@@ -1,17 +1,80 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { supabase } from "../../lib/supabase";
 
-export type StaffRole = "school_admin" | "class_teacher" | "shadow_teacher";
+export type StaffRole = "school_admin" | "class_teacher" | "shadow_teacher" | "super_admin";
+
+interface Profile {
+  id: string;
+  school_id: string | null;
+  role: StaffRole;
+  full_name: string;
+  photo_url: string | null;
+}
 
 interface AuthContextValue {
-  role: StaffRole;
-  setRole: (role: StaffRole) => void;
+  session: Session | null;
+  profile: Profile | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [role, setRole] = useState<StaffRole>("school_admin");
-  return <AuthContext.Provider value={{ role, setRole }}>{children}</AuthContext.Provider>;
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  async function loadProfile(userId: string) {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, school_id, role, full_name, photo_url")
+      .eq("id", userId)
+      .single();
+
+    if (error) {
+      console.error("Failed to load profile:", error.message);
+      setProfile(null);
+      return;
+    }
+    setProfile(data as Profile);
+  }
+
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      setSession(session);
+      if (session?.user) await loadProfile(session.user.id);
+      setLoading(false);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session);
+      if (session?.user) {
+        await loadProfile(session.user.id);
+      } else {
+        setProfile(null);
+      }
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  async function signIn(email: string, password: string) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error: error?.message ?? null };
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut();
+  }
+
+  return (
+    <AuthContext.Provider value={{ session, profile, loading, signIn, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
