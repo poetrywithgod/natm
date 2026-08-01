@@ -3,9 +3,11 @@ import { AuthProvider, useAuth } from "./features/auth/AuthContext";
 import { RequireRole } from "./guards/RequireRole";
 import { RedirectIfAuthed } from "./guards/RedirectIfAuthed";
 import AdminLayout from "./layouts/AdminLayout";
+import ClassTeacherLayout from "./layouts/ClassTeacherLayout";
 import Login from "./pages/Login";
 import SchoolAdminDashboard from "./pages/SchoolAdminDashboard";
-import ClassTeacherDashboard from "./pages/ClassTeacherDashboard";
+import ClassTeacherAttendance from "./pages/ClassTeacherAttendance";
+import ClassTeacherProfile from "./pages/ClassTeacherProfile";
 import ShadowTeacherDashboard from "./pages/ShadowTeacherDashboard";
 import SessionsTerms from "./pages/SessionsTerms";
 import AdminClasses from "./pages/AdminClasses";
@@ -64,13 +66,14 @@ function AppRoutes() {
         path="/class-teacher"
         element={
           <RequireRole allow={["class_teacher"]}>
-            <>
-              <SimpleTopBar />
-              <ClassTeacherDashboard />
-            </>
+            <ClassTeacherLayout />
           </RequireRole>
         }
-      />
+      >
+        <Route index element={<ClassTeacherAttendance />} />
+        <Route path="profile" element={<ClassTeacherProfile />} />
+      </Route>
+
       <Route
         path="/shadow-teacher"
         element={

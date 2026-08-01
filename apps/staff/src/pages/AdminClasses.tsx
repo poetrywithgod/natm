@@ -5,7 +5,9 @@ import {
   fetchClassTeacherOptions,
   createClass,
   assignClassTeacher,
+  assignClassLevel,
   renameClass,
+  CLASS_LEVELS,
   type SchoolClass,
   type ClassTeacherOption,
 } from "../features/classes/api";
@@ -15,6 +17,7 @@ export default function AdminClasses() {
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [teacherOptions, setTeacherOptions] = useState<ClassTeacherOption[]>([]);
   const [newClassName, setNewClassName] = useState("");
+  const [newLevel, setNewLevel] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -48,8 +51,9 @@ export default function AdminClasses() {
   async function handleCreateClass() {
     if (!schoolId || !newClassName.trim()) return;
     try {
-      await createClass(schoolId, newClassName.trim());
+      await createClass(schoolId, newClassName.trim(), newLevel || null);
       setNewClassName("");
+      setNewLevel("");
       await loadAll();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create class");
@@ -62,6 +66,15 @@ export default function AdminClasses() {
       await loadAll();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to assign class teacher");
+    }
+  }
+
+  async function handleAssignLevel(classId: string, level: string) {
+    try {
+      await assignClassLevel(classId, level === "" ? null : level);
+      await loadAll();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to set class level");
     }
   }
 
@@ -95,7 +108,7 @@ export default function AdminClasses() {
         </p>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         <input
           type="text"
           placeholder='New class, e.g. "JSS 1A"'
@@ -103,6 +116,18 @@ export default function AdminClasses() {
           onChange={(e) => setNewClassName(e.target.value)}
           className="p-2 rounded bg-forest-700 text-forest-100 font-ui placeholder:text-forest-300/60 flex-1"
         />
+        <select
+          value={newLevel}
+          onChange={(e) => setNewLevel(e.target.value)}
+          className="p-2 rounded bg-forest-700 text-forest-100 font-ui"
+        >
+          <option value="">Standard Level (optional)</option>
+          {CLASS_LEVELS.map((l) => (
+            <option key={l.value} value={l.value}>
+              {l.label}
+            </option>
+          ))}
+        </select>
         <button
           onClick={handleCreateClass}
           className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui font-semibold"
@@ -110,6 +135,9 @@ export default function AdminClasses() {
           Add Class
         </button>
       </div>
+      <p className="font-ui text-xs text-forest-300 -mt-4">
+        Standard Level determines which curriculum this class sees.
+      </p>
 
       <div className="space-y-3">
         {classes.length === 0 && (
@@ -151,6 +179,22 @@ export default function AdminClasses() {
                 {cls.name}
               </button>
             )}
+
+            <div className="flex items-center gap-2">
+              <span className="font-ui text-xs text-forest-300">Level:</span>
+              <select
+                value={cls.level ?? ""}
+                onChange={(e) => handleAssignLevel(cls.id, e.target.value)}
+                className="p-2 rounded bg-forest-700 text-forest-100 font-ui text-sm"
+              >
+                <option value="">Not set</option>
+                {CLASS_LEVELS.map((l) => (
+                  <option key={l.value} value={l.value}>
+                    {l.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div className="flex items-center gap-2">
               <span className="font-ui text-xs text-forest-300">Class Teacher:</span>
