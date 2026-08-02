@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Camera, User } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import {
@@ -198,13 +199,13 @@ export default function AdminStudents() {
                   />
                   <button
                     onClick={() => handleSaveRename(student.id)}
-                    className="px-3 py-1.5 rounded bg-forest-500 text-forest-950 font-ui text-xs font-semibold"
+                    className="px-3 py-1.5 rounded bg-forest-500 text-forest-950 font-uitext-xs font-semibold"
                   >
                     Save
                   </button>
                   <button
                     onClick={() => setEditingId(null)}
-                    className="px-3 py-1.5 rounded bg-forest-700 text-forest-100 font-ui text-xs"
+                    className="px-3 py-1.5 rounded bg-forest-700 text-forest-100 font-uitext-xs"
                   >
                     Cancel
                   </button>
@@ -232,6 +233,13 @@ export default function AdminStudents() {
                 </option>
               ))}
             </select>
+
+            <Link
+              to={`/admin/students/${student.id}`}
+              className="px-3 py-1.5 rounded bg-forest-700 text-forest-100 font-ui text-xs whitespace-nowrap"
+            >
+              View Profile →
+            </Link>
           </div>
         ))}
       </div>

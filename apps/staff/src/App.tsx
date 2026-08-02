@@ -12,6 +12,7 @@ import ShadowTeacherDashboard from "./pages/ShadowTeacherDashboard";
 import SessionsTerms from "./pages/SessionsTerms";
 import AdminClasses from "./pages/AdminClasses";
 import AdminStudents from "./pages/AdminStudents";
+import AdminStudentProfile from "./pages/AdminStudentProfile";
 import AdminStaffManagement from "./pages/AdminStaffManagement";
 import AdminAttendance from "./pages/AdminAttendance";
 import AdminTimetable from "./pages/AdminTimetable";
@@ -52,6 +53,7 @@ function AppRoutes() {
         <Route path="sessions" element={<SessionsTerms />} />
         <Route path="classes" element={<AdminClasses />} />
         <Route path="students" element={<AdminStudents />} />
+        <Route path="students/:id" element={<AdminStudentProfile />} />
         <Route path="staff" element={<AdminStaffManagement />} />
         <Route path="attendance" element={<AdminAttendance />} />
         <Route path="timetable" element={<AdminTimetable />} />

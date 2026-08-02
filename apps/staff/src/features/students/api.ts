@@ -28,6 +28,12 @@ export async function fetchStudents(schoolId: string): Promise<Student[]> {
   return data;
 }
 
+export async function fetchStudentById(studentId: string): Promise<Student | null> {
+  const { data, error } = await supabase.from("students").select("*").eq("id", studentId).single();
+  if (error) return null;
+  return data;
+}
+
 export async function fetchClassOptions(schoolId: string): Promise<ClassOption[]> {
   const { data, error } = await supabase
     .from("classes")
@@ -78,7 +84,6 @@ export async function uploadStudentPhoto(
     upsert: true,
   });
   if (uploadError) throw new Error(uploadError.message);
-
   const { error: updateError } = await supabase
     .from("students")
     .update({ photo_url: path })

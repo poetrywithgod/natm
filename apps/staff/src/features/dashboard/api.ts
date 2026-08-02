@@ -40,7 +40,8 @@ export async function fetchDashboardSummary(schoolId: string): Promise<Dashboard
       .from("profiles")
       .select("id", { count: "exact", head: true })
       .eq("school_id", schoolId)
-      .in("role", ["class_teacher", "shadow_teacher"]),
+      .eq("is_active", true)
+      .in("role", ["class_teacher", "shadow_teacher", "finance_manager"]),
     supabase
       .from("academic_sessions")
       .select("id, name")
