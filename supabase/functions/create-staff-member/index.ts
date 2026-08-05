@@ -101,6 +101,15 @@ Deno.serve(async (req) => {
       });
     }
 
+    await adminClient.from("audit_logs").insert({
+      school_id: callerProfile.school_id,
+      actor_id: user.id,
+      action: "staff.invited",
+      entity_type: "staff",
+      entity_id: invited.user.id,
+      details: { full_name, email, role },
+    });
+
     return new Response(JSON.stringify({ success: true, id: invited.user.id }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -94,7 +94,7 @@ export default function ClassTeacherAttendance() {
         studentId: s.id,
         status: selections[s.id] ?? "present",
       }));
-      await saveAttendance(myClass.id, term.id, date, profile.id, entries);
+      await saveAttendance(myClass.id, term.id, date, profile.id, entries, profile.school_id!);
       setSuccessMessage("Attendance saved.");
       setAlreadySaved(true);
     } catch (e) {

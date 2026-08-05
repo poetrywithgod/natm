@@ -1,9 +1,10 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { ClipboardCheck, UserCircle } from "lucide-react";
+import { ClipboardCheck, Megaphone, UserCircle } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 
 const NAV_ITEMS = [
   { to: "/class-teacher", label: "Attendance", icon: ClipboardCheck, end: true },
+  { to: "/class-teacher/announcements", label: "Announcements", icon: Megaphone, end: false },
   { to: "/class-teacher/profile", label: "Profile", icon: UserCircle, end: false },
 ];
 
@@ -24,11 +25,9 @@ export default function ClassTeacherLayout() {
           Sign out
         </button>
       </header>
-
       <main className="flex-1 overflow-auto pb-16">
         <Outlet />
       </main>
-
       <nav className="fixed bottom-0 left-0 right-0 bg-forest-900 border-t border-forest-700 flex">
         {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
           <NavLink

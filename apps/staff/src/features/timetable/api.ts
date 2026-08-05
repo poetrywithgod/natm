@@ -1,4 +1,5 @@
 import { supabase } from "../../lib/supabase";
+import { logAuditEvent } from "../audit/api";
 
 export type TimetablePeriod = {
   id: string;
@@ -39,33 +40,61 @@ export async function fetchPeriods(schoolId: string): Promise<TimetablePeriod[]>
   return data ?? [];
 }
 
-export async function createPeriod(input: {
-  school_id: string;
-  period_number: number;
-  label: string;
-  start_time: string;
-  end_time: string;
-}): Promise<TimetablePeriod> {
+export async function createPeriod(
+  input: {
+    school_id: string;
+    period_number: number;
+    label: string;
+    start_time: string;
+    end_time: string;
+  },
+  actorId: string
+): Promise<TimetablePeriod> {
   const { data, error } = await supabase
     .from("timetable_periods")
     .insert(input)
     .select()
     .single();
   if (error) throw error;
+  logAuditEvent({
+    school_id: input.school_id,
+    actor_id: actorId,
+    action: "timetable.period_created",
+    entity_type: "timetable_period",
+    entity_id: data.id,
+    details: { label: input.label, start_time: input.start_time, end_time: input.end_time },
+  });
   return data;
 }
 
 export async function updatePeriod(
   id: string,
-  input: Partial<Pick<TimetablePeriod, "label" | "start_time" | "end_time" | "period_number">>
+  input: Partial<Pick<TimetablePeriod, "label" | "start_time" | "end_time" | "period_number">>,
+  schoolId: string,
+  actorId: string
 ): Promise<void> {
   const { error } = await supabase.from("timetable_periods").update(input).eq("id", id);
   if (error) throw error;
+  logAuditEvent({
+    school_id: schoolId,
+    actor_id: actorId,
+    action: "timetable.period_updated",
+    entity_type: "timetable_period",
+    entity_id: id,
+    details: input,
+  });
 }
 
-export async function deletePeriod(id: string): Promise<void> {
+export async function deletePeriod(id: string, schoolId: string, actorId: string): Promise<void> {
   const { error } = await supabase.from("timetable_periods").delete().eq("id", id);
   if (error) throw error;
+  logAuditEvent({
+    school_id: schoolId,
+    actor_id: actorId,
+    action: "timetable.period_deleted",
+    entity_type: "timetable_period",
+    entity_id: id,
+  });
 }
 
 export async function fetchTimetableEntries(classId: string): Promise<TimetableEntry[]> {
@@ -77,23 +106,41 @@ export async function fetchTimetableEntries(classId: string): Promise<TimetableE
   return (data as unknown as TimetableEntry[]) ?? [];
 }
 
-export async function upsertTimetableEntry(input: {
-  school_id: string;
-  class_id: string;
-  day_of_week: number;
-  period_id: string;
-  subject_id: string;
-  teacher_id: string;
-}): Promise<void> {
+export async function upsertTimetableEntry(
+  input: {
+    school_id: string;
+    class_id: string;
+    day_of_week: number;
+    period_id: string;
+    subject_id: string;
+    teacher_id: string;
+  },
+  actorId: string
+): Promise<void> {
   const { error } = await supabase
     .from("timetable_entries")
     .upsert(input, { onConflict: "class_id,day_of_week,period_id" });
   if (error) throw error;
+  logAuditEvent({
+    school_id: input.school_id,
+    actor_id: actorId,
+    action: "timetable.entry_saved",
+    entity_type: "class",
+    entity_id: input.class_id,
+    details: { day_of_week: input.day_of_week, subject_id: input.subject_id, teacher_id: input.teacher_id },
+  });
 }
 
-export async function deleteTimetableEntry(id: string): Promise<void> {
+export async function deleteTimetableEntry(id: string, schoolId: string, actorId: string): Promise<void> {
   const { error } = await supabase.from("timetable_entries").delete().eq("id", id);
   if (error) throw error;
+  logAuditEvent({
+    school_id: schoolId,
+    actor_id: actorId,
+    action: "timetable.entry_cleared",
+    entity_type: "timetable_entry",
+    entity_id: id,
+  });
 }
 
 export async function fetchSubjects(): Promise<{ id: string; name: string }[]> {

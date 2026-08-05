@@ -63,7 +63,7 @@ export default function AdminStudents() {
   async function handleCreateStudent() {
     if (!schoolId || !newName.trim()) return;
     try {
-      await createStudent(schoolId, newName.trim(), newClassId || null);
+      await createStudent(schoolId, newName.trim(), newClassId || null, profile!.id);
       setNewName("");
       setNewClassId("");
       await loadAll();
@@ -74,7 +74,7 @@ export default function AdminStudents() {
 
   async function handleAssignClass(studentId: string, classId: string) {
     try {
-      await assignStudentClass(studentId, classId === "" ? null : classId);
+      await assignStudentClass(studentId, classId === "" ? null : classId, schoolId!, profile!.id);
       await loadAll();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to assign class");
@@ -89,7 +89,7 @@ export default function AdminStudents() {
   async function handleSaveRename(studentId: string) {
     if (!editingName.trim()) return;
     try {
-      await renameStudent(studentId, editingName.trim());
+      await renameStudent(studentId, editingName.trim(), schoolId!, profile!.id);
       setEditingId(null);
       await loadAll();
     } catch (e) {
@@ -101,7 +101,7 @@ export default function AdminStudents() {
     if (!schoolId || !file) return;
     setUploadingId(studentId);
     try {
-      await uploadStudentPhoto(schoolId, studentId, file);
+      await uploadStudentPhoto(schoolId, studentId, file, profile!.id);
       await loadAll();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to upload photo");

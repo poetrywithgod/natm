@@ -51,7 +51,7 @@ export default function AdminClasses() {
   async function handleCreateClass() {
     if (!schoolId || !newClassName.trim()) return;
     try {
-      await createClass(schoolId, newClassName.trim(), newLevel || null);
+      await createClass(schoolId, newClassName.trim(), newLevel || null, profile!.id);
       setNewClassName("");
       setNewLevel("");
       await loadAll();
@@ -62,7 +62,7 @@ export default function AdminClasses() {
 
   async function handleAssignTeacher(classId: string, teacherId: string) {
     try {
-      await assignClassTeacher(classId, teacherId === "" ? null : teacherId);
+      await assignClassTeacher(classId, teacherId === "" ? null : teacherId, schoolId!, profile!.id);
       await loadAll();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to assign class teacher");
@@ -71,7 +71,7 @@ export default function AdminClasses() {
 
   async function handleAssignLevel(classId: string, level: string) {
     try {
-      await assignClassLevel(classId, level === "" ? null : level);
+      await assignClassLevel(classId, level === "" ? null : level, schoolId!, profile!.id);
       await loadAll();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to set class level");
@@ -86,7 +86,7 @@ export default function AdminClasses() {
   async function handleSaveRename(classId: string) {
     if (!editingName.trim()) return;
     try {
-      await renameClass(classId, editingName.trim());
+      await renameClass(classId, editingName.trim(), schoolId!, profile!.id);
       setEditingId(null);
       await loadAll();
     } catch (e) {

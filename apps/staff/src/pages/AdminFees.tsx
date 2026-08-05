@@ -110,7 +110,7 @@ export default function AdminFees() {
     setCreating(true);
     setError(null);
     try {
-      await createFeeType(schoolId, term.id, newName.trim(), amount, newClassId || null);
+      await createFeeType(schoolId, term.id, newName.trim(), amount, newClassId || null, profile!.id);
       setNewName("");
       setNewAmount("");
       setNewClassId("");
@@ -141,7 +141,7 @@ export default function AdminFees() {
     const paid = parseFloat(draft?.paid || "0") || 0;
     setSavingId(studentId);
     try {
-      await upsertStudentFee(schoolId, studentId, selectedFeeTypeId, term.id, due, paid);
+      await upsertStudentFee(schoolId, studentId, selectedFeeTypeId, term.id, due, paid, profile!.id);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save fee");
     } finally {
@@ -156,7 +156,7 @@ export default function AdminFees() {
     if (!schoolId || !term || !selectedFeeTypeId) return;
     setSavingId(studentId);
     try {
-      await upsertStudentFee(schoolId, studentId, selectedFeeTypeId, term.id, due, due);
+      await upsertStudentFee(schoolId, studentId, selectedFeeTypeId, term.id, due, due, profile!.id);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to mark as paid");
     } finally {

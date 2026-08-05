@@ -1,4 +1,5 @@
 import { supabase } from "../../lib/supabase";
+import { logAuditEvent } from "../audit/api";
 
 export interface CurrentTerm {
   id: string;
@@ -80,7 +81,8 @@ export async function createFeeType(
   termId: string,
   name: string,
   amount: number,
-  classId: string | null
+  classId: string | null,
+  actorId: string
 ): Promise<void> {
   const { data: feeType, error: feeTypeError } = await supabase
     .from("fee_types")
@@ -93,6 +95,15 @@ export async function createFeeType(
   if (classId) studentQuery = studentQuery.eq("class_id", classId);
   const { data: students, error: studentsError } = await studentQuery;
   if (studentsError) throw new Error(studentsError.message);
+
+  logAuditEvent({
+    school_id: schoolId,
+    actor_id: actorId,
+    action: "fee_type.created",
+    entity_type: "fee_type",
+    entity_id: feeType.id,
+    details: { name, amount, class_id: classId },
+  });
 
   if (!students || students.length === 0) return;
 
@@ -145,7 +156,8 @@ export async function upsertStudentFee(
   feeTypeId: string,
   termId: string,
   amountDue: number,
-  amountPaid: number
+  amountPaid: number,
+  actorId: string
 ): Promise<void> {
   const { error } = await supabase.from("student_fees").upsert(
     {
@@ -160,4 +172,12 @@ export async function upsertStudentFee(
     { onConflict: "student_id,fee_type_id" }
   );
   if (error) throw new Error(error.message);
+  logAuditEvent({
+    school_id: schoolId,
+    actor_id: actorId,
+    action: "fee.payment_recorded",
+    entity_type: "student",
+    entity_id: studentId,
+    details: { fee_type_id: feeTypeId, amount_due: amountDue, amount_paid: amountPaid },
+  });
 }

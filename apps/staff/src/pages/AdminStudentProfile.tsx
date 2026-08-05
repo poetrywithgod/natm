@@ -127,7 +127,7 @@ export default function AdminStudentProfile() {
             subject_id: subjectId,
             carryover_class_id: student.class_id,
             academic_session_id: sessionId,
-          });
+          }, profile.id);
         }
       }
 
@@ -143,7 +143,7 @@ export default function AdminStudentProfile() {
 
   async function handleRemoveCarryover(carryoverId: string) {
     try {
-      await removeCarryover(carryoverId);
+      await removeCarryover(carryoverId, schoolId!, profile!.id);
       await loadAll();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to remove carryover");

@@ -1,4 +1,5 @@
 import { supabase } from "../../lib/supabase";
+import { logAuditEvent } from "../audit/api";
 
 export interface Student {
   id: string;
@@ -49,7 +50,8 @@ export async function fetchClassOptions(schoolId: string): Promise<ClassOption[]
 export async function createStudent(
   schoolId: string,
   fullName: string,
-  classId: string | null
+  classId: string | null,
+  actorId: string
 ): Promise<Student> {
   const { data, error } = await supabase
     .from("students")
@@ -61,23 +63,58 @@ export async function createStudent(
     .select()
     .single();
   if (error) throw new Error(error.message);
+  logAuditEvent({
+    school_id: schoolId,
+    actor_id: actorId,
+    action: "student.created",
+    entity_type: "student",
+    entity_id: data.id,
+    details: { full_name: fullName, class_id: classId },
+  });
   return data;
 }
 
-export async function assignStudentClass(studentId: string, classId: string | null): Promise<void> {
+export async function assignStudentClass(
+  studentId: string,
+  classId: string | null,
+  schoolId: string,
+  actorId: string
+): Promise<void> {
   const { error } = await supabase.from("students").update({ class_id: classId }).eq("id", studentId);
   if (error) throw new Error(error.message);
+  logAuditEvent({
+    school_id: schoolId,
+    actor_id: actorId,
+    action: "student.class_assigned",
+    entity_type: "student",
+    entity_id: studentId,
+    details: { class_id: classId },
+  });
 }
 
-export async function renameStudent(studentId: string, fullName: string): Promise<void> {
+export async function renameStudent(
+  studentId: string,
+  fullName: string,
+  schoolId: string,
+  actorId: string
+): Promise<void> {
   const { error } = await supabase.from("students").update({ full_name: fullName }).eq("id", studentId);
   if (error) throw new Error(error.message);
+  logAuditEvent({
+    school_id: schoolId,
+    actor_id: actorId,
+    action: "student.renamed",
+    entity_type: "student",
+    entity_id: studentId,
+    details: { full_name: fullName },
+  });
 }
 
 export async function uploadStudentPhoto(
   schoolId: string,
   studentId: string,
-  file: File
+  file: File,
+  actorId: string
 ): Promise<void> {
   const path = `${schoolId}/${studentId}/${Date.now()}-${file.name}`;
   const { error: uploadError } = await supabase.storage.from(PHOTO_BUCKET).upload(path, file, {
@@ -89,6 +126,13 @@ export async function uploadStudentPhoto(
     .update({ photo_url: path })
     .eq("id", studentId);
   if (updateError) throw new Error(updateError.message);
+  logAuditEvent({
+    school_id: schoolId,
+    actor_id: actorId,
+    action: "student.photo_uploaded",
+    entity_type: "student",
+    entity_id: studentId,
+  });
 }
 
 export async function getSignedPhotoUrl(path: string): Promise<string | null> {

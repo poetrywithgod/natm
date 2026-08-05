@@ -146,6 +146,15 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      await adminClient.from("audit_logs").insert({
+        school_id: callerProfile.school_id,
+        actor_id: user.id,
+        action: "staff.deactivated",
+        entity_type: "staff",
+        entity_id: staff_id,
+        details: { full_name: target.full_name },
+      });
     } else {
       const { error: unbanError } = await adminClient.auth.admin.updateUserById(staff_id, {
         ban_duration: "none",
@@ -167,6 +176,15 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      await adminClient.from("audit_logs").insert({
+        school_id: callerProfile.school_id,
+        actor_id: user.id,
+        action: "staff.reactivated",
+        entity_type: "staff",
+        entity_id: staff_id,
+        details: { full_name: target.full_name },
+      });
     }
 
     return new Response(JSON.stringify({ success: true }), {

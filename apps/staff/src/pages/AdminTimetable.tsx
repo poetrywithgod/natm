@@ -88,7 +88,7 @@ export default function AdminTimetable() {
         label: newPeriod.label.trim(),
         start_time: newPeriod.start_time,
         end_time: newPeriod.end_time,
-      });
+      }, profile!.id);
       setNewPeriod({ label: "", start_time: "", end_time: "" });
       await loadBase();
     } catch (e) {
@@ -103,7 +103,7 @@ export default function AdminTimetable() {
 
   async function handleSavePeriod(id: string) {
     try {
-      await updatePeriod(id, editingPeriod);
+      await updatePeriod(id, editingPeriod, schoolId!, profile!.id);
       setEditingPeriodId(null);
       await loadBase();
     } catch (e) {
@@ -113,7 +113,7 @@ export default function AdminTimetable() {
 
   async function handleDeletePeriod(id: string) {
     try {
-      await deletePeriod(id);
+      await deletePeriod(id, schoolId!, profile!.id);
       await loadBase();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete period");
@@ -141,7 +141,7 @@ export default function AdminTimetable() {
         period_id: editingCell.periodId,
         subject_id: cellSubject,
         teacher_id: cellTeacher,
-      });
+      }, profile!.id);
       setEditingCell(null);
       await loadEntries(selectedClassId);
     } catch (e) {
@@ -157,7 +157,7 @@ export default function AdminTimetable() {
       return;
     }
     try {
-      await deleteTimetableEntry(existing.id);
+      await deleteTimetableEntry(existing.id, schoolId!, profile!.id);
       setEditingCell(null);
       await loadEntries(selectedClassId);
     } catch (e) {

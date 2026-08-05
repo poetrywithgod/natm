@@ -1,5 +1,6 @@
 import { supabase } from "../../lib/supabase";
 import { CLASS_LEVELS } from "../classes/api";
+import { logAuditEvent } from "../audit/api";
 
 export interface AttendanceRecord {
   id: string;
@@ -98,19 +99,39 @@ export async function promoteStudent(input: {
     .update({ class_id: input.to_class_id })
     .eq("id", input.student_id);
   if (updateError) throw new Error(updateError.message);
+
+  logAuditEvent({
+    school_id: input.school_id,
+    actor_id: input.promoted_by,
+    action: input.decision === "promoted" ? "student.promoted" : "student.repeated",
+    entity_type: "student",
+    entity_id: input.student_id,
+    details: { from_class_id: input.from_class_id, to_class_id: input.to_class_id },
+  });
 }
 
-export async function addCarryover(input: {
-  school_id: string;
-  student_id: string;
-  subject_id: string;
-  carryover_class_id: string;
-  academic_session_id: string;
-}): Promise<void> {
+export async function addCarryover(
+  input: {
+    school_id: string;
+    student_id: string;
+    subject_id: string;
+    carryover_class_id: string;
+    academic_session_id: string;
+  },
+  actorId: string
+): Promise<void> {
   const { error } = await supabase.from("student_subject_carryovers").upsert(input, {
     onConflict: "student_id,subject_id,academic_session_id",
   });
   if (error) throw new Error(error.message);
+  logAuditEvent({
+    school_id: input.school_id,
+    actor_id: actorId,
+    action: "student.carryover_added",
+    entity_type: "student",
+    entity_id: input.student_id,
+    details: { subject_id: input.subject_id, carryover_class_id: input.carryover_class_id },
+  });
 }
 
 export async function fetchCarryovers(
@@ -126,7 +147,14 @@ export async function fetchCarryovers(
   return (data as unknown as { id: string; subject: { name: string } | null }[]) ?? [];
 }
 
-export async function removeCarryover(id: string): Promise<void> {
+export async function removeCarryover(id: string, schoolId: string, actorId: string): Promise<void> {
   const { error } = await supabase.from("student_subject_carryovers").delete().eq("id", id);
   if (error) throw new Error(error.message);
+  logAuditEvent({
+    school_id: schoolId,
+    actor_id: actorId,
+    action: "student.carryover_removed",
+    entity_type: "student_subject_carryover",
+    entity_id: id,
+  });
 }

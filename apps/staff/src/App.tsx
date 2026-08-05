@@ -5,6 +5,7 @@ import { RedirectIfAuthed } from "./guards/RedirectIfAuthed";
 import AdminLayout from "./layouts/AdminLayout";
 import ClassTeacherLayout from "./layouts/ClassTeacherLayout";
 import Login from "./pages/Login";
+import ResetPassword from "./pages/ResetPassword";
 import SchoolAdminDashboard from "./pages/SchoolAdminDashboard";
 import ClassTeacherAttendance from "./pages/ClassTeacherAttendance";
 import ClassTeacherProfile from "./pages/ClassTeacherProfile";
@@ -19,6 +20,7 @@ import AdminTimetable from "./pages/AdminTimetable";
 import AdminPromotion from "./pages/AdminPromotion";
 import AdminFees from "./pages/AdminFees";
 import AdminAnnouncements from "./pages/AdminAnnouncements";
+import ClassTeacherAnnouncements from "./pages/ClassTeacherAnnouncements";
 import AdminAuditLog from "./pages/AdminAuditLog";
 import AdminProfile from "./pages/AdminProfile";
 
@@ -40,6 +42,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<RedirectIfAuthed><Login /></RedirectIfAuthed>} />
       <Route path="/" element={<Navigate to="/admin" replace />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       <Route
         path="/admin"
@@ -73,6 +76,7 @@ function AppRoutes() {
         }
       >
         <Route index element={<ClassTeacherAttendance />} />
+        <Route path="announcements" element={<ClassTeacherAnnouncements />} />
         <Route path="profile" element={<ClassTeacherProfile />} />
       </Route>
 

@@ -1,4 +1,5 @@
 import { supabase } from "../../lib/supabase";
+import { logAuditEvent } from "../audit/api";
 
 export const CLASS_LEVELS = [
   { value: "primary_1", label: "Primary 1" },
@@ -54,7 +55,8 @@ export async function fetchClassTeacherOptions(schoolId: string): Promise<ClassT
 export async function createClass(
   schoolId: string,
   name: string,
-  level: string | null
+  level: string | null,
+  actorId: string
 ): Promise<SchoolClass> {
   const { data, error } = await supabase
     .from("classes")
@@ -62,28 +64,75 @@ export async function createClass(
     .select()
     .single();
   if (error) throw new Error(error.message);
+  logAuditEvent({
+    school_id: schoolId,
+    actor_id: actorId,
+    action: "class.created",
+    entity_type: "class",
+    entity_id: data.id,
+    details: { name, level },
+  });
   return data;
 }
 
 // null clears the assignment (class_teacher_id references profiles with on delete set null,
 // so this mirrors that same "unassigned" state deliberately).
-export async function assignClassTeacher(classId: string, teacherId: string | null): Promise<void> {
+export async function assignClassTeacher(
+  classId: string,
+  teacherId: string | null,
+  schoolId: string,
+  actorId: string
+): Promise<void> {
   const { error } = await supabase
     .from("classes")
     .update({ class_teacher_id: teacherId })
     .eq("id", classId);
   if (error) throw new Error(error.message);
+  logAuditEvent({
+    school_id: schoolId,
+    actor_id: actorId,
+    action: "class.teacher_assigned",
+    entity_type: "class",
+    entity_id: classId,
+    details: { teacher_id: teacherId },
+  });
 }
 
-export async function assignClassLevel(classId: string, level: string | null): Promise<void> {
+export async function assignClassLevel(
+  classId: string,
+  level: string | null,
+  schoolId: string,
+  actorId: string
+): Promise<void> {
   const { error } = await supabase.from("classes").update({ level }).eq("id", classId);
   if (error) throw new Error(error.message);
+  logAuditEvent({
+    school_id: schoolId,
+    actor_id: actorId,
+    action: "class.level_changed",
+    entity_type: "class",
+    entity_id: classId,
+    details: { level },
+  });
 }
 
-export async function renameClass(classId: string, name: string): Promise<void> {
+export async function renameClass(
+  classId: string,
+  name: string,
+  schoolId: string,
+  actorId: string
+): Promise<void> {
   const { error } = await supabase
     .from("classes")
     .update({ name })
     .eq("id", classId);
   if (error) throw new Error(error.message);
+  logAuditEvent({
+    school_id: schoolId,
+    actor_id: actorId,
+    action: "class.renamed",
+    entity_type: "class",
+    entity_id: classId,
+    details: { name },
+  });
 }

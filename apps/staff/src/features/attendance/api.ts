@@ -1,4 +1,5 @@
 import { supabase } from "../../lib/supabase";
+import { logAuditEvent } from "../audit/api";
 
 export type AttendanceStatus = "present" | "absent" | "late";
 
@@ -60,7 +61,8 @@ export async function saveAttendance(
   termId: string,
   date: string,
   markedBy: string,
-  entries: { studentId: string; status: AttendanceStatus }[]
+  entries: { studentId: string; status: AttendanceStatus }[],
+  schoolId: string
 ): Promise<void> {
   const rows = entries.map((e) => ({
     student_id: e.studentId,
@@ -72,4 +74,12 @@ export async function saveAttendance(
   }));
   const { error } = await supabase.from("attendance").upsert(rows, { onConflict: "student_id,date" });
   if (error) throw new Error(error.message);
+  logAuditEvent({
+    school_id: schoolId,
+    actor_id: markedBy,
+    action: "attendance.marked",
+    entity_type: "class",
+    entity_id: classId,
+    details: { date, student_count: entries.length },
+  });
 }
