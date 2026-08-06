@@ -1,35 +1,46 @@
+import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./features/auth/AuthContext";
 import { RequireRole } from "./guards/RequireRole";
 import { RedirectIfAuthed } from "./guards/RedirectIfAuthed";
 import AdminLayout from "./layouts/AdminLayout";
 import ClassTeacherLayout from "./layouts/ClassTeacherLayout";
-import Login from "./pages/Login";
-import ResetPassword from "./pages/ResetPassword";
-import SchoolAdminDashboard from "./pages/SchoolAdminDashboard";
-import ClassTeacherAttendance from "./pages/ClassTeacherAttendance";
-import ClassTeacherProfile from "./pages/ClassTeacherProfile";
-import ShadowTeacherDashboard from "./pages/ShadowTeacherDashboard";
-import SessionsTerms from "./pages/SessionsTerms";
-import AdminClasses from "./pages/AdminClasses";
-import AdminStudents from "./pages/AdminStudents";
-import AdminStudentProfile from "./pages/AdminStudentProfile";
-import AdminStaffManagement from "./pages/AdminStaffManagement";
-import AdminAttendance from "./pages/AdminAttendance";
-import AdminTimetable from "./pages/AdminTimetable";
-import AdminPromotion from "./pages/AdminPromotion";
-import AdminFees from "./pages/AdminFees";
-import AdminAnnouncements from "./pages/AdminAnnouncements";
-import ClassTeacherAnnouncements from "./pages/ClassTeacherAnnouncements";
-import AdminAuditLog from "./pages/AdminAuditLog";
-import AdminProfile from "./pages/AdminProfile";
+import PageSkeleton from "./components/PageSkeleton";
+
+// Every page is lazy-loaded so a heavy dependency in one page (e.g.
+// pdfjs-dist in Lessons) never bloats the bundle every other page has to
+// download on first load -- each route's code only fetches when visited.
+const Login = lazy(() => import("./pages/Login"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const SchoolAdminDashboard = lazy(() => import("./pages/SchoolAdminDashboard"));
+const ClassTeacherAttendance = lazy(() => import("./pages/ClassTeacherAttendance"));
+const ClassTeacherDashboard = lazy(() => import("./pages/ClassTeacherDashboard"));
+const ClassTeacherMore = lazy(() => import("./pages/ClassTeacherMore"));
+const ClassTeacherProfile = lazy(() => import("./pages/ClassTeacherProfile"));
+const ClassTeacherActivities = lazy(() => import("./pages/ClassTeacherActivities"));
+const ClassTeacherLessons = lazy(() => import("./pages/ClassTeacherLessons"));
+const ClassTeacherAssignWork = lazy(() => import("./pages/ClassTeacherAssignWork"));
+const ShadowTeacherDashboard = lazy(() => import("./pages/ShadowTeacherDashboard"));
+const SessionsTerms = lazy(() => import("./pages/SessionsTerms"));
+const AdminClasses = lazy(() => import("./pages/AdminClasses"));
+const AdminStudents = lazy(() => import("./pages/AdminStudents"));
+const AdminStudentProfile = lazy(() => import("./pages/AdminStudentProfile"));
+const AdminStaffManagement = lazy(() => import("./pages/AdminStaffManagement"));
+const AdminAttendance = lazy(() => import("./pages/AdminAttendance"));
+const AdminTimetable = lazy(() => import("./pages/AdminTimetable"));
+const AdminPromotion = lazy(() => import("./pages/AdminPromotion"));
+const AdminFees = lazy(() => import("./pages/AdminFees"));
+const AdminAnnouncements = lazy(() => import("./pages/AdminAnnouncements"));
+const ClassTeacherAnnouncements = lazy(() => import("./pages/ClassTeacherAnnouncements"));
+const AdminAuditLog = lazy(() => import("./pages/AdminAuditLog"));
+const AdminProfile = lazy(() => import("./pages/AdminProfile"));
 
 function SimpleTopBar() {
   const { profile, signOut } = useAuth();
   if (!profile) return null;
   return (
     <div className="flex justify-between items-center p-4 bg-forest-900 font-ui text-sm text-forest-100">
-      <span>{profile.full_name} — {profile.role}</span>
+      <span>{profile.full_name} - {profile.role}</span>
       <button onClick={signOut} className="px-3 py-1 rounded bg-forest-700">
         Sign out
       </button>
@@ -39,59 +50,66 @@ function SimpleTopBar() {
 
 function AppRoutes() {
   return (
-    <Routes>
-      <Route path="/login" element={<RedirectIfAuthed><Login /></RedirectIfAuthed>} />
-      <Route path="/" element={<Navigate to="/admin" replace />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
+    <Suspense fallback={<PageSkeleton />}>
+      <Routes>
+        <Route path="/login" element={<RedirectIfAuthed><Login /></RedirectIfAuthed>} />
+        <Route path="/" element={<Navigate to="/admin" replace />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
-      <Route
-        path="/admin"
-        element={
-          <RequireRole allow={["school_admin"]}>
-            <AdminLayout />
-          </RequireRole>
-        }
-      >
-        <Route index element={<SchoolAdminDashboard />} />
-        <Route path="sessions" element={<SessionsTerms />} />
-        <Route path="classes" element={<AdminClasses />} />
-        <Route path="students" element={<AdminStudents />} />
-        <Route path="students/:id" element={<AdminStudentProfile />} />
-        <Route path="staff" element={<AdminStaffManagement />} />
-        <Route path="attendance" element={<AdminAttendance />} />
-        <Route path="timetable" element={<AdminTimetable />} />
-        <Route path="promotion" element={<AdminPromotion />} />
-        <Route path="fees" element={<AdminFees />} />
-        <Route path="announcements" element={<AdminAnnouncements />} />
-        <Route path="audit-log" element={<AdminAuditLog />} />
-        <Route path="profile" element={<AdminProfile />} />
-      </Route>
+        <Route
+          path="/admin"
+          element={
+            <RequireRole allow={["school_admin"]}>
+              <AdminLayout />
+            </RequireRole>
+          }
+        >
+          <Route index element={<SchoolAdminDashboard />} />
+          <Route path="sessions" element={<SessionsTerms />} />
+          <Route path="classes" element={<AdminClasses />} />
+          <Route path="students" element={<AdminStudents />} />
+          <Route path="students/:id" element={<AdminStudentProfile />} />
+          <Route path="staff" element={<AdminStaffManagement />} />
+          <Route path="attendance" element={<AdminAttendance />} />
+          <Route path="timetable" element={<AdminTimetable />} />
+          <Route path="promotion" element={<AdminPromotion />} />
+          <Route path="fees" element={<AdminFees />} />
+          <Route path="announcements" element={<AdminAnnouncements />} />
+          <Route path="audit-log" element={<AdminAuditLog />} />
+          <Route path="profile" element={<AdminProfile />} />
+        </Route>
 
-      <Route
-        path="/class-teacher"
-        element={
-          <RequireRole allow={["class_teacher"]}>
-            <ClassTeacherLayout />
-          </RequireRole>
-        }
-      >
-        <Route index element={<ClassTeacherAttendance />} />
-        <Route path="announcements" element={<ClassTeacherAnnouncements />} />
-        <Route path="profile" element={<ClassTeacherProfile />} />
-      </Route>
+        <Route
+          path="/class-teacher"
+          element={
+            <RequireRole allow={["class_teacher"]}>
+              <ClassTeacherLayout />
+            </RequireRole>
+          }
+        >
+          <Route index element={<ClassTeacherDashboard />} />
+          <Route path="attendance" element={<ClassTeacherAttendance />} />
+          <Route path="activities" element={<ClassTeacherActivities />} />
+          <Route path="lessons" element={<ClassTeacherLessons />} />
+          <Route path="assign-work" element={<ClassTeacherAssignWork />} />
+          <Route path="announcements" element={<ClassTeacherAnnouncements />} />
+          <Route path="profile" element={<ClassTeacherProfile />} />
+          <Route path="more" element={<ClassTeacherMore />} />
+        </Route>
 
-      <Route
-        path="/shadow-teacher"
-        element={
-          <RequireRole allow={["shadow_teacher"]}>
-            <>
-              <SimpleTopBar />
-              <ShadowTeacherDashboard />
-            </>
-          </RequireRole>
-        }
-      />
-    </Routes>
+        <Route
+          path="/shadow-teacher"
+          element={
+            <RequireRole allow={["shadow_teacher"]}>
+              <>
+                <SimpleTopBar />
+                <ShadowTeacherDashboard />
+              </>
+            </RequireRole>
+          }
+        />
+      </Routes>
+    </Suspense>
   );
 }
 

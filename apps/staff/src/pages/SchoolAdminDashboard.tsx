@@ -16,6 +16,7 @@ import {
 } from "recharts";
 import { useAuth } from "../features/auth/AuthContext";
 import { supabase } from "../lib/supabase";
+import { getCurrentQuarter, finalizeCurrentQuarter } from "../features/grading/api";
 import {
   fetchDashboardSummary,
   fetchAttendanceTrend,
@@ -62,8 +63,11 @@ export default function SchoolAdminDashboard() {
   const [classFeeStats, setClassFeeStats] = useState<ClassFeeStat[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [finalizing, setFinalizing] = useState(false);
+  const [finalizeMessage, setFinalizeMessage] = useState<string | null>(null);
 
   const schoolId = profile?.school_id;
+  const quarter = getCurrentQuarter();
 
   async function loadAll() {
     if (!schoolId) return;
@@ -114,6 +118,25 @@ export default function SchoolAdminDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schoolId]);
 
+  async function handleFinalizeQuarter() {
+    if (!schoolId || !profile) return;
+    setFinalizing(true);
+    setFinalizeMessage(null);
+    setError(null);
+    try {
+      const count = await finalizeCurrentQuarter(schoolId, profile.id);
+      setFinalizeMessage(
+        count > 0
+          ? `Finalized Q${quarter.quarterNumber} ${quarter.year} scores for ${count} student-subject pair(s).`
+          : "No submitted quiz attempts found for this quarter yet."
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to finalize quarter");
+    } finally {
+      setFinalizing(false);
+    }
+  }
+
   if (loading) return <div className="p-6 font-ui text-forest-100">Loading...</div>;
 
   const feePieData = [
@@ -142,6 +165,26 @@ export default function SchoolAdminDashboard() {
               : "Not set"
           }
         />
+      </div>
+
+      <div className="bg-forest-900 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="font-display text-lg text-forest-100">
+            Finalize Quarter (Q{quarter.quarterNumber} {quarter.year})
+          </h2>
+          <p className="font-ui text-xs text-forest-300 mt-1">
+            Locks in each student's average quiz score per subject for this quarter. Safe to run more
+            than once — later attempts get folded in on the next finalize.
+          </p>
+          {finalizeMessage && <p className="font-ui text-xs text-forest-400 mt-1">{finalizeMessage}</p>}
+        </div>
+        <button
+          onClick={handleFinalizeQuarter}
+          disabled={finalizing}
+          className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui text-sm font-semibold disabled:opacity-50 whitespace-nowrap"
+        >
+          {finalizing ? "Finalizing..." : "Finalize Quarter"}
+        </button>
       </div>
 
       <div className="bg-forest-900 rounded-lg p-4">

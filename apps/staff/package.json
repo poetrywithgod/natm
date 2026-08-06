@@ -13,6 +13,7 @@
   "dependencies": {
     "@natm/supabase": "workspace:^",
     "lucide-react": "^1.28.0",
+    "pdfjs-dist": "^6.2.108",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.2",

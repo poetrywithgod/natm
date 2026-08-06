@@ -18,6 +18,7 @@ import {
   type FeeRecord,
   type ClassSuggestion,
 } from "../features/promotion/api";
+import { fetchSubjectProgress, type SubjectProgress } from "../features/grading/api";
 
 const STATUS_LABELS: Record<string, string> = { present: "Present", absent: "Absent", late: "Late" };
 
@@ -35,6 +36,7 @@ export default function AdminStudentProfile() {
   const [suggestions, setSuggestions] = useState<ClassSuggestion[]>([]);
   const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
   const [carryovers, setCarryovers] = useState<{ id: string; subject: { name: string } | null }[]>([]);
+  const [subjectProgress, setSubjectProgress] = useState<SubjectProgress[]>([]);
 
   const [decision, setDecision] = useState<"promoted" | "repeated">("promoted");
   const [targetClassId, setTargetClassId] = useState("");
@@ -66,6 +68,11 @@ export default function AdminStudentProfile() {
 
       const cls = allClasses.find((c) => c.id === stu?.class_id) ?? null;
       setCurrentClass(cls);
+
+      if (stu && cls) {
+        const progress = await fetchSubjectProgress(stu.id, cls.id);
+        setSubjectProgress(progress);
+      }
 
       if (stu?.photo_url) {
         const url = await getSignedPhotoUrl(stu.photo_url);
@@ -280,6 +287,43 @@ export default function AdminStudentProfile() {
                 >
                   Remove
                 </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Subject Progress */}
+      <div className="bg-forest-900 rounded-lg p-4 space-y-3">
+        <h2 className="font-display text-lg text-forest-100">Subject Progress</h2>
+        {subjectProgress.length === 0 ? (
+          <p className="font-ui text-xs text-forest-300">
+            No subjects assigned to this student's class yet.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {subjectProgress.map((sp) => (
+              <div key={sp.subject_id}>
+                <div className="flex justify-between font-ui text-xs text-forest-100 mb-1">
+                  <span>{sp.subject_name}</span>
+                  <span className="text-forest-300">
+                    {sp.currentQuarterAverage !== null
+                      ? `${sp.currentQuarterAverage.toFixed(0)}% this quarter (${sp.currentQuarterAttemptCount} attempt${sp.currentQuarterAttemptCount === 1 ? "" : "s"})`
+                      : "No attempts yet this quarter"}
+                  </span>
+                </div>
+                <div className="h-2 rounded-full bg-forest-700 overflow-hidden">
+                  <div
+                    className="h-full bg-forest-500"
+                    style={{ width: `${sp.currentQuarterAverage ?? 0}%` }}
+                  />
+                </div>
+                {sp.lastFinalizedScore !== null && sp.lastFinalizedQuarter && (
+                  <p className="font-ui text-[11px] text-forest-300/70 mt-1">
+                    Last finalized: {sp.lastFinalizedScore.toFixed(0)}% (Q{sp.lastFinalizedQuarter.quarterNumber}{" "}
+                    {sp.lastFinalizedQuarter.year})
+                  </p>
+                )}
               </div>
             ))}
           </div>

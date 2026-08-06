@@ -1,11 +1,13 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { ClipboardCheck, Megaphone, UserCircle } from "lucide-react";
+import { LayoutDashboard, ClipboardCheck, BookOpen, FileText, MoreHorizontal } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 
 const NAV_ITEMS = [
-  { to: "/class-teacher", label: "Attendance", icon: ClipboardCheck, end: true },
-  { to: "/class-teacher/announcements", label: "Announcements", icon: Megaphone, end: false },
-  { to: "/class-teacher/profile", label: "Profile", icon: UserCircle, end: false },
+  { to: "/class-teacher", label: "Dashboard", icon: LayoutDashboard, end: true },
+  { to: "/class-teacher/attendance", label: "Attendance", icon: ClipboardCheck, end: false },
+  { to: "/class-teacher/activities", label: "Activities", icon: BookOpen, end: false },
+  { to: "/class-teacher/lessons", label: "Lessons", icon: FileText, end: false },
+  { to: "/class-teacher/more", label: "More", icon: MoreHorizontal, end: false },
 ];
 
 export default function ClassTeacherLayout() {
