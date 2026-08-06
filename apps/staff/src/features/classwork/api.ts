@@ -121,6 +121,12 @@ export async function createClassWork(
       }));
       const { error: notifyError } = await supabase.from("notifications").insert(notificationRows);
       if (notifyError) throw new Error(notifyError.message);
+
+      // Fire-and-forget push delivery. Notification rows already exist,
+      // so a failure here just means delivery waits for a later trigger.
+      supabase.functions.invoke("send-push", { body: {} }).catch((err) => {
+        console.error("send-push invoke failed:", err);
+      });
     }
   }
 

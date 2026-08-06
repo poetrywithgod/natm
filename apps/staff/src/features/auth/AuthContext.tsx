@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../../lib/supabase";
+import { registerPushSubscription } from "../push/subscribe";
 
 export type StaffRole = "school_admin" | "class_teacher" | "shadow_teacher" | "super_admin";
 
@@ -46,7 +47,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
-      if (session?.user) await loadProfile(session.user.id);
+      if (session?.user) {
+        await loadProfile(session.user.id);
+        registerPushSubscription(session.user.id);
+      }
       setLoading(false);
     });
 
@@ -54,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       if (session?.user) {
         await loadProfile(session.user.id);
+        registerPushSubscription(session.user.id);
       } else {
         setProfile(null);
       }
