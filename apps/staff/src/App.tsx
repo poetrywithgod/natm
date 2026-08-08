@@ -5,6 +5,7 @@ import { RequireRole } from "./guards/RequireRole";
 import { RedirectIfAuthed } from "./guards/RedirectIfAuthed";
 import AdminLayout from "./layouts/AdminLayout";
 import ClassTeacherLayout from "./layouts/ClassTeacherLayout";
+import ShadowTeacherLayout from "./layouts/ShadowTeacherLayout";
 import PageSkeleton from "./components/PageSkeleton";
 
 // Every page is lazy-loaded so a heavy dependency in one page (e.g.
@@ -22,6 +23,11 @@ const ClassTeacherLessons = lazy(() => import("./pages/ClassTeacherLessons"));
 const ClassTeacherAssignWork = lazy(() => import("./pages/ClassTeacherAssignWork"));
 const ClassTeacherNotifications = lazy(() => import("./pages/ClassTeacherNotifications"));
 const ShadowTeacherDashboard = lazy(() => import("./pages/ShadowTeacherDashboard"));
+const ShadowTeacherStudents = lazy(() => import("./pages/ShadowTeacherStudents"));
+const ShadowTeacherStudentDetail = lazy(() => import("./pages/ShadowTeacherStudentDetail"));
+const ShadowTeacherAnnouncements = lazy(() => import("./pages/ShadowTeacherAnnouncements"));
+const ShadowTeacherProfile = lazy(() => import("./pages/ShadowTeacherProfile"));
+const ShadowTeacherNotifications = lazy(() => import("./pages/ShadowTeacherNotifications"));
 const SessionsTerms = lazy(() => import("./pages/SessionsTerms"));
 const AdminClasses = lazy(() => import("./pages/AdminClasses"));
 const AdminStudents = lazy(() => import("./pages/AdminStudents"));
@@ -105,13 +111,17 @@ function AppRoutes() {
           path="/shadow-teacher"
           element={
             <RequireRole allow={["shadow_teacher"]}>
-              <>
-                <SimpleTopBar />
-                <ShadowTeacherDashboard />
-              </>
+              <ShadowTeacherLayout />
             </RequireRole>
           }
-        />
+        >
+          <Route index element={<ShadowTeacherDashboard />} />
+          <Route path="students" element={<ShadowTeacherStudents />} />
+          <Route path="students/:id" element={<ShadowTeacherStudentDetail />} />
+          <Route path="announcements" element={<ShadowTeacherAnnouncements />} />
+          <Route path="profile" element={<ShadowTeacherProfile />} />
+          <Route path="notifications" element={<ShadowTeacherNotifications />} />
+        </Route>
       </Routes>
     </Suspense>
   );
