@@ -23,8 +23,6 @@ Deno.serve(async (req) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Client scoped to the caller's own JWT — used only to verify who they
-    // are and that they're actually a school_admin, never to write data.
     const callerClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -54,57 +52,43 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { email, full_name, role } = body as {
-      email?: string;
-      full_name?: string;
-      role?: string;
-    };
+    const { staff_id } = body as { staff_id?: string };
 
-    if (!email || !full_name || !role) {
-      return new Response(JSON.stringify({ error: "email, full_name, and role are required" }), {
+    if (!staff_id) {
+      return new Response(JSON.stringify({ error: "staff_id is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (!["class_teacher", "shadow_teacher", "finance_manager"].includes(role)) {
-      return new Response(JSON.stringify({ error: "role must be class_teacher, shadow_teacher, or finance_manager" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Service-role client — only ever used server-side, never exposed to the browser.
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    const appUrl = Deno.env.get("APP_URL");
-    const { data: invited, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(
-      email,
-      appUrl ? { redirectTo: `${appUrl}/reset-password` } : undefined
-    );
-    if (inviteError || !invited.user) {
-      return new Response(JSON.stringify({ error: inviteError?.message ?? "Invite failed" }), {
-        status: 400,
+    // Safety check: the target profile must belong to the caller's own school.
+    const { data: targetProfile, error: targetError } = await adminClient
+      .from("profiles")
+      .select("school_id")
+      .eq("id", staff_id)
+      .single();
+
+    if (targetError || !targetProfile) {
+      return new Response(JSON.stringify({ error: "Staff member not found" }), {
+        status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Upsert rather than insert: inviteUserByEmail is idempotent and
-    // returns the existing auth user if this email was already invited
-    // before, so a plain insert would collide on the profiles primary key
-    // for a retried invite. Upsert makes retries safe either way.
-    const { error: insertError } = await adminClient.from("profiles").upsert(
-      {
-        id: invited.user.id,
-        school_id: callerProfile.school_id,
-        role,
-        full_name,
-      },
-      { onConflict: "id" }
-    );
+    if (targetProfile.school_id !== callerProfile.school_id) {
+      return new Response(JSON.stringify({ error: "Forbidden — different school" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    if (insertError) {
-      return new Response(JSON.stringify({ error: insertError.message }), {
+    // Deleting the auth user cascades to profiles (on delete cascade),
+    // so no separate profile delete is needed.
+    const { error: deleteError } = await adminClient.auth.admin.deleteUser(staff_id);
+    if (deleteError) {
+      return new Response(JSON.stringify({ error: deleteError.message }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -113,13 +97,12 @@ Deno.serve(async (req) => {
     await adminClient.from("audit_logs").insert({
       school_id: callerProfile.school_id,
       actor_id: user.id,
-      action: "staff.invited",
+      action: "staff.deleted",
       entity_type: "staff",
-      entity_id: invited.user.id,
-      details: { full_name, email, role },
+      entity_id: staff_id,
     });
 
-    return new Response(JSON.stringify({ success: true, id: invited.user.id }), {
+    return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

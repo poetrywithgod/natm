@@ -5,6 +5,7 @@ import {
   createStaffMember,
   deactivateStaffMember,
   reactivateStaffMember,
+  deleteStaffMember,
   DeactivationBlockedError,
   type StaffMember,
 } from "../features/staff/api";
@@ -82,6 +83,22 @@ export default function AdminStaffManagement() {
       } else {
         setError(e instanceof Error ? e.message : "Failed to deactivate staff member");
       }
+    } finally {
+      setProcessingId(null);
+    }
+  }
+
+  async function handleDelete(staffId: string, fullName: string) {
+    if (!window.confirm(`Permanently delete ${fullName}? This cannot be undone.`)) return;
+    setProcessingId(staffId);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      await deleteStaffMember(staffId);
+      setSuccessMessage("Staff member deleted.");
+      await loadAll();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to delete staff member");
     } finally {
       setProcessingId(null);
     }
@@ -197,6 +214,13 @@ export default function AdminStaffManagement() {
                     {processingId === member.id ? "..." : "Reactivate"}
                   </button>
                 )}
+                <button
+                  onClick={() => handleDelete(member.id, member.full_name)}
+                  disabled={processingId === member.id}
+                  className="px-3 py-1.5 rounded border border-error/40 text-error font-ui text-xs disabled:opacity-50"
+                >
+                  {processingId === member.id ? "..." : "Delete"}
+                </button>
               </div>
             </div>
 

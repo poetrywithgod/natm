@@ -85,3 +85,13 @@ export async function reactivateStaffMember(staffId: string): Promise<void> {
   if (error) throw new Error(error.message);
   if (data?.error) throw new Error(data.error);
 }
+
+// Permanently deletes the staff member's auth account. profiles.id has
+// on delete cascade to auth.users, so the profile row is removed with it.
+export async function deleteStaffMember(staffId: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke("delete-staff-member", {
+    body: { staff_id: staffId },
+  });
+  if (error) throw new Error(error.message);
+  if (data?.error) throw new Error(data.error);
+}
