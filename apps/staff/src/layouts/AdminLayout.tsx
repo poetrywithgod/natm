@@ -13,6 +13,7 @@ import {
   Megaphone,
   FileClock,
   UserCircle,
+  Image,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -31,6 +32,7 @@ const NAV_ITEMS = [
   { to: "/admin/announcements", label: "Announcements", icon: Megaphone, end: false },
   { to: "/admin/audit-log", label: "Audit Log", icon: FileClock, end: false },
   { to: "/admin/profile", label: "Profile", icon: UserCircle, end: false },
+  { to: "/admin/school-profile", label: "School Profile", icon: Image, end: false },
 ];
 
 export default function AdminLayout() {

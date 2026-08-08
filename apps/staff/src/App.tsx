@@ -20,6 +20,7 @@ const ClassTeacherProfile = lazy(() => import("./pages/ClassTeacherProfile"));
 const ClassTeacherActivities = lazy(() => import("./pages/ClassTeacherActivities"));
 const ClassTeacherLessons = lazy(() => import("./pages/ClassTeacherLessons"));
 const ClassTeacherAssignWork = lazy(() => import("./pages/ClassTeacherAssignWork"));
+const ClassTeacherNotifications = lazy(() => import("./pages/ClassTeacherNotifications"));
 const ShadowTeacherDashboard = lazy(() => import("./pages/ShadowTeacherDashboard"));
 const SessionsTerms = lazy(() => import("./pages/SessionsTerms"));
 const AdminClasses = lazy(() => import("./pages/AdminClasses"));
@@ -34,6 +35,7 @@ const AdminAnnouncements = lazy(() => import("./pages/AdminAnnouncements"));
 const ClassTeacherAnnouncements = lazy(() => import("./pages/ClassTeacherAnnouncements"));
 const AdminAuditLog = lazy(() => import("./pages/AdminAuditLog"));
 const AdminProfile = lazy(() => import("./pages/AdminProfile"));
+const AdminSchoolProfile = lazy(() => import("./pages/AdminSchoolProfile"));
 
 function SimpleTopBar() {
   const { profile, signOut } = useAuth();
@@ -77,6 +79,7 @@ function AppRoutes() {
           <Route path="announcements" element={<AdminAnnouncements />} />
           <Route path="audit-log" element={<AdminAuditLog />} />
           <Route path="profile" element={<AdminProfile />} />
+          <Route path="school-profile" element={<AdminSchoolProfile />} />
         </Route>
 
         <Route
@@ -92,6 +95,7 @@ function AppRoutes() {
           <Route path="activities" element={<ClassTeacherActivities />} />
           <Route path="lessons" element={<ClassTeacherLessons />} />
           <Route path="assign-work" element={<ClassTeacherAssignWork />} />
+          <Route path="notifications" element={<ClassTeacherNotifications />} />
           <Route path="announcements" element={<ClassTeacherAnnouncements />} />
           <Route path="profile" element={<ClassTeacherProfile />} />
           <Route path="more" element={<ClassTeacherMore />} />
