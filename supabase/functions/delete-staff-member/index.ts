@@ -85,10 +85,19 @@ Deno.serve(async (req) => {
     }
 
     // Deleting the auth user cascades to profiles (on delete cascade),
-    // so no separate profile delete is needed.
+    // so no separate profile delete is needed. If this staff member has
+    // historical records (attendance marked, activities logged, work
+    // assigned, etc.) other tables reference their profile without
+    // cascading, deliberately, so those records survive -- the delete
+    // then fails at the database level. Surface a clear message instead
+    // of the generic one so the admin knows to deactivate instead.
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(staff_id);
     if (deleteError) {
-      return new Response(JSON.stringify({ error: deleteError.message }), {
+      const isFkBlock = /database error deleting user/i.test(deleteError.message ?? "");
+      const message = isFkBlock
+        ? "This staff member has historical records (attendance, activities, or other data) linked to their account, so they can't be permanently deleted. Use Deactivate instead to remove their access while preserving school records."
+        : deleteError.message;
+      return new Response(JSON.stringify({ error: message }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
