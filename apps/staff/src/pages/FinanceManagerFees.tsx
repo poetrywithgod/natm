@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../features/auth/AuthContext";
+import { useToast } from "../features/toast/ToastContext";
 import { supabase } from "../lib/supabase";
 import { fetchClasses } from "../features/classes/api";
 import type { SchoolClass } from "../features/classes/api";
@@ -16,6 +17,7 @@ import {
 
 export default function FinanceManagerFees() {
   const { profile } = useAuth();
+  const { showToast } = useToast();
   const [term, setTerm] = useState<CurrentTerm | null>(null);
   const [feeTypes, setFeeTypes] = useState<FeeType[]>([]);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
@@ -110,13 +112,17 @@ export default function FinanceManagerFees() {
     setCreating(true);
     setError(null);
     try {
-      await createFeeType(schoolId, term.id, newName.trim(), amount, newClassId || null, profile!.id);
+      const createdName = newName.trim();
+      await createFeeType(schoolId, term.id, createdName, amount, newClassId || null, profile!.id);
       setNewName("");
       setNewAmount("");
       setNewClassId("");
       await loadFeeTypes(term);
+      showToast(`"${createdName}" fee type created`, "success");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create fee type");
+      const msg = e instanceof Error ? e.message : "Failed to create fee type";
+      setError(msg);
+      showToast(msg, "error");
     } finally {
       setCreating(false);
     }
@@ -142,8 +148,11 @@ export default function FinanceManagerFees() {
     setSavingId(studentId);
     try {
       await upsertStudentFee(schoolId, studentId, selectedFeeTypeId, term.id, due, paid, profile!.id);
+      showToast("Fee record saved", "success");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save fee");
+      const msg = e instanceof Error ? e.message : "Failed to save fee";
+      setError(msg);
+      showToast(msg, "error");
     } finally {
       setSavingId(null);
     }
@@ -157,8 +166,12 @@ export default function FinanceManagerFees() {
     setSavingId(studentId);
     try {
       await upsertStudentFee(schoolId, studentId, selectedFeeTypeId, term.id, due, due, profile!.id);
+      const studentName = rows.find((r) => r.student_id === studentId)?.full_name ?? "Student";
+      showToast(`${studentName} marked as paid`, "success");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to mark as paid");
+      const msg = e instanceof Error ? e.message : "Failed to mark as paid";
+      setError(msg);
+      showToast(msg, "error");
     } finally {
       setSavingId(null);
     }
@@ -216,7 +229,7 @@ export default function FinanceManagerFees() {
             <button
               onClick={handleCreateFeeType}
               disabled={creating}
-              className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui font-semibold whitespace-nowrap"
+              className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui font-semibold whitespace-nowrap hover:bg-forest-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {creating ? "Creating..." : "Create Fee"}
             </button>
@@ -230,7 +243,7 @@ export default function FinanceManagerFees() {
               <button
                 key={f.id}
                 onClick={() => selectFeeType(f.id)}
-                className={`w-full text-left bg-forest-900 rounded-lg p-4 flex items-center justify-between ${
+                className={`w-full text-left bg-forest-900 rounded-lg p-4 flex items-center justify-between hover:bg-forest-700 transition-colors cursor-pointer ${
                   selectedFeeTypeId === f.id ? "ring-2 ring-forest-500" : ""
                 }`}
               >
@@ -297,14 +310,14 @@ export default function FinanceManagerFees() {
                         <button
                           onClick={() => handleSave(row.student_id)}
                           disabled={savingId === row.student_id}
-                          className="px-3 py-1.5 rounded bg-forest-700 text-forest-100 font-ui text-xs"
+                          className="px-3 py-1.5 rounded bg-forest-700 text-forest-100 font-ui text-xs hover:bg-forest-500 hover:text-forest-950 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           Save
                         </button>
                         <button
                           onClick={() => handleMarkPaid(row.student_id)}
                           disabled={savingId === row.student_id}
-                          className="px-3 py-1.5 rounded bg-forest-500 text-forest-950 font-ui text-xs font-semibold"
+                          className="px-3 py-1.5 rounded bg-forest-500 text-forest-950 font-ui text-xs font-semibold hover:bg-forest-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           Mark Paid
                         </button>
