@@ -48,14 +48,31 @@ export async function createSession(schoolId: string, name: string): Promise<Aca
   return data;
 }
 
-export async function createTerm(sessionId: string, termNumber: number): Promise<Term> {
+export async function createTerm(
+  sessionId: string,
+  termNumber: number,
+  startDate: string | null,
+  endDate: string | null
+): Promise<Term> {
   const { data, error } = await supabase
     .from("terms")
-    .insert({ session_id: sessionId, term_number: termNumber })
+    .insert({ session_id: sessionId, term_number: termNumber, start_date: startDate, end_date: endDate })
     .select()
     .single();
   if (error) throw new Error(error.message);
   return data;
+}
+
+export async function updateTermDates(
+  termId: string,
+  startDate: string | null,
+  endDate: string | null
+): Promise<void> {
+  const { error } = await supabase
+    .from("terms")
+    .update({ start_date: startDate, end_date: endDate })
+    .eq("id", termId);
+  if (error) throw new Error(error.message);
 }
 
 // Sets one session as current for the school, unsetting any previous one first —

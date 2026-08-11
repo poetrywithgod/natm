@@ -14,7 +14,7 @@ import {
   type StudentFeeRow,
 } from "../features/fees/api";
 
-export default function AdminFees() {
+export default function FinanceManagerFees() {
   const { profile } = useAuth();
   const [term, setTerm] = useState<CurrentTerm | null>(null);
   const [feeTypes, setFeeTypes] = useState<FeeType[]>([]);
@@ -176,7 +176,7 @@ export default function AdminFees() {
 
       {!term && (
         <p className="font-ui text-sm text-forest-300 bg-forest-900 rounded-lg p-3">
-          No current session/term is set — set one under Sessions & Terms before creating fees.
+          No current session/term is set — ask School Admin to set one under Sessions & Terms before creating fees.
         </p>
       )}
 

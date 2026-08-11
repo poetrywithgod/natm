@@ -3,7 +3,7 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../../lib/supabase";
 import { registerPushSubscription } from "../push/subscribe";
 
-export type StaffRole = "school_admin" | "class_teacher" | "shadow_teacher" | "super_admin";
+export type StaffRole = "school_admin" | "class_teacher" | "shadow_teacher" | "super_admin" | "finance_manager";
 
 interface Profile {
   id: string;

@@ -1,11 +1,13 @@
 import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./features/auth/AuthContext";
+import { ToastProvider } from "./features/toast/ToastContext";
 import { RequireRole } from "./guards/RequireRole";
 import { RedirectIfAuthed } from "./guards/RedirectIfAuthed";
 import AdminLayout from "./layouts/AdminLayout";
 import ClassTeacherLayout from "./layouts/ClassTeacherLayout";
 import ShadowTeacherLayout from "./layouts/ShadowTeacherLayout";
+import FinanceManagerLayout from "./layouts/FinanceManagerLayout";
 import PageSkeleton from "./components/PageSkeleton";
 
 // Every page is lazy-loaded so a heavy dependency in one page (e.g.
@@ -28,6 +30,11 @@ const ShadowTeacherStudentDetail = lazy(() => import("./pages/ShadowTeacherStude
 const ShadowTeacherAnnouncements = lazy(() => import("./pages/ShadowTeacherAnnouncements"));
 const ShadowTeacherProfile = lazy(() => import("./pages/ShadowTeacherProfile"));
 const ShadowTeacherNotifications = lazy(() => import("./pages/ShadowTeacherNotifications"));
+const FinanceManagerDashboard = lazy(() => import("./pages/FinanceManagerDashboard"));
+const FinanceManagerFees = lazy(() => import("./pages/FinanceManagerFees"));
+const FinanceManagerAnnouncements = lazy(() => import("./pages/FinanceManagerAnnouncements"));
+const FinanceManagerNotifications = lazy(() => import("./pages/FinanceManagerNotifications"));
+const FinanceManagerProfile = lazy(() => import("./pages/FinanceManagerProfile"));
 const SessionsTerms = lazy(() => import("./pages/SessionsTerms"));
 const AdminClasses = lazy(() => import("./pages/AdminClasses"));
 const AdminStudents = lazy(() => import("./pages/AdminStudents"));
@@ -36,7 +43,6 @@ const AdminStaffManagement = lazy(() => import("./pages/AdminStaffManagement"));
 const AdminAttendance = lazy(() => import("./pages/AdminAttendance"));
 const AdminTimetable = lazy(() => import("./pages/AdminTimetable"));
 const AdminPromotion = lazy(() => import("./pages/AdminPromotion"));
-const AdminFees = lazy(() => import("./pages/AdminFees"));
 const AdminAnnouncements = lazy(() => import("./pages/AdminAnnouncements"));
 const ClassTeacherAnnouncements = lazy(() => import("./pages/ClassTeacherAnnouncements"));
 const AdminAuditLog = lazy(() => import("./pages/AdminAuditLog"));
@@ -81,7 +87,6 @@ function AppRoutes() {
           <Route path="attendance" element={<AdminAttendance />} />
           <Route path="timetable" element={<AdminTimetable />} />
           <Route path="promotion" element={<AdminPromotion />} />
-          <Route path="fees" element={<AdminFees />} />
           <Route path="announcements" element={<AdminAnnouncements />} />
           <Route path="audit-log" element={<AdminAuditLog />} />
           <Route path="profile" element={<AdminProfile />} />
@@ -122,6 +127,20 @@ function AppRoutes() {
           <Route path="profile" element={<ShadowTeacherProfile />} />
           <Route path="notifications" element={<ShadowTeacherNotifications />} />
         </Route>
+        <Route
+          path="/finance-manager"
+          element={
+            <RequireRole allow={["finance_manager"]}>
+              <FinanceManagerLayout />
+            </RequireRole>
+          }
+        >
+          <Route index element={<FinanceManagerDashboard />} />
+          <Route path="fees" element={<FinanceManagerFees />} />
+          <Route path="announcements" element={<FinanceManagerAnnouncements />} />
+          <Route path="notifications" element={<FinanceManagerNotifications />} />
+          <Route path="profile" element={<FinanceManagerProfile />} />
+        </Route>
       </Routes>
     </Suspense>
   );
@@ -130,9 +149,11 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   );
 }
