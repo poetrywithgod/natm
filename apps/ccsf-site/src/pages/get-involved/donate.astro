@@ -1,0 +1,66 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import ScrollReveal from "../../components/ScrollReveal";
+
+const supports = [
+  "Inclusive education activities",
+  "Therapy and developmental support",
+  "Individualized learning interventions",
+  "Educational and therapeutic resources",
+  "Parent and caregiver support",
+  "Disability awareness and advocacy",
+  "Community engagement activities",
+  "Training and capacity development",
+  "Programme monitoring and evaluation",
+];
+---
+
+<SiteLayout
+  title="Donate"
+  description="Support Cherries Children School Foundation's programmes for children with Special Educational Needs. Donate directly via Keystone Bank or contact CCSF via WhatsApp."
+>
+  <section class="bg-pine-900 text-cream-100 py-20">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h1 class="font-display text-4xl mb-4">Donate</h1>
+      <p class="font-body text-cream-100/80">
+        Your support can help CCSF sustain and expand programmes for children with Special Educational Needs.
+      </p>
+    </div>
+  </section>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <p class="font-body text-ink/80 leading-relaxed mb-8">
+        Donations contribute to the resources, services, and interventions required to help children learn, develop, participate, and thrive.
+      </p>
+      <h2 class="font-display text-xl text-pine-900 mb-4">Donations May Support</h2>
+      <ul class="grid sm:grid-cols-2 gap-2">
+        {supports.map((s) => (
+          <li class="font-body text-sm text-ink/70">- {s}</li>
+        ))}
+      </ul>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal client:visible>
+  <section class="bg-pine-900 text-cream-100 py-20">
+    <div class="max-w-2xl mx-auto px-4 sm:px-6 text-center">
+      <h2 class="font-display text-2xl mb-8">Official Donation Account</h2>
+      <div class="bg-pine-700 rounded-2xl p-8 inline-block text-left">
+        <p class="font-body text-sm text-cream-100/70 mb-1">Account Name</p>
+        <p class="font-display text-lg mb-4">Cherries Children School Foundation</p>
+        <p class="font-body text-sm text-cream-100/70 mb-1">Bank</p>
+        <p class="font-display text-lg mb-4">Keystone Bank</p>
+        <p class="font-body text-sm text-cream-100/70 mb-1">Account Number</p>
+        <p class="font-display text-2xl">1013582929</p>
+      </div>
+      <p class="font-body text-cream-100/80 mt-8">
+        Donation Confirmation & Enquiries: Phone / WhatsApp
+        <a href="https://wa.me/2349153114330" class="text-gold-500 hover:underline">0915 311 4330</a>
+      </p>
+    </div>
+  </section>
+  </ScrollReveal>
+</SiteLayout>

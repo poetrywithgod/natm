@@ -1,0 +1,90 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import ScrollReveal from "../../components/ScrollReveal";
+
+const opportunities = [
+  "Educational support",
+  "Therapy and developmental activities",
+  "Parent and caregiver engagement",
+  "Community sensitization",
+  "Events and outreach",
+  "Administration and programme support",
+  "Communications and media",
+  "Research and documentation",
+  "Professional or technical services",
+];
+
+const applicationFields = [
+  "Full name",
+  "Contact information",
+  "Location",
+  "Occupation or profession",
+  "Relevant qualifications or skills",
+  "Area of interest",
+  "Availability",
+  "Previous volunteer experience, where applicable",
+  "Reason for volunteering",
+  "Agreement to CCSF safeguarding and conduct requirements",
+];
+---
+
+<SiteLayout
+  title="Volunteer"
+  description="Volunteer with Cherries Children School Foundation. Contribute your skills, time, and experience to programmes supporting children with Special Educational Needs in Rivers State, Nigeria."
+>
+  <section class="bg-pine-900 text-cream-100 py-20">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h1 class="font-display text-4xl mb-4">Volunteer With CCSF</h1>
+      <p class="font-body text-cream-100/80">
+        Contribute your time, skills, professional experience, and energy to approved CCSF activities.
+      </p>
+    </div>
+  </section>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <p class="font-body text-ink/80 leading-relaxed mb-8">
+        Volunteers can contribute valuable skills, time, knowledge, and experience to the Foundation's work. Volunteer engagement is aligned with programme needs, relevant qualifications, safeguarding requirements, and the professional standards expected by CCSF.
+      </p>
+      <h2 class="font-display text-xl text-pine-900 mb-4">Volunteer Opportunities May Involve</h2>
+      <ul class="grid sm:grid-cols-2 gap-2">
+        {opportunities.map((o) => (
+          <li class="font-body text-sm text-ink/70">- {o}</li>
+        ))}
+      </ul>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-200 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <h2 class="font-display text-xl text-pine-900 mb-4">Volunteer Application Information</h2>
+      <p class="font-body text-ink/70 text-sm mb-6">
+        When you apply, CCSF will ask for the following:
+      </p>
+      <ul class="grid sm:grid-cols-2 gap-2">
+        {applicationFields.map((a) => (
+          <li class="font-body text-sm text-ink/70">- {a}</li>
+        ))}
+      </ul>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal client:visible>
+  <section class="bg-pine-900 text-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h2 class="font-display text-xl mb-4">Safeguarding Requirement</h2>
+      <p class="font-body text-cream-100/80 leading-relaxed">
+        All volunteers working with or around children are expected to comply with CCSF's child safeguarding, confidentiality, professional conduct, data protection, and organizational policies.
+      </p>
+      <p class="font-body text-cream-100/80 mt-6">
+        To apply or ask questions: Phone / WhatsApp
+        <a href="https://wa.me/2349153114330" class="text-gold-500 hover:underline">0915 311 4330</a>
+      </p>
+    </div>
+  </section>
+  </ScrollReveal>
+</SiteLayout>
