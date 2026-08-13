@@ -26,10 +26,10 @@ const impactAreas = [
 ];
 
 const partners = [
-  { name: "Rivers State Ministry of Women Affairs", relevance: "Government collaboration and stakeholder engagement relevant to women, families, children, and community support." },
-  { name: "Rivers State Ministry of Social Welfare", relevance: "Government collaboration relevant to social welfare, child support, referrals, protection, and community services." },
-  { name: "New Testament Foundation", relevance: "Foundation-level collaboration supporting shared social, educational, or community development objectives." },
-  { name: "Chimdi And Community Affairs", relevance: "Community-focused collaboration supporting awareness, inclusion, outreach, and stakeholder engagement." },
+  { name: "Rivers State Ministry of Women Affairs", relevance: "Government collaboration and stakeholder engagement relevant to women, families, children, and community support.", icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M4 21V10m16 11V10M4 10l8-6 8 6M7 10v6m4-6v6m4-6v6m4-6v6" />` },
+  { name: "Rivers State Ministry of Social Welfare", relevance: "Government collaboration relevant to social welfare, child support, referrals, protection, and community services.", icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M12 21s-6.716-4.35-9.428-8.038C.89 10.36 1.5 6.5 5 5c2.2-.94 4.2.06 5.5 2 .3.44.6.9 1.5 2 .4-.5.7-.96 1-1.4C14.3 6.06 16.3 5.06 18.5 6c3.5 1.5 4.11 5.36 2.428 7.962C17.716 16.65 12 21 12 21Z" />` },
+  { name: "New Testament Foundation", relevance: "Foundation-level collaboration supporting shared social, educational, or community development objectives.", icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18M6 9h12" />` },
+  { name: "Chimdi And Community Affairs", relevance: "Community-focused collaboration supporting awareness, inclusion, outreach, and stakeholder engagement.", icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m5-2.13a4 4 0 100-8 4 4 0 000 8zm6 0a3 3 0 100-6 3 3 0 000 6z" />` },
 ];
 ---
 
@@ -83,6 +83,7 @@ const partners = [
       <div class="grid sm:grid-cols-2 gap-6">
         {partners.map((p) => (
           <div class="bg-pine-700 rounded-2xl p-6">
+            <div class="w-10 h-10 rounded-full bg-pine-900 flex items-center justify-center mb-3" set:html={`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-5 h-5 text-gold-500">${p.icon}</svg>`} />
             <h3 class="font-display text-base mb-2">{p.name}</h3>
             <p class="font-body text-sm text-cream-100/70">{p.relevance}</p>
           </div>

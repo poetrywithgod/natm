@@ -21,10 +21,10 @@ const impact = [
 ];
 
 const partners = [
-  "Rivers State Ministry of Women Affairs",
-  "Rivers State Ministry of Social Welfare",
-  "New Testament Foundation",
-  "Chimdi And Community Affairs",
+  { name: "Rivers State Ministry of Women Affairs", icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M4 21V10m16 11V10M4 10l8-6 8 6M7 10v6m4-6v6m4-6v6m4-6v6" />` },
+  { name: "Rivers State Ministry of Social Welfare", icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M12 21s-6.716-4.35-9.428-8.038C.89 10.36 1.5 6.5 5 5c2.2-.94 4.2.06 5.5 2 .3.44.6.9 1.5 2 .4-.5.7-.96 1-1.4C14.3 6.06 16.3 5.06 18.5 6c3.5 1.5 4.11 5.36 2.428 7.962C17.716 16.65 12 21 12 21Z" />` },
+  { name: "New Testament Foundation", icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18M6 9h12" />` },
+  { name: "Chimdi And Community Affairs", icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m5-2.13a4 4 0 100-8 4 4 0 000 8zm6 0a3 3 0 100-6 3 3 0 000 6z" />` },
 ];
 ---
 
@@ -137,8 +137,9 @@ const partners = [
       <h2 class="font-display text-2xl text-pine-900 mb-8">Our Strategic Partners</h2>
       <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {partners.map((p) => (
-          <div class="bg-cream-200 rounded-xl p-5 flex items-center justify-center text-center">
-            <p class="font-body text-sm text-ink/80">{p}</p>
+          <div class="bg-cream-200 rounded-xl p-5 flex flex-col items-center justify-center text-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-pine-700 flex items-center justify-center" set:html={`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-5 h-5 text-cream-100">${p.icon}</svg>`} />
+            <p class="font-body text-sm text-ink/80">{p.name}</p>
           </div>
         ))}
       </div>
