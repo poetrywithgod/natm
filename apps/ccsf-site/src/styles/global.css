@@ -1,0 +1,19 @@
+@import "tailwindcss";
+@theme {
+  --color-pine-900: #123A2B;
+  --color-pine-700: #1F5A41;
+  --color-pine-500: #3D8563;
+  --color-cherry-600: #C81E2B;
+  --color-cherry-500: #E13544;
+  --color-cream-100: #FBF6ED;
+  --color-cream-200: #F3EAD7;
+  --color-gold-500: #D9A441;
+  --color-ink: #1A1D1B;
+
+  --font-display: "Fraunces", serif;
+  --font-body: "Plus Jakarta Sans", sans-serif;
+}
+body {
+  @apply bg-cream-100 text-ink;
+  font-family: var(--font-body);
+}

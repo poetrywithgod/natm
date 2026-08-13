@@ -1,0 +1,148 @@
+---
+import SiteLayout from "../layouts/SiteLayout.astro";
+import HeroSlideshow from "../components/HeroSlideshow";
+import ScrollReveal from "../components/ScrollReveal";
+
+const programmes = [
+  { n: "1", title: "Inclusive Education", desc: "Removing barriers to learning and promoting equal participation in quality education." },
+  { n: "2", title: "IEP & Individual Learning Support", desc: "Developing tailored educational plans based on each child's abilities, needs, and progress." },
+  { n: "3", title: "Therapy & Developmental Support", desc: "Providing or facilitating coordinated therapeutic, behavioural, and developmental interventions." },
+  { n: "4", title: "Family & Parent Support", desc: "Equipping parents and caregivers to participate actively in their child's education and development." },
+  { n: "5", title: "Advocacy for Neurodiversity", desc: "Challenging stigma, prejudice, and stereotypes while promoting dignity, inclusion, and opportunity." },
+  { n: "6", title: "Community & School Inclusion", desc: "Strengthening schools, communities, and stakeholder networks to build more inclusive environments." },
+];
+
+const impact = [
+  { value: "30", label: "Children Reached" },
+  { value: "20", label: "Children Receiving Therapy / Developmental Support" },
+  { value: "20", label: "Parents & Caregivers Supported" },
+  { value: "12", label: "Teachers & Educators Reached" },
+  { value: "4", label: "Strategic Partnerships Established" },
+];
+
+const partners = [
+  "Rivers State Ministry of Women Affairs",
+  "Rivers State Ministry of Social Welfare",
+  "New Testament Foundation",
+  "Chimdi And Community Affairs",
+];
+---
+
+<SiteLayout
+  title="Home"
+  description="Cherries Children School Foundation (CCSF) empowers children with Special Educational Needs in Rivers State, Nigeria through inclusive education, therapy, family support, and advocacy."
+>
+  <section class="relative text-cream-100 min-h-[640px] sm:min-h-[760px] flex items-center overflow-hidden">
+    <HeroSlideshow client:load />
+    <div class="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center">
+      <img src="/logo.png" alt="Cherries Children School Foundation" class="h-20 w-auto mx-auto mb-8" />
+      <h1 class="font-display text-3xl sm:text-5xl leading-tight mb-6">
+        A society where every child with Special Educational Needs has equal access to quality education, dignity, and opportunity.
+      </h1>
+      <p class="font-body text-cream-100/80 max-w-2xl mx-auto mb-10">
+        Providing an environment for inclusive education where the neurodiverse child is given opportunities to learn and thrive.
+      </p>
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+        <a
+          href="/get-involved/donate"
+          class="px-8 py-3 rounded-full bg-cherry-600 text-cream-100 font-body font-semibold hover:bg-cherry-500 transition-colors"
+        >
+          Donate Now
+        </a>
+        <a
+          href="/programmes"
+          class="px-8 py-3 rounded-full border border-cream-100/40 text-cream-100 font-body font-semibold hover:bg-pine-700 transition-colors"
+        >
+          See Our Programmes
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <ScrollReveal>
+  <section class="bg-cream-100 py-16">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-8 text-center">
+        {impact.map((item) => (
+          <div>
+            <p class="font-display text-4xl text-pine-900">{item.value}</p>
+            <p class="font-body text-xs text-ink/70 mt-2">{item.label}</p>
+          </div>
+        ))}
+      </div>
+      <p class="font-body text-xs text-ink/50 text-center mt-8 italic">
+        Verified figures supplied by CCSF, based on documented programme records.
+      </p>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal>
+  <section class="bg-cream-200 py-20">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <h2 class="font-display text-3xl text-pine-900 text-center mb-2">Our Six Programme Areas</h2>
+      <p class="font-body text-ink/70 text-center max-w-2xl mx-auto mb-12">
+        A child-centred framework combining inclusive education, therapy, family support, advocacy, and community inclusion.
+      </p>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {programmes.map((p) => (
+          <div class="bg-cream-100 rounded-2xl p-6 border border-pine-900/10">
+            <span class="font-display text-3xl text-cherry-600">{p.n}</span>
+            <h3 class="font-display text-lg text-pine-900 mt-2 mb-2">{p.title}</h3>
+            <p class="font-body text-sm text-ink/70">{p.desc}</p>
+          </div>
+        ))}
+      </div>
+      <div class="text-center mt-10">
+        <a href="/programmes" class="font-body text-sm text-pine-900 font-semibold underline hover:text-cherry-600">
+          Read more about our programmes
+        </a>
+      </div>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal>
+  <section class="bg-pine-900 text-cream-100 py-20">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 text-center">
+      <h2 class="font-display text-3xl mb-3">Get Involved</h2>
+      <p class="font-body text-cream-100/80 max-w-xl mx-auto mb-12">
+        There are many ways to support children with Special Educational Needs at CCSF.
+      </p>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <a href="/get-involved/donate" class="bg-pine-700 rounded-2xl p-6 hover:bg-pine-500 transition-colors">
+          <h3 class="font-display text-lg mb-2">Donate</h3>
+          <p class="font-body text-sm text-cream-100/70">Support our programmes directly.</p>
+        </a>
+        <a href="/get-involved/volunteer" class="bg-pine-700 rounded-2xl p-6 hover:bg-pine-500 transition-colors">
+          <h3 class="font-display text-lg mb-2">Volunteer</h3>
+          <p class="font-body text-sm text-cream-100/70">Give your time and skills.</p>
+        </a>
+        <a href="/get-involved/partner" class="bg-pine-700 rounded-2xl p-6 hover:bg-pine-500 transition-colors">
+          <h3 class="font-display text-lg mb-2">Partner With Us</h3>
+          <p class="font-body text-sm text-cream-100/70">Join our network of strategic partners.</p>
+        </a>
+        <a href="/get-involved/sponsor-a-child" class="bg-cherry-600 rounded-2xl p-6 hover:bg-cherry-500 transition-colors">
+          <h3 class="font-display text-lg mb-2">Sponsor a Child</h3>
+          <p class="font-body text-sm text-cream-100/90">Fund a child's developmental support.</p>
+        </a>
+      </div>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal>
+  <section class="bg-cream-100 py-16">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 text-center">
+      <h2 class="font-display text-2xl text-pine-900 mb-8">Our Strategic Partners</h2>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {partners.map((p) => (
+          <div class="bg-cream-200 rounded-xl p-5 flex items-center justify-center text-center">
+            <p class="font-body text-sm text-ink/80">{p}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+  </ScrollReveal>
+</SiteLayout>
