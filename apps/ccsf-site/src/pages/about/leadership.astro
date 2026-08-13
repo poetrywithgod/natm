@@ -1,0 +1,85 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import ScrollReveal from "../../components/ScrollReveal";
+
+const staffStandards = [
+  "Maintain professionalism",
+  "Perform assigned responsibilities competently",
+  "Respect colleagues and beneficiaries",
+  "Participate in relevant training",
+  "Comply with organizational policies",
+  "Maintain confidentiality",
+  "Protect children",
+  "Use organizational resources responsibly",
+];
+---
+
+<SiteLayout
+  title="Leadership"
+  description="The founding leadership and governance structure of Cherries Children School Foundation (CCSF), a CAC-registered organisation serving children with Special Educational Needs in Rivers State, Nigeria."
+>
+  <section class="bg-pine-900 text-cream-100 py-20">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h1 class="font-display text-4xl mb-4">Leadership</h1>
+      <p class="font-body text-cream-100/80">Founding leadership, governance, and organizational stewardship.</p>
+    </div>
+  </section>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <h2 class="font-display text-2xl text-pine-900 mb-6">Founding Leadership</h2>
+      <div class="grid sm:grid-cols-2 gap-6">
+        <div class="bg-cream-200 rounded-xl p-6">
+          <div class="w-20 h-20 rounded-full bg-pine-700 flex items-center justify-center mb-4">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-10 h-10 text-cream-100"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" /></svg>
+          </div>
+          <h3 class="font-display text-lg text-pine-900 mb-1">Williams Monty West</h3>
+          <p class="font-body text-sm text-ink/70 mb-3">Neuroeducator</p>
+          <p class="font-body text-sm text-ink/70">Co-founder of Cherries Children School Foundation, contributing a professional background in inclusive, child-centred education for children with Special Educational Needs.</p>
+          <p class="font-body text-xs text-ink/40 italic mt-3">Photo to be provided</p>
+        </div>
+        <div class="bg-cream-200 rounded-xl p-6">
+          <div class="w-20 h-20 rounded-full bg-cherry-600 flex items-center justify-center mb-4">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-10 h-10 text-cream-100"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" /></svg>
+          </div>
+          <h3 class="font-display text-lg text-pine-900 mb-1">Ella William-West</h3>
+          <p class="font-body text-sm text-ink/70 mb-3">Communicologist and Inclusive Education Advocate</p>
+          <p class="font-body text-sm text-ink/70">Co-founder of Cherries Children School Foundation, contributing a professional background in communication and advocacy for inclusive education.</p>
+          <p class="font-body text-xs text-ink/40 italic mt-3">Photo to be provided</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-200 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <h2 class="font-display text-2xl text-pine-900 mb-4">Governance and Leadership Structure</h2>
+      <p class="font-body text-ink/80 leading-relaxed mb-4">
+        CCSF is governed by a Board of Trustees responsible for strategic leadership, policy approval, financial oversight, organizational sustainability, and legal compliance. The Executive Director oversees the day-to-day operations of the Foundation and implements Board-approved policies and strategic decisions.
+      </p>
+      <p class="font-body text-ink/80 leading-relaxed">
+        Board members are expected to act in the best interests of CCSF, disclose conflicts of interest, maintain confidentiality, attend meetings regularly, and promote high standards of governance and accountability. This governance structure supports appropriate separation between strategic oversight and operational management.
+      </p>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <h2 class="font-display text-2xl text-pine-900 mb-4">Our People</h2>
+      <p class="font-body text-ink/80 leading-relaxed mb-6">
+        CCSF is committed to fair, transparent, merit-based, and equal-opportunity employment practices. Employees, volunteers, and other representatives of the Foundation are expected to maintain professional and ethical standards in all aspects of their work.
+      </p>
+      <ul class="grid sm:grid-cols-2 gap-2">
+        {staffStandards.map((s) => (
+          <li class="font-body text-sm text-ink/70">- {s}</li>
+        ))}
+      </ul>
+    </div>
+  </section>
+  </ScrollReveal>
+</SiteLayout>

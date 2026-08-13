@@ -1,0 +1,110 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import ScrollReveal from "../../components/ScrollReveal";
+
+const objectives = [
+  { title: "Equity", desc: "Equal participation in education through overcoming differences caused by the undesirable and unacceptable impact of social barriers on disability and/or difficulties in development." },
+  { title: "Relevance", desc: "Education aligned with the individual characteristics, abilities, and needs of a child who has special needs in education." },
+  { title: "Access", desc: "Implementing activities that ensure every child with Special Educational Needs participates on an equal footing with peers through adequate and targeted services in the local community." },
+  { title: "Effectiveness", desc: "Improving children's achievements and participation, while increasing the elimination of prejudice and stereotyped beliefs in teaching, student-teacher relationships, and working conditions at school." },
+  { title: "Efficiency", desc: "Development of individuals and communities that respect diversity." },
+];
+
+const boardResponsibilities = [
+  "Strategic leadership",
+  "Policy approval",
+  "Financial oversight",
+  "Organizational sustainability",
+  "Legal and regulatory compliance",
+  "Accountability and transparency",
+];
+
+const complianceAreas = [
+  "Applicable Nigerian laws",
+  "Regulatory requirements",
+  "Donor agreements",
+  "Financial reporting standards",
+  "Child safeguarding requirements",
+  "Employment laws",
+  "Health and safety regulations",
+  "Data protection obligations",
+];
+---
+
+<SiteLayout
+  title="Governance"
+  description="Cherries Children School Foundation's legal status, registered aims and objectives, and governance structure as a CAC-registered incorporated trustee organisation in Nigeria."
+>
+  <section class="bg-pine-900 text-cream-100 py-20">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h1 class="font-display text-4xl mb-4">Governance</h1>
+      <p class="font-body text-cream-100/80">Responsible leadership, accountability, and legal compliance.</p>
+    </div>
+  </section>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <h2 class="font-display text-2xl text-pine-900 mb-4">Legal Status & Registration</h2>
+      <p class="font-body text-ink/80 leading-relaxed mb-4">
+        CCSF is a not-for-profit and non-political organisation registered in Nigeria as an incorporated trustee/corporate body with the Corporate Affairs Commission (CAC). The Certificate of Incorporation confirms that Cherries Children School Foundation was registered on 5 February 2024 under CAC Registration Number 7332638.
+      </p>
+      <p class="font-body text-ink/80 leading-relaxed">
+        Registered Office: 15, Uyo Street, Rumuomasi, Port Harcourt, Rivers State, Nigeria. The Foundation's registered constitution identifies the Board of Trustees as its governing body and provides for formal meetings, financial accountability, independent audit, and application of funds solely toward the Foundation's aims and objectives.
+      </p>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-200 py-20">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6">
+      <h2 class="font-display text-2xl text-pine-900 text-center mb-2">Registered Aims and Objectives</h2>
+      <p class="font-body text-ink/70 text-center max-w-2xl mx-auto mb-10">
+        Five constitutional principles guide every CCSF programme.
+      </p>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {objectives.map((o) => (
+          <div class="bg-cream-100 rounded-2xl p-6 border border-pine-900/10">
+            <h3 class="font-display text-lg text-pine-900 mb-2">{o.title}</h3>
+            <p class="font-body text-sm text-ink/70">{o.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <h2 class="font-display text-2xl text-pine-900 mb-4">Governance Structure</h2>
+      <p class="font-body text-ink/80 leading-relaxed mb-6">
+        CCSF is governed by a Board of Trustees responsible for strategic leadership, policy approval, financial oversight, organizational sustainability, and legal compliance. The Executive Director oversees the day-to-day operations of the Foundation and implements Board-approved policies and strategic decisions.
+      </p>
+      <h3 class="font-display text-lg text-pine-900 mb-3">Board Responsibilities</h3>
+      <ul class="grid sm:grid-cols-2 gap-2">
+        {boardResponsibilities.map((r) => (
+          <li class="font-body text-sm text-ink/70">- {r}</li>
+        ))}
+      </ul>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal client:visible>
+  <section class="bg-pine-900 text-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <h2 class="font-display text-2xl mb-4">Commitment to Compliance</h2>
+      <p class="font-body text-cream-100/80 leading-relaxed mb-6">
+        CCSF is committed to operating within applicable legal, regulatory, contractual, and professional requirements.
+      </p>
+      <ul class="grid sm:grid-cols-2 gap-2">
+        {complianceAreas.map((c) => (
+          <li class="font-body text-sm text-cream-100/80">- {c}</li>
+        ))}
+      </ul>
+    </div>
+  </section>
+  </ScrollReveal>
+</SiteLayout>

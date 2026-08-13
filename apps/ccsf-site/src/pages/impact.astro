@@ -1,0 +1,105 @@
+---
+import SiteLayout from "../layouts/SiteLayout.astro";
+import ScrollReveal from "../components/ScrollReveal";
+
+const impactAreas = [
+  {
+    value: "30",
+    label: "Children Reached",
+    desc: "CCSF has reached 30 children with Special Educational Needs through its educational, developmental, therapeutic, and support interventions. The Foundation's approach places each child's dignity, individual abilities, support needs, and participation at the centre of programme delivery.",
+  },
+  {
+    value: "20",
+    label: "Children Receiving Therapy / Developmental Support",
+    desc: "A total of 20 children have received therapy and/or developmental support aimed at strengthening learning, communication, behaviour, development, participation, and overall functioning.",
+  },
+  {
+    value: "20",
+    label: "Parents & Caregivers Supported",
+    desc: "CCSF has supported 20 parents and caregivers, recognizing families as essential partners in children's education, therapy, development, and overall well-being.",
+  },
+  {
+    value: "12",
+    label: "Teachers & Educators Reached",
+    desc: "The Foundation has reached 12 teachers and educators through activities designed to strengthen understanding of Special Educational Needs, inclusive education, and appropriate support for children with diverse learning and developmental needs.",
+  },
+];
+
+const partners = [
+  { name: "Rivers State Ministry of Women Affairs", relevance: "Government collaboration and stakeholder engagement relevant to women, families, children, and community support." },
+  { name: "Rivers State Ministry of Social Welfare", relevance: "Government collaboration relevant to social welfare, child support, referrals, protection, and community services." },
+  { name: "New Testament Foundation", relevance: "Foundation-level collaboration supporting shared social, educational, or community development objectives." },
+  { name: "Chimdi And Community Affairs", relevance: "Community-focused collaboration supporting awareness, inclusion, outreach, and stakeholder engagement." },
+];
+---
+
+<SiteLayout
+  title="Our Impact"
+  description="Verified impact figures for Cherries Children School Foundation (CCSF): children reached, therapy and developmental support, parents and caregivers supported, educators reached, and strategic partnerships."
+>
+  <section class="bg-pine-900 text-cream-100 py-20">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h1 class="font-display text-4xl mb-4">Our Impact</h1>
+      <p class="font-body text-cream-100/80">
+        Every Child. Every Ability. Every Opportunity.
+      </p>
+    </div>
+  </section>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <p class="font-body text-ink/80 leading-relaxed mb-2">
+        All figures presented here are the verified figures supplied by CCSF, based on documented programme records rather than estimates.
+      </p>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  {impactAreas.map((item, i) => (
+    <ScrollReveal client:visible>
+    <section class={`py-16 ${i % 2 === 0 ? "bg-cream-200" : "bg-cream-100"}`}>
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-start sm:items-center gap-6">
+        <p class="font-display text-6xl text-cherry-600 shrink-0">{item.value}</p>
+        <div>
+          <h2 class="font-display text-xl text-pine-900 mb-2">{item.label}</h2>
+          <p class="font-body text-sm text-ink/70 leading-relaxed">{item.desc}</p>
+        </div>
+      </div>
+    </section>
+    </ScrollReveal>
+  ))}
+
+  <ScrollReveal client:visible>
+  <section class="bg-pine-900 text-cream-100 py-20">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6">
+      <div class="text-center mb-4">
+        <p class="font-display text-6xl">4</p>
+        <h2 class="font-display text-2xl mt-2">Strategic Partnerships Established</h2>
+      </div>
+      <p class="font-body text-cream-100/80 text-center max-w-2xl mx-auto mb-12">
+        CCSF recognizes that sustainable inclusion cannot be achieved by one organisation working alone.
+      </p>
+      <div class="grid sm:grid-cols-2 gap-6">
+        {partners.map((p) => (
+          <div class="bg-pine-700 rounded-2xl p-6">
+            <h3 class="font-display text-base mb-2">{p.name}</h3>
+            <p class="font-body text-sm text-cream-100/70">{p.relevance}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h2 class="font-display text-2xl text-pine-900 mb-4">How We Measure Our Impact</h2>
+      <p class="font-body text-ink/80 leading-relaxed">
+        CCSF is committed to Monitoring, Evaluation, Accountability and Learning (MEAL). Programme performance is monitored using evidence that helps the Foundation understand results, strengthen decision-making, incorporate beneficiary feedback, and improve programme quality over time. Our goal is not simply to conduct activities, but to create sustainable improvements in the lives of children with Special Educational Needs.
+      </p>
+    </div>
+  </section>
+  </ScrollReveal>
+</SiteLayout>

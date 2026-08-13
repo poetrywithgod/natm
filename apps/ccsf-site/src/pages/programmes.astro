@@ -1,0 +1,92 @@
+---
+import SiteLayout from "../layouts/SiteLayout.astro";
+import ScrollReveal from "../components/ScrollReveal";
+
+const programmes = [
+  {
+    n: "1",
+    title: "Inclusive Education",
+    intro: "The Inclusive Education Programme supports children with Special Educational Needs to access quality and appropriate education in environments that recognize their individual learning needs. CCSF believes that every child deserves the opportunity to learn alongside others while receiving the additional support required for meaningful participation, progress, and personal development.",
+    points: ["Equal participation in education", "Inclusive learning environments", "Individualized educational support", "Reduction of barriers to learning", "Respect for diversity", "Improved participation and academic development", "Collaboration between children, teachers, families, and professionals"],
+    purpose: "To create educational opportunities in which children with Special Educational Needs are valued, supported, and enabled to participate on an equal footing with their peers.",
+  },
+  {
+    n: "2",
+    title: "IEP & Individual Learning Support",
+    intro: "Every child has different abilities, learning styles, developmental needs, and challenges. Through the Individualized Education Plan (IEP) Programme, CCSF supports the development of tailored educational plans that respond to the specific needs of each child.",
+    points: ["Individual assessment", "Identification of learning and developmental needs", "Development of personalized learning goals", "Selection of appropriate teaching strategies", "Progress monitoring and documentation", "Regular plan reviews and adjustments", "Parent and caregiver participation", "Collaboration with educators, therapists, and relevant professionals"],
+    purpose: "IEPs help ensure that educational support remains relevant to the individual characteristics, abilities, and needs of each child, in line with CCSF's constitutional objectives.",
+  },
+  {
+    n: "3",
+    title: "Therapy & Developmental Support",
+    intro: "CCSF recognizes that some children with Special Educational Needs require therapeutic and developmental interventions alongside education. The Therapy and Developmental Support Programme provides or facilitates appropriate support aimed at improving children's functional, behavioural, developmental, and learning outcomes.",
+    points: ["Therapy services", "Behavioural support", "Developmental interventions", "Progress assessment and review", "Family participation", "Coordination between therapists, educators, caregivers, and other relevant professionals"],
+    purpose: "The goal is to provide coordinated support that strengthens each child's ability to learn, communicate, participate, and develop.",
+  },
+  {
+    n: "4",
+    title: "Family & Parent Support",
+    intro: "CCSF recognizes parents and caregivers as essential partners in the education, therapy, development, and overall well-being of children with Special Educational Needs. The Family Support and Parent Engagement Programme strengthens the ability of families to understand, support, and participate in their child's education and development.",
+    points: ["Parent and caregiver orientation", "Family consultations", "Participation in educational planning", "Information and awareness sessions", "Regular communication on children's progress", "Guidance on supporting children at home", "Family participation in programme reviews"],
+    purpose: "Consistent collaboration between families, educators, therapists, and other professionals helps to create stronger support systems around the child and can improve continuity between home, school, therapy, and community environments.",
+  },
+  {
+    n: "5",
+    title: "Advocacy for Neurodiversity",
+    intro: "Misunderstanding, stigma, prejudice, and stereotypes can create significant barriers for children with Special Educational Needs. CCSF's advocacy work promotes greater understanding, acceptance, dignity, and inclusion.",
+    points: ["Increase public awareness of Special Educational Needs", "Challenge prejudice and stereotypes", "Promote inclusive education", "Encourage respect for individual differences", "Advocate for equal opportunities", "Promote children's dignity and participation", "Strengthen understanding among families, schools, professionals, and communities"],
+    purpose: "This programme supports CCSF's objective of reducing the undesirable effects of social barriers on children with disabilities and developmental difficulties.",
+  },
+  {
+    n: "6",
+    title: "Community & School Inclusion",
+    intro: "True inclusion requires the involvement of the wider community. CCSF works with families, schools, healthcare providers, government institutions, professionals, and community organisations to build environments in which children with Special Educational Needs can participate fully.",
+    points: ["Community sensitization", "School engagement", "Stakeholder collaboration", "Disability awareness activities", "Community-based support", "Referral and professional networks", "Partnership development", "Support for inclusive teaching practices and teacher capacity"],
+    purpose: "CCSF supports efforts to make schools and learning environments more responsive to children with diverse educational needs, strengthening collaboration between schools and families.",
+  },
+];
+---
+
+<SiteLayout
+  title="Our Programmes"
+  description="CCSF's six principal programme areas for children with Special Educational Needs: inclusive education, IEP support, therapy, family support, advocacy, and community inclusion."
+>
+  <section class="bg-pine-900 text-cream-100 py-20">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h1 class="font-display text-4xl mb-4">Our Programmes</h1>
+      <p class="font-body text-cream-100/80">
+        A child-centred programme framework combining inclusive education, individualized learning support, therapy, family participation, advocacy, and community engagement.
+      </p>
+    </div>
+  </section>
+
+  {programmes.map((p) => (
+    <ScrollReveal client:visible>
+    <section class={`py-16 ${p.n === "1" || p.n === "3" || p.n === "5" ? "bg-cream-100" : "bg-cream-200"}`}>
+      <div class="max-w-4xl mx-auto px-4 sm:px-6">
+        <span class="font-display text-4xl text-cherry-600">{p.n}</span>
+        <h2 class="font-display text-2xl text-pine-900 mt-2 mb-4">{p.title}</h2>
+        <p class="font-body text-ink/80 leading-relaxed mb-6">{p.intro}</p>
+        <ul class="grid sm:grid-cols-2 gap-2 mb-6">
+          {p.points.map((pt) => (
+            <li class="font-body text-sm text-ink/70">- {pt}</li>
+          ))}
+        </ul>
+        <p class="font-body text-sm text-ink/70 italic border-l-2 border-cherry-600 pl-4">{p.purpose}</p>
+      </div>
+    </section>
+    </ScrollReveal>
+  ))}
+
+  <ScrollReveal client:visible>
+  <section class="bg-pine-900 text-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h2 class="font-display text-2xl mb-4">Safeguarding Across All Programmes</h2>
+      <p class="font-body text-cream-100/80 leading-relaxed">
+        Child safeguarding is a cross-cutting requirement across every CCSF programme. The safety, dignity, privacy, and well-being of children guide programme design, communication, data handling, family engagement, photography, video use, and all forms of service delivery. CCSF maintains zero tolerance for child abuse, neglect, exploitation, harassment, and violence.
+      </p>
+    </div>
+  </section>
+  </ScrollReveal>
+</SiteLayout>

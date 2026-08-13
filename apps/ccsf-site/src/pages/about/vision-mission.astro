@@ -1,0 +1,70 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import ScrollReveal from "../../components/ScrollReveal";
+
+const values = [
+  { title: "Integrity", desc: "We act honestly, ethically, and responsibly in our relationships, programmes, governance, and use of organizational resources." },
+  { title: "Compassion", desc: "We approach every child and family with empathy, understanding, sensitivity, and genuine concern for their well-being." },
+  { title: "Excellence", desc: "We strive to maintain high standards in education, therapy, programme delivery, safeguarding, governance, and organizational performance." },
+  { title: "Accountability", desc: "We take responsibility for our decisions, actions, resources, commitments, and the results of our work." },
+  { title: "Inclusion", desc: "We believe every child deserves opportunities to participate, learn, develop, and be valued regardless of individual differences or support needs." },
+  { title: "Respect", desc: "We uphold the dignity, rights, privacy, perspectives, and individuality of children, families, staff, volunteers, partners, and communities." },
+  { title: "Professionalism", desc: "We promote competence, ethical conduct, continuous learning, responsible behaviour, and high professional standards." },
+  { title: "Innovation", desc: "We encourage new ideas, evidence-based approaches, continuous improvement, and creative responses to educational and developmental challenges." },
+  { title: "Teamwork", desc: "We recognize that meaningful impact requires collaboration among children, families, educators, therapists, professionals, communities, partners, and other stakeholders." },
+  { title: "Stewardship", desc: "We manage financial, human, material, and institutional resources responsibly and use them only for approved charitable and organizational purposes." },
+];
+---
+
+<SiteLayout
+  title="Vision & Mission"
+  description="The vision, mission, and core values guiding Cherries Children School Foundation's work with children with Special Educational Needs in Rivers State, Nigeria."
+>
+  <section class="bg-pine-900 text-cream-100 py-20">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h1 class="font-display text-4xl mb-4">Vision & Mission</h1>
+      <p class="font-body text-cream-100/80">Equal access. Dignity. Inclusion. Lifelong opportunity.</p>
+    </div>
+  </section>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <h2 class="font-display text-2xl text-pine-900 mb-3">Our Vision</h2>
+      <p class="font-body text-ink/80 text-lg leading-relaxed">
+        A society where every child with Special Educational Needs has equal access to quality education, dignity, inclusion, and opportunities for lifelong success.
+      </p>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-200 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <h2 class="font-display text-2xl text-pine-900 mb-3">Our Mission</h2>
+      <p class="font-body text-ink/80 text-lg leading-relaxed">
+        To empower children with Special Educational Needs (SEN) through inclusive education, therapy, advocacy, family support, and community engagement, enabling them to achieve their full potential.
+      </p>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-100 py-20">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <h2 class="font-display text-3xl text-pine-900 text-center mb-2">Our Core Values</h2>
+      <p class="font-body text-ink/70 text-center max-w-2xl mx-auto mb-12">
+        Ten principles that guide every programme, decision, and relationship at CCSF.
+      </p>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
+        {values.map((v) => (
+          <div class="bg-cream-200 rounded-xl p-5">
+            <h3 class="font-display text-base text-pine-900 mb-2">{v.title}</h3>
+            <p class="font-body text-xs text-ink/70">{v.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+  </ScrollReveal>
+</SiteLayout>
