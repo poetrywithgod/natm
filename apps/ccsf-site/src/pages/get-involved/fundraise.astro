@@ -1,0 +1,58 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import ScrollReveal from "../../components/ScrollReveal";
+
+const requirements = [
+  "Authorized",
+  "Ethical",
+  "Transparent",
+  "Accurate",
+  "Consistent with the Foundation's mission and values",
+  "Properly accounted for",
+];
+---
+
+<SiteLayout
+  title="Fundraise"
+  description="Fundraise for Cherries Children School Foundation. Subject to prior approval, individuals, groups, and institutions may help mobilize resources for approved CCSF programmes."
+>
+  <section class="bg-pine-900 text-cream-100 py-20">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h1 class="font-display text-4xl mb-4">Fundraise for CCSF</h1>
+      <p class="font-body text-cream-100/80">
+        Help mobilize resources for approved CCSF programmes and activities.
+      </p>
+    </div>
+  </section>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <p class="font-body text-ink/80 leading-relaxed mb-8">
+        Subject to prior approval and CCSF's fundraising procedures, individuals, groups, institutions, and supporters may help mobilize resources for approved CCSF programmes and activities.
+      </p>
+      <h2 class="font-display text-xl text-pine-900 mb-4">All Fundraising Carried Out in the Name of CCSF Must Be</h2>
+      <ul class="grid sm:grid-cols-2 gap-2">
+        {requirements.map((r) => (
+          <li class="font-body text-sm text-ink/70">- {r}</li>
+        ))}
+      </ul>
+      <p class="font-body text-sm text-ink/70 italic border-l-2 border-cherry-600 pl-4 mt-6">
+        This reflects CCSF's commitment that fundraising activities remain ethical, transparent, honest, and consistent with the Foundation's mission.
+      </p>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal client:visible>
+  <section class="bg-pine-900 text-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h2 class="font-display text-xl mb-4">Propose a Fundraiser</h2>
+      <p class="font-body text-cream-100/80">
+        Get prior approval before fundraising in CCSF's name. Phone / WhatsApp
+        <a href="https://wa.me/2349153114330" class="text-gold-500 hover:underline">0915 311 4330</a>
+      </p>
+    </div>
+  </section>
+  </ScrollReveal>
+</SiteLayout>

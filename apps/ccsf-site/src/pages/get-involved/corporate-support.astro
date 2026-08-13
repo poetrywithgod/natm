@@ -1,0 +1,58 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import ScrollReveal from "../../components/ScrollReveal";
+
+const supportAreas = [
+  "Funding specific programmes",
+  "Providing educational materials",
+  "Supporting therapy resources",
+  "Funding awareness campaigns",
+  "Supporting training programmes",
+  "Providing professional services",
+  "Donating equipment or facilities",
+  "Supporting community outreach",
+  "Employee volunteer programmes",
+];
+---
+
+<SiteLayout
+  title="Corporate Support"
+  description="Corporate and institutional support for Cherries Children School Foundation through CSR, social investment, employee volunteering, professional expertise, or in-kind support."
+>
+  <section class="bg-pine-900 text-cream-100 py-20">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h1 class="font-display text-4xl mb-4">Corporate & Institutional Support</h1>
+      <p class="font-body text-cream-100/80">
+        Partner your organisation's resources with our mission.
+      </p>
+    </div>
+  </section>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <p class="font-body text-ink/80 leading-relaxed mb-8">
+        Companies and institutions can support CCSF through Corporate Social Responsibility (CSR), social investment, employee volunteering, professional expertise, programme sponsorship, or in-kind support.
+      </p>
+      <h2 class="font-display text-xl text-pine-900 mb-4">Potential Areas of Corporate Support</h2>
+      <ul class="grid sm:grid-cols-2 gap-2">
+        {supportAreas.map((s) => (
+          <li class="font-body text-sm text-ink/70">- {s}</li>
+        ))}
+      </ul>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal client:visible>
+  <section class="bg-pine-900 text-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h2 class="font-display text-xl mb-4">Discuss a Corporate Partnership</h2>
+      <p class="font-body text-cream-100/80">
+        Phone / WhatsApp
+        <a href="https://wa.me/2349153114330" class="text-gold-500 hover:underline">0915 311 4330</a>
+      </p>
+    </div>
+  </section>
+  </ScrollReveal>
+</SiteLayout>
