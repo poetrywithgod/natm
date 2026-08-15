@@ -44,6 +44,7 @@ const AdminAttendance = lazy(() => import("./pages/AdminAttendance"));
 const AdminTimetable = lazy(() => import("./pages/AdminTimetable"));
 const AdminPromotion = lazy(() => import("./pages/AdminPromotion"));
 const AdminAnnouncements = lazy(() => import("./pages/AdminAnnouncements"));
+const AdminNews = lazy(() => import("./pages/AdminNews"));
 const ClassTeacherAnnouncements = lazy(() => import("./pages/ClassTeacherAnnouncements"));
 const AdminAuditLog = lazy(() => import("./pages/AdminAuditLog"));
 const AdminProfile = lazy(() => import("./pages/AdminProfile"));
@@ -88,6 +89,7 @@ function AppRoutes() {
           <Route path="timetable" element={<AdminTimetable />} />
           <Route path="promotion" element={<AdminPromotion />} />
           <Route path="announcements" element={<AdminAnnouncements />} />
+          <Route path="news" element={<AdminNews />} />
           <Route path="audit-log" element={<AdminAuditLog />} />
           <Route path="profile" element={<AdminProfile />} />
           <Route path="school-profile" element={<AdminSchoolProfile />} />
