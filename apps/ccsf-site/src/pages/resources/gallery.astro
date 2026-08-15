@@ -1,0 +1,56 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import ScrollReveal from "../../components/ScrollReveal";
+
+const categories = [
+  "Inclusive Education",
+  "Therapy & Developmental Support",
+  "Parent Engagement",
+  "Teacher/Educator Activities",
+  "Community Outreach",
+  "Advocacy & Awareness",
+  "Partnership Engagement",
+  "NATM Activities",
+  "Events",
+];
+---
+
+<SiteLayout
+  title="Gallery"
+  description="Approved photographs and videos showing CCSF's programmes and activities across inclusive education, therapy, community outreach, and advocacy."
+>
+  <section class="bg-pine-900 text-cream-100 py-20">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h1 class="font-display text-4xl mb-4">Gallery & Media Resources</h1>
+      <p class="font-body text-cream-100/80">
+        Approved photographs and videos showing CCSF's programmes and activities.
+      </p>
+    </div>
+  </section>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <p class="font-body text-ink/80 leading-relaxed mb-8">
+        The Resource Centre may provide approved photographs and videos showing CCSF's programmes and activities, organised by category.
+      </p>
+      <ul class="grid sm:grid-cols-2 gap-2">
+        {categories.map((c) => (
+          <li class="font-body text-sm text-ink/70">- {c}</li>
+        ))}
+      </ul>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal client:visible>
+  <section class="bg-pine-900 text-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h2 class="font-display text-xl mb-4">Media Safeguarding</h2>
+      <p class="font-body text-cream-100/80 leading-relaxed">
+        All photographs and videos involving children must comply with CCSF's safeguarding, privacy, consent, and communications requirements.
+      </p>
+    </div>
+  </section>
+  </ScrollReveal>
+</SiteLayout>

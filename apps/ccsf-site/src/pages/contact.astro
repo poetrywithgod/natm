@@ -1,0 +1,61 @@
+---
+import SiteLayout from "../layouts/SiteLayout.astro";
+import ScrollReveal from "../components/ScrollReveal";
+---
+
+<SiteLayout
+  title="Contact"
+  description="Contact Cherries Children School Foundation. Address, phone/WhatsApp, and office hours for CCSF's registered office in Port Harcourt, Rivers State, Nigeria."
+>
+  <section class="bg-pine-900 text-cream-100 py-20">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h1 class="font-display text-4xl mb-4">Contact Us</h1>
+      <p class="font-body text-cream-100/80">
+        We welcome enquiries from families, partners, professionals, and supporters.
+      </p>
+    </div>
+  </section>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-100 py-20">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <div class="grid sm:grid-cols-2 gap-8">
+        <div class="bg-cream-200 rounded-2xl p-6">
+          <h2 class="font-display text-lg text-pine-900 mb-2">Registered Office</h2>
+          <p class="font-body text-sm text-ink/70">15, Uyo Street, Rumuomasi, Port Harcourt, Rivers State, Nigeria</p>
+        </div>
+        <div class="bg-cream-200 rounded-2xl p-6">
+          <h2 class="font-display text-lg text-pine-900 mb-2">Phone / WhatsApp</h2>
+          <p class="font-body text-sm text-ink/70">
+            <a href="https://wa.me/2349153114330" class="hover:text-cherry-600">0915 311 4330</a>
+          </p>
+        </div>
+        <div class="bg-cream-200 rounded-2xl p-6">
+          <h2 class="font-display text-lg text-pine-900 mb-2">Office Hours</h2>
+          <p class="font-body text-sm text-ink/70">Monday - Friday, 8:00 AM - 4:00 PM</p>
+        </div>
+        <div class="bg-cream-200 rounded-2xl p-6">
+          <h2 class="font-display text-lg text-pine-900 mb-2">WhatsApp Engagement</h2>
+          <p class="font-body text-sm text-ink/70">Available 24 Hours</p>
+        </div>
+      </div>
+      <div class="text-center mt-10">
+        <a href="https://www.facebook.com/cherries.children" target="_blank" rel="noopener noreferrer" class="font-body text-sm text-pine-900 font-semibold underline hover:text-cherry-600">
+          Follow CCSF on Facebook
+        </a>
+      </div>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal client:visible>
+  <section class="bg-pine-900 text-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h2 class="font-display text-xl mb-4">Requesting Information</h2>
+      <p class="font-body text-cream-100/80 leading-relaxed">
+        If you need information that isn't publicly available, please contact CCSF directly. Requests involving confidential information, children's records, internal governance information, donor data, or protected organisational information are handled in accordance with CCSF's policies and applicable requirements.
+      </p>
+    </div>
+  </section>
+  </ScrollReveal>
+</SiteLayout>

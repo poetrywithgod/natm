@@ -1,0 +1,79 @@
+---
+import SiteLayout from "../layouts/SiteLayout.astro";
+import ScrollReveal from "../components/ScrollReveal";
+
+// TEMPORARY static placeholder posts. Once the school admin dashboard's
+// News module is live, this array should be replaced with a fetch to that
+// API (id, title, image, content, publishedAt) so admins can create,
+// edit, and retract posts without a code deploy. Card layout below is
+// already shaped to match that future data (image + title + excerpt),
+// so swapping the data source shouldn't require restyling the cards.
+const posts = [
+  {
+    title: "NATM Curriculum Introduction",
+    image: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=1200&h=800&q=80",
+    excerpt: "Updates on the introduction and development of the Neuroscience Action Teaching Model Curriculum.",
+  },
+  {
+    title: "NATM App - In View",
+    image: "https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1200&h=800&q=80",
+    excerpt: "Updates as the proposed digital platform progresses.",
+  },
+  {
+    title: "Partnership Updates",
+    image: "https://images.unsplash.com/photo-1699347914988-c61ec13c99c5?auto=format&fit=crop&w=1200&h=800&q=80",
+    excerpt: "Information on CCSF's engagement with government and other institutional partners.",
+  },
+  {
+    title: "Programme Updates",
+    image: "https://images.unsplash.com/photo-1588072432836-e10032774350?auto=format&fit=crop&w=1200&h=800&q=80",
+    excerpt: "News about education, therapy, family engagement, advocacy, and community activities.",
+  },
+  {
+    title: "Foundation Announcements",
+    image: "https://images.unsplash.com/photo-1517816428104-797678c7cf0c?auto=format&fit=crop&w=1200&h=800&q=80",
+    excerpt: "Important organisational information and public notices.",
+  },
+];
+---
+
+<SiteLayout
+  title="News"
+  description="News, updates, and announcements from Cherries Children School Foundation covering programme developments, partnerships, and the NATM Curriculum."
+>
+  <section class="bg-pine-900 text-cream-100 py-20">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h1 class="font-display text-4xl mb-4">News & Updates</h1>
+      <p class="font-body text-cream-100/80">
+        Approved information on CCSF's recent developments, programme innovations, partnerships, and announcements.
+      </p>
+    </div>
+  </section>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-100 py-20">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {posts.map((p) => (
+          <article class="bg-cream-200 rounded-2xl overflow-hidden">
+            <img
+              src={p.image}
+              alt={p.title}
+              loading="lazy"
+              decoding="async"
+              class="w-full h-40 object-cover"
+            />
+            <div class="p-5">
+              <h2 class="font-display text-lg text-pine-900 mb-2">{p.title}</h2>
+              <p class="font-body text-sm text-ink/70">{p.excerpt}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+      <p class="font-body text-sm text-ink/60 text-center mt-10 italic">
+        Individual news posts are being prepared for publication. Check back soon, or contact CCSF via WhatsApp for the latest updates.
+      </p>
+    </div>
+  </section>
+  </ScrollReveal>
+</SiteLayout>

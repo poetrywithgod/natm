@@ -1,0 +1,60 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import ScrollReveal from "../../components/ScrollReveal";
+
+const policies = [
+  "Child Safeguarding Policy",
+  "Child Protection Policy",
+  "Code of Conduct",
+  "Data Protection and Confidentiality Policy",
+  "Volunteer Policy",
+  "Health and Safety Policy",
+  "Anti-Fraud and Anti-Corruption Policy",
+  "Whistleblowing Policy",
+  "Financial Management Policy",
+  "Procurement and Asset Management Policy",
+  "Risk Management Policy",
+  "Communications and Branding Policy",
+  "Complaints and Feedback Procedures",
+];
+---
+
+<SiteLayout
+  title="Policies"
+  description="Cherries Children School Foundation's governance and safeguarding policies, including its Child Safeguarding Policy, Code of Conduct, and Data Protection and Confidentiality Policy."
+>
+  <section class="bg-pine-900 text-cream-100 py-20">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h1 class="font-display text-4xl mb-4">Policies</h1>
+      <p class="font-body text-cream-100/80">
+        Safeguarding, confidentiality, ethical conduct, and responsible practice guide everything CCSF does.
+      </p>
+    </div>
+  </section>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <p class="font-body text-ink/80 leading-relaxed mb-8">
+        Because CCSF works with children, safeguarding, confidentiality, ethical conduct, and responsible practice remain central to its operations. The following policies govern how CCSF operates.
+      </p>
+      <ul class="grid sm:grid-cols-2 gap-2">
+        {policies.map((p) => (
+          <li class="font-body text-sm text-ink/70">- {p}</li>
+        ))}
+      </ul>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal client:visible>
+  <section class="bg-pine-900 text-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h2 class="font-display text-xl mb-4">Child Safeguarding Commitment</h2>
+      <p class="font-body text-cream-100/80 leading-relaxed">
+        CCSF maintains zero tolerance for child abuse, neglect, exploitation, harassment, emotional violence, and physical violence. All published materials involving children must respect their privacy, dignity, safety, confidentiality, and best interests.
+      </p>
+    </div>
+  </section>
+  </ScrollReveal>
+</SiteLayout>

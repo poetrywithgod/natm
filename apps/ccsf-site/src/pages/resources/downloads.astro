@@ -1,0 +1,59 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import ScrollReveal from "../../components/ScrollReveal";
+
+const categories = [
+  { title: "Policies & Governance", desc: "Constitution, CAC registration, governance documents, safeguarding and operational policies." },
+  { title: "Programmes & Impact", desc: "Programme profiles, impact summaries, MEAL information and verified outcomes." },
+  { title: "NATM Resources", desc: "Approved NATM Curriculum information, teaching framework and future NATM App resources." },
+  { title: "Parents & Families", desc: "Practical resources supporting caregivers and family participation." },
+  { title: "Teachers & Educators", desc: "Inclusive education, classroom support and professional learning resources." },
+  { title: "Reports & Downloads", desc: "Approved reports, profiles, institutional materials and public documents." },
+];
+---
+
+<SiteLayout
+  title="Downloads"
+  description="Knowledge, policies, reports and tools for inclusion from Cherries Children School Foundation's Resource Centre, covering governance, programmes, NATM, families, and educators."
+>
+  <section class="bg-pine-900 text-cream-100 py-20">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h1 class="font-display text-4xl mb-4">Resource Centre</h1>
+      <p class="font-body text-cream-100/80">
+        Knowledge, Policies, Reports and Tools for Inclusion.
+      </p>
+    </div>
+  </section>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <p class="font-body text-ink/80 leading-relaxed mb-4">
+        The CCSF Resource Centre provides families, educators, professionals, partners, donors, researchers, and members of the public with access to approved information and materials relating to the Foundation's work.
+      </p>
+      <p class="font-body text-ink/80 leading-relaxed">
+        The Resource Centre is designed to promote transparency, learning, accountability, inclusive education, child safeguarding, and informed support for children with Special Educational Needs. Only documents and materials approved for public access are published or made downloadable.
+      </p>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-200 py-20">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6">
+      <h2 class="font-display text-2xl text-pine-900 text-center mb-10">Resource Categories</h2>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {categories.map((c) => (
+          <div class="bg-cream-100 rounded-2xl p-6 border border-pine-900/10">
+            <h3 class="font-display text-lg text-pine-900 mb-2">{c.title}</h3>
+            <p class="font-body text-sm text-ink/70">{c.desc}</p>
+          </div>
+        ))}
+      </div>
+      <p class="font-body text-sm text-ink/60 text-center mt-10 italic">
+        Downloadable materials are being prepared for publication. Contact CCSF via WhatsApp for specific document requests.
+      </p>
+    </div>
+  </section>
+  </ScrollReveal>
+</SiteLayout>

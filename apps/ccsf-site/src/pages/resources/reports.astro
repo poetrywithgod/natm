@@ -1,0 +1,77 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import ScrollReveal from "../../components/ScrollReveal";
+
+const indicators = [
+  { label: "Children Reached", value: "30" },
+  { label: "Children Receiving Therapy/Developmental Support", value: "20" },
+  { label: "Parents & Caregivers Supported", value: "20" },
+  { label: "Teachers/Educators Reached", value: "12" },
+  { label: "Strategic Partnerships Established", value: "4" },
+];
+
+const reportTypes = [
+  "Programme reports",
+  "Impact summaries",
+  "Project reports",
+  "Monitoring and evaluation reports",
+  "Beneficiary feedback summaries",
+  "Annual reports, when available",
+];
+---
+
+<SiteLayout
+  title="Reports"
+  description="Impact and programme reports from Cherries Children School Foundation, based on verified Monitoring, Evaluation, Accountability and Learning (MEAL) data."
+>
+  <section class="bg-pine-900 text-cream-100 py-20">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h1 class="font-display text-4xl mb-4">Impact & Programme Reports</h1>
+      <p class="font-body text-cream-100/80">
+        Evidence-based programme management through Monitoring, Evaluation, Accountability and Learning.
+      </p>
+    </div>
+  </section>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <p class="font-body text-ink/80 leading-relaxed mb-8">
+        CCSF is committed to evidence-based programme management through Monitoring, Evaluation, Accountability and Learning (MEAL). Public reports use verified data and clearly distinguish activities from outcomes.
+      </p>
+      <div class="grid sm:grid-cols-2 gap-4">
+        {indicators.map((i) => (
+          <div class="bg-cream-200 rounded-xl p-5 flex items-center justify-between">
+            <span class="font-body text-sm text-ink/70">{i.label}</span>
+            <span class="font-display text-2xl text-cherry-600">{i.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-200 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <h2 class="font-display text-xl text-pine-900 mb-4">Reports May Include</h2>
+      <ul class="grid sm:grid-cols-2 gap-2">
+        {reportTypes.map((r) => (
+          <li class="font-body text-sm text-ink/70">- {r}</li>
+        ))}
+      </ul>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal client:visible>
+  <section class="bg-pine-900 text-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h2 class="font-display text-xl mb-4">Data Integrity</h2>
+      <p class="font-body text-cream-100/80 leading-relaxed">
+        Only verified figures are included in public reports.
+      </p>
+    </div>
+  </section>
+  </ScrollReveal>
+</SiteLayout>
