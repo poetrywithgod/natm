@@ -1,17 +1,18 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Camera, User } from "lucide-react";
+import { Camera, User, X } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import {
   fetchStudents,
   fetchClassOptions,
-  createStudent,
+  createStudentAccount,
   assignStudentClass,
   renameStudent,
   uploadStudentPhoto,
   getSignedPhotoUrl,
   type Student,
   type ClassOption,
+  type CreateStudentAccountResult,
 } from "../features/students/api";
 
 export default function AdminStudents() {
@@ -21,6 +22,9 @@ export default function AdminStudents() {
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [newName, setNewName] = useState("");
   const [newClassId, setNewClassId] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [newCredentials, setNewCredentials] = useState<CreateStudentAccountResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -61,14 +65,23 @@ export default function AdminStudents() {
   }, [schoolId]);
 
   async function handleCreateStudent() {
-    if (!schoolId || !newName.trim()) return;
+    if (!newName.trim() || !newClassId || !newEmail.trim()) {
+      setError("Name, class, and email are all required.");
+      return;
+    }
+    setCreating(true);
+    setError(null);
     try {
-      await createStudent(schoolId, newName.trim(), newClassId || null, profile!.id);
+      const result = await createStudentAccount(newEmail.trim(), newName.trim(), newClassId);
+      setNewCredentials(result);
       setNewName("");
       setNewClassId("");
+      setNewEmail("");
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create student");
+      setError(e instanceof Error ? e.message : "Failed to create student account");
+    } finally {
+      setCreating(false);
     }
   }
 
@@ -126,12 +139,19 @@ export default function AdminStudents() {
           onChange={(e) => setNewName(e.target.value)}
           className="p-2 rounded bg-forest-700 text-forest-100 font-ui placeholder:text-forest-300/60 flex-1"
         />
+        <input
+          type="email"
+          placeholder="Email"
+          value={newEmail}
+          onChange={(e) => setNewEmail(e.target.value)}
+          className="p-2 rounded bg-forest-700 text-forest-100 font-ui placeholder:text-forest-300/60 flex-1"
+        />
         <select
           value={newClassId}
           onChange={(e) => setNewClassId(e.target.value)}
           className="p-2 rounded bg-forest-700 text-forest-100 font-ui"
         >
-          <option value="">No class</option>
+          <option value="">Select class</option>
           {classOptions.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -140,14 +160,44 @@ export default function AdminStudents() {
         </select>
         <button
           onClick={handleCreateStudent}
-          className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui font-semibold whitespace-nowrap"
+          disabled={creating}
+          className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui font-semibold whitespace-nowrap disabled:opacity-50"
         >
-          Add Student
+          {creating ? "Creating..." : "Add Student"}
         </button>
       </div>
       <p className="font-ui text-xs text-forest-300 -mt-4">
-        Student ID is generated automatically once added.
+        A login account, temporary password, and Student ID are all generated automatically once added.
       </p>
+
+      {newCredentials && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-forest-900 rounded-lg p-6 max-w-sm w-full space-y-4 relative">
+            <button
+              onClick={() => setNewCredentials(null)}
+              className="absolute top-3 right-3 text-forest-300 hover:text-forest-100"
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+            <h2 className="font-display text-lg text-forest-100">Student Account Created</h2>
+            <p className="font-ui text-xs text-forest-300">
+              Share these credentials with the family. The student will be required to set a new password on first login.
+            </p>
+            <div className="bg-forest-700 rounded p-3 space-y-1 font-ui text-sm text-forest-100">
+              <p><span className="text-forest-300">Student ID:</span> {newCredentials.unique_student_id}</p>
+              <p><span className="text-forest-300">Email:</span> {newCredentials.email}</p>
+              <p><span className="text-forest-300">Temporary Password:</span> {newCredentials.temporary_password}</p>
+            </div>
+            <button
+              onClick={() => setNewCredentials(null)}
+              className="w-full py-2 rounded bg-forest-500 text-forest-950 font-ui font-semibold"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-3">
         {students.length === 0 && (

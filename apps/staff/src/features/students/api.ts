@@ -142,3 +142,25 @@ export async function getSignedPhotoUrl(path: string): Promise<string | null> {
   if (error) return null;
   return data.signedUrl;
 }
+
+export interface CreateStudentAccountResult {
+  email: string;
+  temporary_password: string;
+  unique_student_id: string;
+}
+
+// Creates a full auth account (auto-generated password) + profile +
+// student record in one call, via the create-student Edge Function
+// (needs the service_role key server-side, which the client never has).
+export async function createStudentAccount(
+  email: string,
+  fullName: string,
+  classId: string
+): Promise<CreateStudentAccountResult> {
+  const { data, error } = await supabase.functions.invoke("create-student", {
+    body: { email, full_name: fullName, class_id: classId },
+  });
+  if (error) throw new Error(error.message);
+  if (data?.error) throw new Error(data.error);
+  return data as CreateStudentAccountResult;
+}
