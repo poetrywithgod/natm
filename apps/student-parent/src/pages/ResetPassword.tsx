@@ -42,7 +42,7 @@ export default function ResetPassword() {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full p-2 rounded bg-lime text-abyssal-950 font-ui font-semibold"
+          className="w-full p-2 rounded bg-lime text-abyssal-950 font-ui font-semibold hover:bg-lime-dark active:scale-95 transition-transform transition-colors duration-150 disabled:opacity-60"
         >
           {submitting ? "Saving..." : "Save Password"}
         </button>
