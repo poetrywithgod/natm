@@ -4,13 +4,17 @@ import { AuthProvider } from "./features/auth/AuthContext";
 import { ToastProvider } from "./features/toast/ToastContext";
 import { RequireRole } from "./guards/RequireRole";
 import { RedirectIfAuthed } from "./guards/RedirectIfAuthed";
+import { StudentOnboardingGate } from "./guards/StudentOnboardingGate";
 import StudentLayout from "./layouts/StudentLayout";
 import PageSkeleton from "./components/PageSkeleton";
 
 const Login = lazy(() => import("./pages/Login"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const StudentSetPassword = lazy(() => import("./pages/StudentSetPassword"));
+const StudentIntakeForm = lazy(() => import("./pages/StudentIntakeForm"));
 const StudentHome = lazy(() => import("./pages/StudentHome"));
 const StudentAssignments = lazy(() => import("./pages/StudentAssignments"));
+const StudentQuiz = lazy(() => import("./pages/StudentQuiz"));
 const StudentProgress = lazy(() => import("./pages/StudentProgress"));
 const StudentNotifications = lazy(() => import("./pages/StudentNotifications"));
 const StudentSettings = lazy(() => import("./pages/StudentSettings"));
@@ -34,15 +38,36 @@ export default function App() {
               <Route path="/reset-password" element={<ResetPassword />} />
 
               <Route
+                path="/student/set-password"
+                element={
+                  <RequireRole allow={["student"]}>
+                    <StudentSetPassword />
+                  </RequireRole>
+                }
+              />
+
+              <Route
+                path="/student/intake-form"
+                element={
+                  <RequireRole allow={["student"]}>
+                    <StudentIntakeForm />
+                  </RequireRole>
+                }
+              />
+
+              <Route
                 path="/student"
                 element={
                   <RequireRole allow={["student"]}>
-                    <StudentLayout />
+                    <StudentOnboardingGate>
+                      <StudentLayout />
+                    </StudentOnboardingGate>
                   </RequireRole>
                 }
               >
                 <Route index element={<StudentHome />} />
                 <Route path="assignments" element={<StudentAssignments />} />
+                <Route path="quiz/:quizId" element={<StudentQuiz />} />
                 <Route path="progress" element={<StudentProgress />} />
                 <Route path="notifications" element={<StudentNotifications />} />
                 <Route path="settings" element={<StudentSettings />} />

@@ -65,14 +65,14 @@ export default function AdminStudents() {
   }, [schoolId]);
 
   async function handleCreateStudent() {
-    if (!newName.trim() || !newClassId || !newEmail.trim()) {
-      setError("Name, class, and email are all required.");
+    if (!newName.trim() || !newEmail.trim()) {
+      setError("Name and email are required.");
       return;
     }
     setCreating(true);
     setError(null);
     try {
-      const result = await createStudentAccount(newEmail.trim(), newName.trim(), newClassId);
+      const result = await createStudentAccount(newEmail.trim(), newName.trim(), newClassId || null);
       setNewCredentials(result);
       setNewName("");
       setNewClassId("");
@@ -151,7 +151,7 @@ export default function AdminStudents() {
           onChange={(e) => setNewClassId(e.target.value)}
           className="p-2 rounded bg-forest-700 text-forest-100 font-ui"
         >
-          <option value="">Select class</option>
+          <option value="">No class yet (pending assessment)</option>
           {classOptions.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -167,7 +167,7 @@ export default function AdminStudents() {
         </button>
       </div>
       <p className="font-ui text-xs text-forest-300 -mt-4">
-        A login account, temporary password, and Student ID are all generated automatically once added.
+        A login account, temporary password, and Student ID are all generated automatically once added. Class/level is assigned later, after the assessment process.
       </p>
 
       {newCredentials && (

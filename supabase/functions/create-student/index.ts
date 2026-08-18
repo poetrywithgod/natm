@@ -62,11 +62,15 @@ Deno.serve(async (req) => {
     const { email, full_name, class_id } = body as {
       email?: string;
       full_name?: string;
-      class_id?: string;
+      class_id?: string | null;
     };
 
-    if (!email || !full_name || !class_id) {
-      return new Response(JSON.stringify({ error: "email, full_name, and class_id are required" }), {
+    // class_id is intentionally optional at admission -- the child's
+    // class/level is determined later, once the AI-assisted assessment
+    // pipeline (intake form + on-site observation) suggests subjects and
+    // level, and the school admin approves. Admission just needs identity.
+    if (!email || !full_name) {
+      return new Response(JSON.stringify({ error: "email and full_name are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -107,7 +111,7 @@ Deno.serve(async (req) => {
       .from("students")
       .insert({
         school_id: callerProfile.school_id,
-        class_id,
+        class_id: class_id ?? null,
         profile_id: created.user.id,
         full_name,
       })
