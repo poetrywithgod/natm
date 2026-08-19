@@ -5,7 +5,11 @@ import { useAuth } from "../features/auth/AuthContext";
 import { fetchOwnStudentRecord } from "../features/profile/api";
 import { getOrCreateDraftEpisode, saveFormDraft, submitForm1, type DraftEpisode } from "../features/intake/api";
 import { PART_A_STEPS } from "../features/intake/formConfigA";
+import { FORM_B_DOMAINS } from "../features/intake/formConfigB";
 import IntakeFieldRenderer from "../components/IntakeFieldRenderer";
+import DomainRenderer from "../components/DomainRenderer";
+
+type Phase = "a" | "b";
 
 export default function StudentIntakeForm() {
   const { profile } = useAuth();
@@ -14,6 +18,8 @@ export default function StudentIntakeForm() {
   const [draft, setDraft] = useState<DraftEpisode | null>(null);
   const [studentId, setStudentId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Record<string, unknown>>({});
+  const [partBData, setPartBData] = useState<Record<string, Record<string, unknown>>>({});
+  const [phase, setPhase] = useState<Phase>("a");
   const [stepIndex, setStepIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -33,6 +39,7 @@ export default function StudentIntakeForm() {
         if (cancelled) return;
         setDraft(d);
         setFormData(d.partA);
+        setPartBData(d.partB as Record<string, Record<string, unknown>>);
         setLoading(false);
       } catch (e) {
         if (!cancelled) {
@@ -47,16 +54,36 @@ export default function StudentIntakeForm() {
     };
   }, [profile?.id, profile?.school_id]);
 
-  const step = PART_A_STEPS[stepIndex];
-  const isLast = stepIndex === PART_A_STEPS.length - 1;
+  const totalSteps = PART_A_STEPS.length + FORM_B_DOMAINS.length;
+  const overallStep = phase === "a" ? stepIndex : PART_A_STEPS.length + stepIndex;
+  const isFirst = phase === "a" && stepIndex === 0;
+  const isLast = phase === "b" && stepIndex === FORM_B_DOMAINS.length - 1;
 
   function handleFieldChange(key: string, value: unknown) {
     setFormData((f) => ({ ...f, [key]: value }));
   }
 
-  async function persistDraft() {
+  function handleDomainChange(domainId: string, value: Record<string, unknown>) {
+    setPartBData((pb) => ({ ...pb, [domainId]: value }));
+  }
+
+  async function persistPartA() {
     if (!draft) return;
     await saveFormDraft(draft.form1Id, "part_a", formData);
+  }
+
+  async function persistPartB() {
+    if (!draft) return;
+    await saveFormDraft(draft.form1Id, "part_b", partBData);
+  }
+
+  async function handleBack() {
+    if (phase === "b" && stepIndex === 0) {
+      setPhase("a");
+      setStepIndex(PART_A_STEPS.length - 1);
+    } else {
+      setStepIndex((i) => i - 1);
+    }
   }
 
   async function handleNext() {
@@ -64,8 +91,18 @@ export default function StudentIntakeForm() {
     setSaving(true);
     setError(null);
     try {
-      await persistDraft();
-      setStepIndex((i) => i + 1);
+      if (phase === "a") {
+        await persistPartA();
+        if (stepIndex === PART_A_STEPS.length - 1) {
+          setPhase("b");
+          setStepIndex(0);
+        } else {
+          setStepIndex((i) => i + 1);
+        }
+      } else {
+        await persistPartB();
+        setStepIndex((i) => i + 1);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save");
     } finally {
@@ -78,7 +115,7 @@ export default function StudentIntakeForm() {
     setSaving(true);
     setError(null);
     try {
-      await persistDraft();
+      await persistPartB();
       await submitForm1(draft.form1Id, draft.episodeId, profile.id, studentId);
       setSubmitted(true);
     } catch (e) {
@@ -109,43 +146,64 @@ export default function StudentIntakeForm() {
     );
   }
 
+  const partAStep = phase === "a" ? PART_A_STEPS[stepIndex] : null;
+  const partBDomain = phase === "b" ? FORM_B_DOMAINS[stepIndex] : null;
+
   return (
     <div className="min-h-screen bg-abyssal-950 p-4 space-y-6">
       <div className="flex items-center justify-between">
-        {stepIndex > 0 ? (
-          <button onClick={() => setStepIndex((i) => i - 1)} className="text-abyssal-300" aria-label="Back">
+        {!isFirst ? (
+          <button onClick={handleBack} className="text-abyssal-300" aria-label="Back">
             <ArrowLeft size={20} />
           </button>
         ) : (
           <span />
         )}
         <p className="font-ui text-xs text-abyssal-300">
-          Step {stepIndex + 1} of {PART_A_STEPS.length}
+          Step {overallStep + 1} of {totalSteps}
         </p>
       </div>
 
       <div className="h-1.5 bg-abyssal-900 rounded-full overflow-hidden">
         <div
           className="h-full bg-lime transition-all duration-300"
-          style={{ width: `${((stepIndex + 1) / PART_A_STEPS.length) * 100}%` }}
+          style={{ width: `${((overallStep + 1) / totalSteps) * 100}%` }}
         />
       </div>
 
-      <div>
-        <h1 className="font-display text-xl text-abyssal-100">{step.title}</h1>
-        {step.intro && <p className="font-body text-sm text-abyssal-300 mt-1">{step.intro}</p>}
-      </div>
+      {partAStep && (
+        <>
+          <div>
+            <h1 className="font-display text-xl text-abyssal-100">{partAStep.title}</h1>
+            {partAStep.intro && <p className="font-body text-sm text-abyssal-300 mt-1">{partAStep.intro}</p>}
+          </div>
 
-      <div className="space-y-5">
-        {step.fields.map((field) => (
-          <IntakeFieldRenderer
-            key={field.key}
-            field={field}
-            value={formData[field.key]}
-            onChange={(v) => handleFieldChange(field.key, v)}
+          <div className="space-y-5">
+            {partAStep.fields.map((field) => (
+              <IntakeFieldRenderer
+                key={field.key}
+                field={field}
+                value={formData[field.key]}
+                onChange={(v) => handleFieldChange(field.key, v)}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {partBDomain && (
+        <>
+          <div>
+            <h1 className="font-display text-xl text-abyssal-100">{partBDomain.title}</h1>
+          </div>
+
+          <DomainRenderer
+            domain={partBDomain}
+            value={partBData[partBDomain.id] ?? {}}
+            onChange={(v) => handleDomainChange(partBDomain.id, v)}
           />
-        ))}
-      </div>
+        </>
+      )}
 
       {error && <p className="text-error text-sm font-ui">{error}</p>}
 
