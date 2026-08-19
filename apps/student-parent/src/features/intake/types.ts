@@ -22,17 +22,46 @@ export interface StepConfig {
   fields: FieldConfig[];
 }
 
-// Part B domain rating item (GM01, FM01, etc.)
+export const RATING_OPTIONS = ["0", "1", "2", "3", "4", "N/A"] as const;
+export type RatingValue = (typeof RATING_OPTIONS)[number];
+
+// ---- Part B domain types ----
+
+export type DomainType = "rating" | "sensory" | "baseline" | "neurodevelopmental" | "keyvalue";
+
 export interface RatingItem {
   id: string;
   text: string;
 }
 
-export interface DomainConfig {
+export interface SimpleItem {
   id: string;
-  title: string;
-  items: RatingItem[];
+  text: string;
 }
 
-export const RATING_OPTIONS = ["0", "1", "2", "3", "4", "N/A"] as const;
-export type RatingValue = (typeof RATING_OPTIONS)[number];
+export interface KeyValueField {
+  key: string;
+  label: string;
+  type: "text" | "textarea" | "checklist";
+  options?: string[];
+}
+
+export interface Domain {
+  id: string;
+  title: string;
+  type: DomainType;
+  intro?: string;
+  items?: (RatingItem | SimpleItem)[];
+  keyValueFields?: KeyValueField[];
+  hasNarrative?: boolean;
+}
+
+export const IMPACT_OPTIONS = ["Positive", "None", "Variable", "Interferes", "Safety"] as const;
+export const FREQUENCY_OPTIONS = ["Never", "Rare", "Sometimes", "Often", "Very often", "Unknown"] as const;
+
+export const NARRATIVE_FIELDS: KeyValueField[] = [
+  { key: "strengths", label: "Strengths / what supports success", type: "textarea" },
+  { key: "priority_needs", label: "Priority support needs / barriers", type: "textarea" },
+  { key: "accommodations", label: "Effective accommodations / strategies", type: "textarea" },
+  { key: "baseline_evidence", label: "Baseline evidence / examples", type: "textarea" },
+];
