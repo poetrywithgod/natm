@@ -1,0 +1,145 @@
+import type { FormTwoDomain } from "./observationTypes";
+
+export const FORM_TWO_DOMAINS: FormTwoDomain[] = [
+  {
+    id: "4a_arousal_regulation_readiness",
+    title: "Arousal, Regulation and Readiness",
+    parameters: [
+      { id: "4A1", text: "Arrives/settles into the environment" },
+      { id: "4A2", text: "Maintains an alert but regulated state" },
+      { id: "4A3", text: "Uses or accepts regulation supports" },
+      { id: "4A4", text: "Recovers after excitement, frustration or overload" },
+    ],
+  },
+  {
+    id: "4b_attention_task_engagement",
+    title: "Attention and Task Engagement",
+    parameters: [
+      { id: "4B1", text: "Orients to relevant task/cue" },
+      { id: "4B2", text: "Sustains engagement for developmentally appropriate period" },
+      { id: "4B3", text: "Shifts attention when needed" },
+      { id: "4B4", text: "Returns to task after distraction" },
+      { id: "4B5", text: "Persists with a challenging but accessible task" },
+    ],
+  },
+  {
+    id: "4c_executive_function_cognitive_control",
+    title: "Executive Function and Cognitive Control",
+    parameters: [
+      { id: "4C1", text: "Initiates task/action" },
+      { id: "4C2", text: "Holds information in mind / working memory" },
+      { id: "4C3", text: "Sequences steps" },
+      { id: "4C4", text: "Organizes materials/actions" },
+      { id: "4C5", text: "Inhibits impulsive responses when needed" },
+      { id: "4C6", text: "Adapts plan when the first approach does not work" },
+    ],
+  },
+  {
+    id: "4d_processing_learning_access",
+    title: "Processing and Learning Access",
+    parameters: [
+      { id: "4D1", text: "Understands what is expected" },
+      { id: "4D2", text: "Processes verbal information" },
+      { id: "4D3", text: "Uses visual information/supports" },
+      { id: "4D4", text: "Responds within an appropriate latency for the learner" },
+      { id: "4D5", text: "Generalizes a demonstrated skill" },
+      { id: "4D6", text: "Learns from modelling, repetition or feedback" },
+    ],
+  },
+  {
+    id: "4e_communication_language_access",
+    title: "Communication and Language Access",
+    parameters: [
+      { id: "4E1", text: "Communicates needs, choices or refusal" },
+      { id: "4E2", text: "Understands familiar language/instructions" },
+      { id: "4E3", text: "Uses speech, AAC, sign or gesture effectively" },
+      { id: "4E4", text: "Repairs communication breakdowns" },
+      { id: "4E5", text: "Asks for help/clarification" },
+      { id: "4E6", text: "Expresses ideas, feelings or experiences" },
+    ],
+  },
+  {
+    id: "4f_social_participation_reciprocity",
+    title: "Social Participation and Reciprocity",
+    parameters: [
+      { id: "4F1", text: "Notices/responds to social bids in a comfortable way" },
+      { id: "4F2", text: "Initiates interaction in preferred ways" },
+      { id: "4F3", text: "Participates in shared activity" },
+      { id: "4F4", text: "Understands turn-taking/boundaries with support as needed" },
+      { id: "4F5", text: "Shows awareness of another person's perspective or emotion" },
+      { id: "4F6", text: "Maintains authentic connection without requiring forced eye contact" },
+    ],
+  },
+  {
+    id: "4g_sensory_processing_environmental_access",
+    title: "Sensory Processing and Environmental Access",
+    parameters: [
+      { id: "4G1", text: "Tolerates current sound level" },
+      { id: "4G2", text: "Tolerates current lighting/visual load" },
+      { id: "4G3", text: "Manages touch/texture demands" },
+      { id: "4G4", text: "Manages movement/body-position demands" },
+      { id: "4G5", text: "Recognizes or communicates sensory discomfort" },
+      { id: "4G6", text: "Uses sensory-seeking/regulation strategies safely" },
+    ],
+  },
+  {
+    id: "4h_motor_planning_coordination_physical_access",
+    title: "Motor Planning, Coordination and Physical Access",
+    parameters: [
+      { id: "4H1", text: "Maintains functional posture/balance" },
+      { id: "4H2", text: "Plans and executes gross-motor movement" },
+      { id: "4H3", text: "Uses hands for functional manipulation" },
+      { id: "4H4", text: "Coordinates visual-motor actions" },
+      { id: "4H5", text: "Completes writing/tool-use tasks at current level" },
+      { id: "4H6", text: "Navigates environment safely" },
+    ],
+  },
+  {
+    id: "4i_emotional_regulation_self_advocacy",
+    title: "Emotional Regulation and Self-Advocacy",
+    parameters: [
+      { id: "4I1", text: "Identifies or signals emotional state" },
+      { id: "4I2", text: "Communicates \"no,\" \"stop,\" \"break\" or discomfort" },
+      { id: "4I3", text: "Tolerates manageable disappointment with support" },
+      { id: "4I4", text: "Uses coping/regulation strategy" },
+      { id: "4I5", text: "Recovers after dysregulation" },
+      { id: "4I6", text: "Seeks help or co-regulation when needed" },
+    ],
+  },
+  {
+    id: "4j_adaptive_independence_daily_function",
+    title: "Adaptive Independence and Daily Function",
+    parameters: [
+      { id: "4J1", text: "Follows familiar routines" },
+      { id: "4J2", text: "Manages personal materials/belongings" },
+      { id: "4J3", text: "Transitions between activities" },
+      { id: "4J4", text: "Completes age/developmentally appropriate self-care tasks" },
+      { id: "4J5", text: "Recognizes basic safety expectations" },
+      { id: "4J6", text: "Completes a task from start to finish with current supports" },
+    ],
+  },
+  {
+    id: "4k_academic_pre_academic_access",
+    title: "Academic / Pre-Academic Access",
+    parameters: [
+      { id: "4K1", text: "Engages with literacy activities" },
+      { id: "4K2", text: "Engages with numeracy/problem-solving activities" },
+      { id: "4K3", text: "Demonstrates concept knowledge at current level" },
+      { id: "4K4", text: "Responds to instruction/feedback" },
+      { id: "4K5", text: "Shows task-specific strengths" },
+      { id: "4K6", text: "Requires accommodations/modifications to access curriculum" },
+    ],
+  },
+  {
+    id: "4l_motivation_interests_strength_based_learning",
+    title: "Motivation, Interests and Strength-Based Learning",
+    parameters: [
+      { id: "4L1", text: "Shows clear interests/preferred topics" },
+      { id: "4L2", text: "Responds to meaningful motivators" },
+      { id: "4L3", text: "Demonstrates curiosity/exploration" },
+      { id: "4L4", text: "Shows creativity or unique problem-solving" },
+      { id: "4L5", text: "Uses a special interest/strength to support learning" },
+      { id: "4L6", text: "Demonstrates competence that may be missed by conventional task formats" },
+    ],
+  },
+];
