@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchEpisodeDetail, approveForm1, type EpisodeDetail } from "../features/assessments/api";
 
@@ -127,6 +127,29 @@ export default function AdminIntakeReview() {
       </div>
 
       {error && <p className="text-error font-ui text-sm">{error}</p>}
+
+      <div className="bg-forest-900 rounded-lg p-4 flex items-center justify-between">
+        <div>
+          <p className="font-display text-lg text-forest-100">Form 2 — Physical Assessment</p>
+          <p className="font-ui text-xs text-forest-300 mt-0.5">
+            {detail.status === "form1_submitted"
+              ? "Locked until Form 1 is approved."
+              : "Complete this with the student during the scheduled observation."}
+          </p>
+        </div>
+        {detail.status === "form1_submitted" ? (
+          <span className="px-3 py-1.5 rounded bg-forest-700 text-forest-300 font-ui text-xs">
+            🔒 Locked — approve Form 1 first
+          </span>
+        ) : (
+          <Link
+            to={`/admin/intake/${detail.episodeId}/observation`}
+            className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui text-sm font-semibold"
+          >
+            {detail.status === "form1_approved" ? "Begin Form 2" : "Continue Form 2"}
+          </Link>
+        )}
+      </div>
 
       <JsonSection title="Part A — Intake & Consent" data={detail.partA} />
       <JsonSection title="Part B — Functional Domains" data={detail.partB} />

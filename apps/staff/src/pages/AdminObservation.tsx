@@ -7,6 +7,7 @@ import {
   submitForm2,
   type Form2Draft,
 } from "../features/observation/api";
+import { fetchEpisodeDetail } from "../features/assessments/api";
 import {
   CONFIDENCE_OPTIONS,
   FORM_TWO_DOMAINS,
@@ -18,11 +19,10 @@ import Form2DomainRenderer, {
   type Form2DomainValues,
   type Form2ParameterValue,
 } from "../features/observation/Form2DomainRenderer";
-import { supabase } from "../lib/supabase";
 
 type Section = "info" | "protocol" | "domains" | "snapshot";
 
-export default function ShadowTeacherObservation() {
+export default function AdminObservation() {
   const { episodeId } = useParams<{ episodeId: string }>();
   const navigate = useNavigate();
   const { profile } = useAuth();
@@ -58,7 +58,7 @@ export default function ShadowTeacherObservation() {
   }, [domains]);
 
   useEffect(() => {
-    if (!episodeId || !profile?.school_id || !profile?.id) return;
+    if (!episodeId || !profile?.school_id) return;
 
     let cancelled = false;
 
@@ -67,10 +67,20 @@ export default function ShadowTeacherObservation() {
       setError(null);
 
       try {
+        const episode = await fetchEpisodeDetail(episodeId);
+
+        if (episode.status !== "form1_approved" && episode.status !== "form2_draft" && episode.status !== "form2_submitted") {
+          if (!cancelled) {
+            setError("Form 2 unlocks once Form 1 has been approved.");
+            setLoading(false);
+          }
+          return;
+        }
+
         const result = await fetchOrCreateForm2Draft(
           episodeId,
           profile.school_id,
-          profile.id
+          episode.studentId
         );
 
         if (cancelled) return;
@@ -160,7 +170,7 @@ export default function ShadowTeacherObservation() {
 
       await submitForm2(draft.form2Id, episodeId, profile.id);
 
-      navigate("/shadow-teacher/students");
+      navigate("/admin/intake");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit Form 2");
     } finally {
