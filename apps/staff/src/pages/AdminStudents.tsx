@@ -249,13 +249,13 @@ export default function AdminStudents() {
                   />
                   <button
                     onClick={() => handleSaveRename(student.id)}
-                    className="px-3 py-1.5 rounded bg-forest-500 text-forest-950 font-uitext-xs font-semibold"
+                    className="px-3 py-1.5 rounded bg-forest-500 text-forest-950 font-ui text-xs font-semibold"
                   >
                     Save
                   </button>
                   <button
                     onClick={() => setEditingId(null)}
-                    className="px-3 py-1.5 rounded bg-forest-700 text-forest-100 font-uitext-xs"
+                    className="px-3 py-1.5 rounded bg-forest-700 text-forest-100 font-ui text-xs"
                   >
                     Cancel
                   </button>

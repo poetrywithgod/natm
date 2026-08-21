@@ -27,6 +27,7 @@ const ClassTeacherNotifications = lazy(() => import("./pages/ClassTeacherNotific
 const ShadowTeacherDashboard = lazy(() => import("./pages/ShadowTeacherDashboard"));
 const ShadowTeacherStudents = lazy(() => import("./pages/ShadowTeacherStudents"));
 const ShadowTeacherStudentDetail = lazy(() => import("./pages/ShadowTeacherStudentDetail"));
+const ShadowTeacherObservation = lazy(() => import("./pages/ShadowTeacherObservation"));
 const ShadowTeacherAnnouncements = lazy(() => import("./pages/ShadowTeacherAnnouncements"));
 const ShadowTeacherProfile = lazy(() => import("./pages/ShadowTeacherProfile"));
 const ShadowTeacherNotifications = lazy(() => import("./pages/ShadowTeacherNotifications"));
@@ -129,6 +130,7 @@ function AppRoutes() {
           <Route index element={<ShadowTeacherDashboard />} />
           <Route path="students" element={<ShadowTeacherStudents />} />
           <Route path="students/:id" element={<ShadowTeacherStudentDetail />} />
+          <Route path="observation/:episodeId" element={<ShadowTeacherObservation />} />
           <Route path="announcements" element={<ShadowTeacherAnnouncements />} />
           <Route path="profile" element={<ShadowTeacherProfile />} />
           <Route path="notifications" element={<ShadowTeacherNotifications />} />
