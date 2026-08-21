@@ -133,6 +133,9 @@ importers:
       '@natm/supabase':
         specifier: workspace:^
         version: link:../../packages/supabase
+      '@supabase/supabase-js':
+        specifier: ^2.111.0
+        version: 2.111.0
       lucide-react:
         specifier: ^1.28.0
         version: 1.28.0(react@19.2.8)

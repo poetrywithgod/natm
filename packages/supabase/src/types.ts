@@ -174,6 +174,95 @@ export type Database = {
           },
         ]
       }
+      assessment_episodes: {
+        Row: {
+          ai_suggested_at: string | null
+          approved_level: Database["public"]["Enums"]["class_level"] | null
+          approved_subjects: Json | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          episode_number: number
+          form1_approved_at: string | null
+          form1_approved_by: string | null
+          form1_submitted_at: string | null
+          form2_submitted_at: string | null
+          id: string
+          school_id: string
+          status: Database["public"]["Enums"]["assessment_episode_status"]
+          student_id: string
+          suggested_level: Database["public"]["Enums"]["class_level"] | null
+          suggested_subjects: Json | null
+        }
+        Insert: {
+          ai_suggested_at?: string | null
+          approved_level?: Database["public"]["Enums"]["class_level"] | null
+          approved_subjects?: Json | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          episode_number: number
+          form1_approved_at?: string | null
+          form1_approved_by?: string | null
+          form1_submitted_at?: string | null
+          form2_submitted_at?: string | null
+          id?: string
+          school_id: string
+          status?: Database["public"]["Enums"]["assessment_episode_status"]
+          student_id: string
+          suggested_level?: Database["public"]["Enums"]["class_level"] | null
+          suggested_subjects?: Json | null
+        }
+        Update: {
+          ai_suggested_at?: string | null
+          approved_level?: Database["public"]["Enums"]["class_level"] | null
+          approved_subjects?: Json | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          episode_number?: number
+          form1_approved_at?: string | null
+          form1_approved_by?: string | null
+          form1_submitted_at?: string | null
+          form2_submitted_at?: string | null
+          id?: string
+          school_id?: string
+          status?: Database["public"]["Enums"]["assessment_episode_status"]
+          student_id?: string
+          suggested_level?: Database["public"]["Enums"]["class_level"] | null
+          suggested_subjects?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_episodes_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_episodes_form1_approved_by_fkey"
+            columns: ["form1_approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_episodes_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_episodes_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance: {
         Row: {
           class_id: string
@@ -668,6 +757,148 @@ export type Database = {
           },
         ]
       }
+      form1_submissions: {
+        Row: {
+          consents: Json
+          created_at: string
+          episode_id: string
+          id: string
+          part_a: Json
+          part_b: Json
+          school_id: string
+          student_id: string
+          submitted_at: string | null
+          submitted_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          consents?: Json
+          created_at?: string
+          episode_id: string
+          id?: string
+          part_a?: Json
+          part_b?: Json
+          school_id: string
+          student_id: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          consents?: Json
+          created_at?: string
+          episode_id?: string
+          id?: string
+          part_a?: Json
+          part_b?: Json
+          school_id?: string
+          student_id?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form1_submissions_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: true
+            referencedRelation: "assessment_episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form1_submissions_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form1_submissions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form1_submissions_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form2_submissions: {
+        Row: {
+          created_at: string
+          domains: Json
+          episode_id: string
+          id: string
+          observation_info: Json
+          protocol_notes: Json
+          school_id: string
+          student_id: string
+          submitted_at: string | null
+          submitted_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          domains?: Json
+          episode_id: string
+          id?: string
+          observation_info?: Json
+          protocol_notes?: Json
+          school_id: string
+          student_id: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          domains?: Json
+          episode_id?: string
+          id?: string
+          observation_info?: Json
+          protocol_notes?: Json
+          school_id?: string
+          student_id?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form2_submissions_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: true
+            referencedRelation: "assessment_episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form2_submissions_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form2_submissions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form2_submissions_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lessons: {
         Row: {
           class_id: string
@@ -735,6 +966,60 @@ export type Database = {
             columns: ["subject_id"]
             isOneToOne: false
             referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      news_posts: {
+        Row: {
+          body: string
+          created_at: string
+          excerpt: string
+          id: string
+          image_url: string | null
+          posted_by: string
+          published: boolean
+          school_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          excerpt: string
+          id?: string
+          image_url?: string | null
+          posted_by: string
+          published?: boolean
+          school_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          excerpt?: string
+          id?: string
+          image_url?: string | null
+          posted_by?: string
+          published?: boolean
+          school_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_posts_posted_by_fkey"
+            columns: ["posted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "news_posts_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
             referencedColumns: ["id"]
           },
         ]
@@ -1486,6 +1771,7 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          onboarding_status: Database["public"]["Enums"]["student_onboarding_status"]
           photo_url: string | null
           profile_id: string | null
           school_id: string
@@ -1496,6 +1782,7 @@ export type Database = {
           created_at?: string
           full_name: string
           id?: string
+          onboarding_status?: Database["public"]["Enums"]["student_onboarding_status"]
           photo_url?: string | null
           profile_id?: string | null
           school_id: string
@@ -1506,6 +1793,7 @@ export type Database = {
           created_at?: string
           full_name?: string
           id?: string
+          onboarding_status?: Database["public"]["Enums"]["student_onboarding_status"]
           photo_url?: string | null
           profile_id?: string | null
           school_id?: string
@@ -1709,6 +1997,14 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      assessment_episode_status:
+        | "form1_draft"
+        | "form1_submitted"
+        | "form1_approved"
+        | "form2_draft"
+        | "form2_submitted"
+        | "ai_suggested"
+        | "completed"
       attendance_status: "present" | "absent" | "late"
       class_level:
         | "primary_1"
@@ -1736,6 +2032,11 @@ export type Database = {
         | "parent"
         | "student"
         | "finance_manager"
+      student_onboarding_status:
+        | "pending_password_reset"
+        | "pending_intake_form"
+        | "pending_review"
+        | "approved"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1866,6 +2167,15 @@ export const Constants = {
   },
   public: {
     Enums: {
+      assessment_episode_status: [
+        "form1_draft",
+        "form1_submitted",
+        "form1_approved",
+        "form2_draft",
+        "form2_submitted",
+        "ai_suggested",
+        "completed",
+      ],
       attendance_status: ["present", "absent", "late"],
       class_level: [
         "primary_1",
@@ -1894,6 +2204,12 @@ export const Constants = {
         "parent",
         "student",
         "finance_manager",
+      ],
+      student_onboarding_status: [
+        "pending_password_reset",
+        "pending_intake_form",
+        "pending_review",
+        "approved",
       ],
     },
   },
