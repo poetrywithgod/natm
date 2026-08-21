@@ -1,6 +1,14 @@
 import { supabase } from "../../lib/supabase";
 import { advanceOnboardingStatus } from "../profile/api";
 
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: JsonValue }
+  | JsonValue[];
+
 export interface DraftEpisode {
   episodeId: string;
   form1Id: string;
@@ -88,10 +96,10 @@ export async function saveFormDraft(
     Record<string, unknown> | null
   >;
 
-  const merged = {
+  const merged: JsonValue = {
     ...(currentRecord[section] ?? {}),
     ...data,
-  };
+  } as Record<string, JsonValue>;
 
   const updatedAt = new Date().toISOString();
 

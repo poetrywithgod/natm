@@ -14,7 +14,6 @@ const StudentSetPassword = lazy(() => import("./pages/StudentSetPassword"));
 const StudentIntakeForm = lazy(() => import("./pages/StudentIntakeForm"));
 const StudentHome = lazy(() => import("./pages/StudentHome"));
 const StudentAssignments = lazy(() => import("./pages/StudentAssignments"));
-const StudentQuiz = lazy(() => import("./pages/StudentQuiz"));
 const StudentProgress = lazy(() => import("./pages/StudentProgress"));
 const StudentNotifications = lazy(() => import("./pages/StudentNotifications"));
 const StudentSettings = lazy(() => import("./pages/StudentSettings"));
@@ -67,7 +66,6 @@ export default function App() {
               >
                 <Route index element={<StudentHome />} />
                 <Route path="assignments" element={<StudentAssignments />} />
-                <Route path="quiz/:quizId" element={<StudentQuiz />} />
                 <Route path="progress" element={<StudentProgress />} />
                 <Route path="notifications" element={<StudentNotifications />} />
                 <Route path="settings" element={<StudentSettings />} />
