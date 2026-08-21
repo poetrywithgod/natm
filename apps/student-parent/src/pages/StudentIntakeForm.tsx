@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchOwnStudentRecord } from "../features/profile/api";
@@ -13,7 +12,6 @@ type Phase = "a" | "b";
 
 export default function StudentIntakeForm() {
   const { profile } = useAuth();
-  const navigate = useNavigate();
 
   const [draft, setDraft] = useState<DraftEpisode | null>(null);
   const [studentId, setStudentId] = useState<string | null>(null);

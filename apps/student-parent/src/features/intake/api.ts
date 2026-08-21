@@ -80,15 +80,43 @@ export async function saveFormDraft(
     .select(section)
     .eq("id", form1Id)
     .single();
+
   if (fetchError) throw new Error(fetchError.message);
 
-  const merged = { ...((current as unknown as Record<string, Record<string, unknown>>)[section] ?? {}), ...data };
+  const currentRecord = current as unknown as Record<
+    string,
+    Record<string, unknown> | null
+  >;
 
-  const { error: updateError } = await supabase
-    .from("form1_submissions")
-    .update({ [section]: merged, updated_at: new Date().toISOString() })
-    .eq("id", form1Id);
-  if (updateError) throw new Error(updateError.message);
+  const merged = {
+    ...(currentRecord[section] ?? {}),
+    ...data,
+  };
+
+  const updatedAt = new Date().toISOString();
+
+  if (section === "part_a") {
+    const { error } = await supabase
+      .from("form1_submissions")
+      .update({ part_a: merged, updated_at: updatedAt })
+      .eq("id", form1Id);
+
+    if (error) throw new Error(error.message);
+  } else if (section === "part_b") {
+    const { error } = await supabase
+      .from("form1_submissions")
+      .update({ part_b: merged, updated_at: updatedAt })
+      .eq("id", form1Id);
+
+    if (error) throw new Error(error.message);
+  } else {
+    const { error } = await supabase
+      .from("form1_submissions")
+      .update({ consents: merged, updated_at: updatedAt })
+      .eq("id", form1Id);
+
+    if (error) throw new Error(error.message);
+  }
 }
 
 export async function submitForm1(
