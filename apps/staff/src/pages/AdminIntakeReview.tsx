@@ -1,7 +1,30 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../features/auth/AuthContext";
-import { fetchEpisodeDetail, approveForm1, type EpisodeDetail } from "../features/assessments/api";
+import {
+  fetchEpisodeDetail,
+  approveForm1,
+  generateRecommendation,
+  approveRecommendation,
+  type EpisodeDetail,
+  type SuggestedSubject,
+} from "../features/assessments/api";
+import type { Database } from "@natm/supabase";
+
+type ClassLevel = Database["public"]["Enums"]["class_level"];
+
+const CLASS_LEVELS = [
+  "primary_1", "primary_2", "primary_3", "primary_4", "primary_5", "primary_6",
+  "jss_1", "jss_2", "jss_3",
+  "ss_1", "ss_2", "ss_3",
+];
+
+function levelLabel(level: string): string {
+  if (level.startsWith("primary_")) return `Primary ${level.split("_")[1]}`;
+  if (level.startsWith("jss_")) return `JSS ${level.split("_")[1]}`;
+  if (level.startsWith("ss_")) return `SS ${level.split("_")[1]}`;
+  return level;
+}
 
 function prettyLabel(key: string): string {
   return key
@@ -61,26 +84,34 @@ export default function AdminIntakeReview() {
   const [detail, setDetail] = useState<EpisodeDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [approvingRec, setApprovingRec] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const [selectedSubjectIds, setSelectedSubjectIds] = useState<Set<string>>(new Set());
+  const [selectedLevel, setSelectedLevel] = useState<string>("");
+
+  async function load() {
     if (!id) return;
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const d = await fetchEpisodeDetail(id);
-        if (!cancelled) setDetail(d);
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load submission");
-      } finally {
-        if (!cancelled) setLoading(false);
+    try {
+      const d = await fetchEpisodeDetail(id);
+      setDetail(d);
+      if (d.status === "ai_suggested" || d.status === "completed") {
+        const subjects = d.approvedSubjects ?? d.suggestedSubjects;
+        setSelectedSubjectIds(new Set(subjects.map((s) => s.subject_id)));
+        setSelectedLevel(d.approvedLevel ?? d.suggestedLevel ?? "");
       }
-    })();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load submission");
+    } finally {
+      setLoading(false);
+    }
+  }
 
-    return () => {
-      cancelled = true;
-    };
+  useEffect(() => {
+    setLoading(true);
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   async function handleApprove() {
@@ -94,6 +125,53 @@ export default function AdminIntakeReview() {
       setError(e instanceof Error ? e.message : "Failed to approve submission");
     } finally {
       setApproving(false);
+    }
+  }
+
+  async function handleGenerateRecommendation() {
+    if (!detail) return;
+    setGenerating(true);
+    setError(null);
+    try {
+      await generateRecommendation(detail.episodeId);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to generate recommendation");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  function toggleSubject(subjectId: string) {
+    setSelectedSubjectIds((current) => {
+      const next = new Set(current);
+      if (next.has(subjectId)) next.delete(subjectId);
+      else next.add(subjectId);
+      return next;
+    });
+  }
+
+  async function handleApproveRecommendation() {
+    if (!detail || !profile?.id || !profile?.school_id || !selectedLevel) return;
+    setApprovingRec(true);
+    setError(null);
+    try {
+      const approvedSubjects: SuggestedSubject[] = detail.suggestedSubjects.filter((s) =>
+        selectedSubjectIds.has(s.subject_id)
+      );
+      await approveRecommendation(
+        detail.episodeId,
+        detail.studentId,
+        profile.school_id,
+        approvedSubjects,
+        selectedLevel as ClassLevel,
+        profile.id
+      );
+      navigate("/admin/intake");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to approve recommendation");
+    } finally {
+      setApprovingRec(false);
     }
   }
 
@@ -150,6 +228,86 @@ export default function AdminIntakeReview() {
           </Link>
         )}
       </div>
+
+      {(detail.status === "form2_submitted" ||
+        detail.status === "ai_suggested" ||
+        detail.status === "completed") && (
+        <div className="bg-forest-900 rounded-lg p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="font-display text-lg text-forest-100">AI Recommendation</p>
+            {detail.status === "form2_submitted" && (
+              <button
+                onClick={handleGenerateRecommendation}
+                disabled={generating}
+                className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui text-sm font-semibold disabled:opacity-50"
+              >
+                {generating ? "Generating..." : "Generate Recommendation"}
+              </button>
+            )}
+            {detail.status === "completed" && (
+              <span className="px-3 py-1.5 rounded bg-forest-700 text-forest-300 font-ui text-xs">
+                Approved
+              </span>
+            )}
+          </div>
+
+          {(detail.status === "ai_suggested" || detail.status === "completed") && (
+            <>
+              {detail.suggestedSummary && (
+                <p className="font-ui text-sm text-forest-300">{detail.suggestedSummary}</p>
+              )}
+
+              <div>
+                <p className="font-ui text-xs font-semibold text-forest-300 mb-1">Class Level</p>
+                <select
+                  value={selectedLevel}
+                  onChange={(e) => setSelectedLevel(e.target.value)}
+                  disabled={detail.status === "completed"}
+                  className="w-full rounded-md border border-forest-700 bg-forest-950 px-3 py-2 font-ui text-sm text-forest-100 disabled:opacity-60"
+                >
+                  {CLASS_LEVELS.map((level) => (
+                    <option key={level} value={level}>
+                      {levelLabel(level)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <p className="font-ui text-xs font-semibold text-forest-300">Subjects</p>
+                {detail.suggestedSubjects.map((s) => (
+                  <label
+                    key={s.subject_id}
+                    className="flex items-start gap-3 bg-forest-950 rounded-md p-3 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedSubjectIds.has(s.subject_id)}
+                      onChange={() => toggleSubject(s.subject_id)}
+                      disabled={detail.status === "completed"}
+                      className="mt-1"
+                    />
+                    <div>
+                      <p className="font-ui text-sm text-forest-100 font-semibold">{s.subject_name}</p>
+                      <p className="font-ui text-xs text-forest-300 mt-0.5">{s.rationale}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+
+              {detail.status === "ai_suggested" && (
+                <button
+                  onClick={handleApproveRecommendation}
+                  disabled={approvingRec || selectedSubjectIds.size === 0}
+                  className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui text-sm font-semibold disabled:opacity-50"
+                >
+                  {approvingRec ? "Approving..." : "Approve & Assign Subjects"}
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       <JsonSection title="Part A — Intake & Consent" data={detail.partA} />
       <JsonSection title="Part B — Functional Domains" data={detail.partB} />

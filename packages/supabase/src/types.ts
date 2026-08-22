@@ -1699,6 +1699,72 @@ export type Database = {
           },
         ]
       }
+      student_subjects: {
+        Row: {
+          assessment_episode_id: string | null
+          assigned_at: string
+          assigned_by: string | null
+          id: string
+          school_id: string
+          student_id: string
+          subject_id: string
+        }
+        Insert: {
+          assessment_episode_id?: string | null
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          school_id: string
+          student_id: string
+          subject_id: string
+        }
+        Update: {
+          assessment_episode_id?: string | null
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          school_id?: string
+          student_id?: string
+          subject_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_subjects_assessment_episode_id_fkey"
+            columns: ["assessment_episode_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_subjects_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_subjects_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_subjects_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_subjects_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_subject_carryovers: {
         Row: {
           academic_session_id: string

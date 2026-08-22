@@ -1,4 +1,7 @@
 import { supabase } from "../../lib/supabase";
+import type { Database } from "@natm/supabase";
+
+type ClassLevel = Database["public"]["Enums"]["class_level"];
 
 export interface IntakeQueueItem {
   episodeId: string;
@@ -8,6 +11,12 @@ export interface IntakeQueueItem {
   episodeNumber: number;
   status: string;
   submittedAt: string | null;
+}
+
+export interface SuggestedSubject {
+  subject_id: string;
+  subject_name: string;
+  rationale: string;
 }
 
 export interface EpisodeDetail {
@@ -22,6 +31,11 @@ export interface EpisodeDetail {
   partA: Record<string, unknown>;
   partB: Record<string, unknown>;
   consents: Record<string, unknown>;
+  suggestedSubjects: SuggestedSubject[];
+  suggestedSummary: string | null;
+  suggestedLevel: string | null;
+  approvedSubjects: SuggestedSubject[] | null;
+  approvedLevel: string | null;
 }
 
 export async function fetchIntakeQueue(schoolId: string): Promise<IntakeQueueItem[]> {
@@ -51,7 +65,7 @@ export async function fetchEpisodeDetail(episodeId: string): Promise<EpisodeDeta
   const { data: episode, error: episodeError } = await supabase
     .from("assessment_episodes")
     .select(
-      "id, episode_number, status, form1_submitted_at, form1_approved_at, student_id, students(full_name, unique_student_id)"
+      "id, episode_number, status, form1_submitted_at, form1_approved_at, student_id, suggested_subjects, suggested_level, approved_subjects, approved_level, students(full_name, unique_student_id)"
     )
     .eq("id", episodeId)
     .single();
@@ -66,6 +80,9 @@ export async function fetchEpisodeDetail(episodeId: string): Promise<EpisodeDeta
 
   const student = Array.isArray(episode.students) ? episode.students[0] : episode.students;
 
+  const suggested = episode.suggested_subjects as { subjects?: SuggestedSubject[]; summary?: string } | null;
+  const approved = episode.approved_subjects as SuggestedSubject[] | null;
+
   return {
     episodeId: episode.id,
     studentId: episode.student_id,
@@ -78,7 +95,57 @@ export async function fetchEpisodeDetail(episodeId: string): Promise<EpisodeDeta
     partA: form1.part_a ?? {},
     partB: form1.part_b ?? {},
     consents: form1.consents ?? {},
+    suggestedSubjects: suggested?.subjects ?? [],
+    suggestedSummary: suggested?.summary ?? null,
+    suggestedLevel: episode.suggested_level,
+    approvedSubjects: approved,
+    approvedLevel: episode.approved_level,
   };
+}
+
+export async function generateRecommendation(episodeId: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke("generate-iep-recommendation", {
+    body: { episode_id: episodeId },
+  });
+  if (error) throw new Error(error.message);
+  if (data?.error) throw new Error(data.error);
+}
+
+export async function approveRecommendation(
+  episodeId: string,
+  studentId: string,
+  schoolId: string,
+  approvedSubjects: SuggestedSubject[],
+  approvedLevel: ClassLevel,
+  approvedBy: string
+): Promise<void> {
+  const now = new Date().toISOString();
+
+  const { error: episodeError } = await supabase
+    .from("assessment_episodes")
+    .update({
+      approved_subjects: approvedSubjects,
+      approved_level: approvedLevel as ClassLevel,
+      status: "completed",
+      completed_at: now,
+      completed_by: approvedBy,
+    })
+    .eq("id", episodeId)
+    .eq("status", "ai_suggested");
+  if (episodeError) throw new Error(episodeError.message);
+
+  const rows = approvedSubjects.map((s) => ({
+    student_id: studentId,
+    subject_id: s.subject_id,
+    school_id: schoolId,
+    assessment_episode_id: episodeId,
+    assigned_by: approvedBy,
+  }));
+
+  const { error: subjectsError } = await supabase
+    .from("student_subjects")
+    .upsert(rows, { onConflict: "student_id,subject_id" });
+  if (subjectsError) throw new Error(subjectsError.message);
 }
 
 export async function approveForm1(episodeId: string, approvedBy: string): Promise<void> {
