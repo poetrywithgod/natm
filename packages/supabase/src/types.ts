@@ -179,6 +179,8 @@ export type Database = {
           ai_suggested_at: string | null
           approved_level: Database["public"]["Enums"]["class_level"] | null
           approved_subjects: Json | null
+          class_assigned_at: string | null
+          class_assigned_by: string | null
           completed_at: string | null
           completed_by: string | null
           created_at: string
@@ -189,6 +191,8 @@ export type Database = {
           form2_submitted_at: string | null
           id: string
           school_id: string
+          shadow_teacher_assigned_at: string | null
+          shadow_teacher_assigned_by: string | null
           status: Database["public"]["Enums"]["assessment_episode_status"]
           student_id: string
           suggested_level: Database["public"]["Enums"]["class_level"] | null
@@ -198,6 +202,8 @@ export type Database = {
           ai_suggested_at?: string | null
           approved_level?: Database["public"]["Enums"]["class_level"] | null
           approved_subjects?: Json | null
+          class_assigned_at?: string | null
+          class_assigned_by?: string | null
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
@@ -208,6 +214,8 @@ export type Database = {
           form2_submitted_at?: string | null
           id?: string
           school_id: string
+          shadow_teacher_assigned_at?: string | null
+          shadow_teacher_assigned_by?: string | null
           status?: Database["public"]["Enums"]["assessment_episode_status"]
           student_id: string
           suggested_level?: Database["public"]["Enums"]["class_level"] | null
@@ -217,6 +225,8 @@ export type Database = {
           ai_suggested_at?: string | null
           approved_level?: Database["public"]["Enums"]["class_level"] | null
           approved_subjects?: Json | null
+          class_assigned_at?: string | null
+          class_assigned_by?: string | null
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
@@ -227,12 +237,21 @@ export type Database = {
           form2_submitted_at?: string | null
           id?: string
           school_id?: string
+          shadow_teacher_assigned_at?: string | null
+          shadow_teacher_assigned_by?: string | null
           status?: Database["public"]["Enums"]["assessment_episode_status"]
           student_id?: string
           suggested_level?: Database["public"]["Enums"]["class_level"] | null
           suggested_subjects?: Json | null
         }
         Relationships: [
+          {
+            foreignKeyName: "assessment_episodes_class_assigned_by_fkey"
+            columns: ["class_assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "assessment_episodes_completed_by_fkey"
             columns: ["completed_by"]
@@ -252,6 +271,13 @@ export type Database = {
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_episodes_shadow_teacher_assigned_by_fkey"
+            columns: ["shadow_teacher_assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -1699,72 +1725,6 @@ export type Database = {
           },
         ]
       }
-      student_subjects: {
-        Row: {
-          assessment_episode_id: string | null
-          assigned_at: string
-          assigned_by: string | null
-          id: string
-          school_id: string
-          student_id: string
-          subject_id: string
-        }
-        Insert: {
-          assessment_episode_id?: string | null
-          assigned_at?: string
-          assigned_by?: string | null
-          id?: string
-          school_id: string
-          student_id: string
-          subject_id: string
-        }
-        Update: {
-          assessment_episode_id?: string | null
-          assigned_at?: string
-          assigned_by?: string | null
-          id?: string
-          school_id?: string
-          student_id?: string
-          subject_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "student_subjects_assessment_episode_id_fkey"
-            columns: ["assessment_episode_id"]
-            isOneToOne: false
-            referencedRelation: "assessment_episodes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "student_subjects_assigned_by_fkey"
-            columns: ["assigned_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "student_subjects_school_id_fkey"
-            columns: ["school_id"]
-            isOneToOne: false
-            referencedRelation: "schools"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "student_subjects_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "student_subjects_subject_id_fkey"
-            columns: ["subject_id"]
-            isOneToOne: false
-            referencedRelation: "subjects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       student_subject_carryovers: {
         Row: {
           academic_session_id: string
@@ -1824,6 +1784,72 @@ export type Database = {
           },
           {
             foreignKeyName: "student_subject_carryovers_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_subjects: {
+        Row: {
+          assessment_episode_id: string | null
+          assigned_at: string
+          assigned_by: string | null
+          id: string
+          school_id: string
+          student_id: string
+          subject_id: string
+        }
+        Insert: {
+          assessment_episode_id?: string | null
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          school_id: string
+          student_id: string
+          subject_id: string
+        }
+        Update: {
+          assessment_episode_id?: string | null
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          school_id?: string
+          student_id?: string
+          subject_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_subjects_assessment_episode_id_fkey"
+            columns: ["assessment_episode_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_subjects_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_subjects_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_subjects_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_subjects_subject_id_fkey"
             columns: ["subject_id"]
             isOneToOne: false
             referencedRelation: "subjects"
