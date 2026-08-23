@@ -1,4 +1,5 @@
 import { supabase } from "../../lib/supabase";
+import { logAuditEvent } from "../audit/api";
 import type { Database } from "@natm/supabase";
 
 type ClassLevel = Database["public"]["Enums"]["class_level"];
@@ -36,6 +37,24 @@ export interface EpisodeDetail {
   suggestedLevel: string | null;
   approvedSubjects: SuggestedSubject[] | null;
   approvedLevel: string | null;
+  classAssignedAt: string | null;
+  shadowTeacherAssignedAt: string | null;
+  currentClassId: string | null;
+  currentClassName: string | null;
+  currentShadowTeacherId: string | null;
+  currentShadowTeacherName: string | null;
+}
+
+export interface ClassOption {
+  id: string;
+  name: string;
+  level: string | null;
+}
+
+export interface ShadowTeacherOption {
+  id: string;
+  full_name: string;
+  activeStudentCount: number;
 }
 
 export async function fetchIntakeQueue(schoolId: string): Promise<IntakeQueueItem[]> {
@@ -65,7 +84,7 @@ export async function fetchEpisodeDetail(episodeId: string): Promise<EpisodeDeta
   const { data: episode, error: episodeError } = await supabase
     .from("assessment_episodes")
     .select(
-      "id, episode_number, status, form1_submitted_at, form1_approved_at, student_id, suggested_subjects, suggested_level, approved_subjects, approved_level, students(full_name, unique_student_id)"
+      "id, episode_number, status, form1_submitted_at, form1_approved_at, student_id, suggested_subjects, suggested_level, approved_subjects, approved_level, class_assigned_at, shadow_teacher_assigned_at, students(full_name, unique_student_id, class_id, classes(name))"
     )
     .eq("id", episodeId)
     .single();
@@ -79,6 +98,23 @@ export async function fetchEpisodeDetail(episodeId: string): Promise<EpisodeDeta
   if (form1Error) throw new Error(form1Error.message);
 
   const student = Array.isArray(episode.students) ? episode.students[0] : episode.students;
+  const currentClass = student ? (Array.isArray(student.classes) ? student.classes[0] : student.classes) : null;
+
+  let currentShadowTeacherId: string | null = null;
+  let currentShadowTeacherName: string | null = null;
+  const { data: activeAssignment } = await supabase
+    .from("shadow_teacher_assignments")
+    .select("shadow_teacher_id, profiles(full_name)")
+    .eq("student_id", episode.student_id)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (activeAssignment) {
+    currentShadowTeacherId = activeAssignment.shadow_teacher_id;
+    const teacherProfile = Array.isArray(activeAssignment.profiles)
+      ? activeAssignment.profiles[0]
+      : activeAssignment.profiles;
+    currentShadowTeacherName = teacherProfile?.full_name ?? null;
+  }
 
   const suggested = episode.suggested_subjects as { subjects?: SuggestedSubject[]; summary?: string } | null;
   const approved = episode.approved_subjects as SuggestedSubject[] | null;
@@ -100,7 +136,130 @@ export async function fetchEpisodeDetail(episodeId: string): Promise<EpisodeDeta
     suggestedLevel: episode.suggested_level,
     approvedSubjects: approved,
     approvedLevel: episode.approved_level,
+    classAssignedAt: episode.class_assigned_at,
+    shadowTeacherAssignedAt: episode.shadow_teacher_assigned_at,
+    currentClassId: student?.class_id ?? null,
+    currentClassName: currentClass?.name ?? null,
+    currentShadowTeacherId,
+    currentShadowTeacherName,
   };
+}
+
+export async function fetchClassOptions(schoolId: string): Promise<ClassOption[]> {
+  const { data, error } = await supabase
+    .from("classes")
+    .select("id, name, level")
+    .eq("school_id", schoolId)
+    .order("name", { ascending: true });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function fetchShadowTeacherOptions(schoolId: string): Promise<ShadowTeacherOption[]> {
+  const { data: teachers, error } = await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .eq("school_id", schoolId)
+    .eq("role", "shadow_teacher")
+    .eq("is_active", true)
+    .order("full_name", { ascending: true });
+  if (error) throw new Error(error.message);
+  if (!teachers || teachers.length === 0) return [];
+
+  // Caseload = count of currently-active shadow_teacher_assignments rows per
+  // teacher. Shadow teacher -> students is deliberately uncapped and many-to-one
+  // (unlike class teachers, who get one class each) -- this is purely a display
+  // aid so admin can balance new assignments, not an enforced limit.
+  const teacherIds = teachers.map((t) => t.id);
+  const { data: assignments, error: assignError } = await supabase
+    .from("shadow_teacher_assignments")
+    .select("shadow_teacher_id")
+    .eq("is_active", true)
+    .in("shadow_teacher_id", teacherIds);
+  if (assignError) throw new Error(assignError.message);
+
+  const counts = new Map<string, number>();
+  for (const a of assignments ?? []) {
+    counts.set(a.shadow_teacher_id, (counts.get(a.shadow_teacher_id) ?? 0) + 1);
+  }
+
+  return teachers.map((t) => ({
+    id: t.id,
+    full_name: t.full_name,
+    activeStudentCount: counts.get(t.id) ?? 0,
+  }));
+}
+
+export async function assignClass(
+  episodeId: string,
+  studentId: string,
+  classId: string,
+  schoolId: string,
+  assignedBy: string
+): Promise<void> {
+  const now = new Date().toISOString();
+
+  const { error: studentError } = await supabase
+    .from("students")
+    .update({ class_id: classId })
+    .eq("id", studentId);
+  if (studentError) throw new Error(studentError.message);
+
+  const { error: episodeError } = await supabase
+    .from("assessment_episodes")
+    .update({ class_assigned_at: now, class_assigned_by: assignedBy })
+    .eq("id", episodeId)
+    .eq("status", "completed");
+  if (episodeError) throw new Error(episodeError.message);
+
+  await logAuditEvent({
+    school_id: schoolId,
+    actor_id: assignedBy,
+    action: "iep.class_assigned",
+    entity_type: "assessment_episode",
+    entity_id: episodeId,
+    details: { student_id: studentId, class_id: classId },
+  });
+}
+
+export async function assignShadowTeacher(
+  episodeId: string,
+  studentId: string,
+  shadowTeacherId: string,
+  schoolId: string,
+  assignedBy: string
+): Promise<void> {
+  const now = new Date().toISOString();
+
+  // Only one active shadow teacher per student (DB-enforced unique index) --
+  // deactivate any existing active assignment before inserting the new one.
+  const { error: deactivateError } = await supabase
+    .from("shadow_teacher_assignments")
+    .update({ is_active: false, ended_at: now })
+    .eq("student_id", studentId)
+    .eq("is_active", true);
+  if (deactivateError) throw new Error(deactivateError.message);
+
+  const { error: insertError } = await supabase
+    .from("shadow_teacher_assignments")
+    .insert({ student_id: studentId, shadow_teacher_id: shadowTeacherId, is_active: true });
+  if (insertError) throw new Error(insertError.message);
+
+  const { error: episodeError } = await supabase
+    .from("assessment_episodes")
+    .update({ shadow_teacher_assigned_at: now, shadow_teacher_assigned_by: assignedBy })
+    .eq("id", episodeId)
+    .eq("status", "completed");
+  if (episodeError) throw new Error(episodeError.message);
+
+  await logAuditEvent({
+    school_id: schoolId,
+    actor_id: assignedBy,
+    action: "iep.shadow_teacher_assigned",
+    entity_type: "assessment_episode",
+    entity_id: episodeId,
+    details: { student_id: studentId, shadow_teacher_id: shadowTeacherId },
+  });
 }
 
 export async function generateRecommendation(episodeId: string): Promise<void> {

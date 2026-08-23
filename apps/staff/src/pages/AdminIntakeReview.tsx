@@ -6,8 +6,14 @@ import {
   approveForm1,
   generateRecommendation,
   approveRecommendation,
+  fetchClassOptions,
+  fetchShadowTeacherOptions,
+  assignClass,
+  assignShadowTeacher,
   type EpisodeDetail,
   type SuggestedSubject,
+  type ClassOption,
+  type ShadowTeacherOption,
 } from "../features/assessments/api";
 import type { Database } from "@natm/supabase";
 
@@ -91,6 +97,13 @@ export default function AdminIntakeReview() {
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<Set<string>>(new Set());
   const [selectedLevel, setSelectedLevel] = useState<string>("");
 
+  const [classOptions, setClassOptions] = useState<ClassOption[]>([]);
+  const [shadowTeacherOptions, setShadowTeacherOptions] = useState<ShadowTeacherOption[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState<string>("");
+  const [selectedShadowTeacherId, setSelectedShadowTeacherId] = useState<string>("");
+  const [assigningClass, setAssigningClass] = useState(false);
+  const [assigningShadowTeacher, setAssigningShadowTeacher] = useState(false);
+
   async function load() {
     if (!id) return;
     try {
@@ -100,6 +113,17 @@ export default function AdminIntakeReview() {
         const subjects = d.approvedSubjects ?? d.suggestedSubjects;
         setSelectedSubjectIds(new Set(subjects.map((s) => s.subject_id)));
         setSelectedLevel(d.approvedLevel ?? d.suggestedLevel ?? "");
+      }
+      if (d.status === "completed" && profile?.school_id) {
+        const [classes, shadowTeachers] = await Promise.all([
+          fetchClassOptions(profile.school_id),
+          fetchShadowTeacherOptions(profile.school_id),
+        ]);
+        setClassOptions(classes);
+        setShadowTeacherOptions(shadowTeachers);
+        const matchingClass = classes.find((c) => c.level === d.approvedLevel);
+        setSelectedClassId(d.currentClassId ?? matchingClass?.id ?? "");
+        setSelectedShadowTeacherId(d.currentShadowTeacherId ?? "");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load submission");
@@ -172,6 +196,40 @@ export default function AdminIntakeReview() {
       setError(e instanceof Error ? e.message : "Failed to approve recommendation");
     } finally {
       setApprovingRec(false);
+    }
+  }
+
+  async function handleAssignClass() {
+    if (!detail || !profile?.id || !profile?.school_id || !selectedClassId) return;
+    setAssigningClass(true);
+    setError(null);
+    try {
+      await assignClass(detail.episodeId, detail.studentId, selectedClassId, profile.school_id, profile.id);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to assign class");
+    } finally {
+      setAssigningClass(false);
+    }
+  }
+
+  async function handleAssignShadowTeacher() {
+    if (!detail || !profile?.id || !profile?.school_id || !selectedShadowTeacherId) return;
+    setAssigningShadowTeacher(true);
+    setError(null);
+    try {
+      await assignShadowTeacher(
+        detail.episodeId,
+        detail.studentId,
+        selectedShadowTeacherId,
+        profile.school_id,
+        profile.id
+      );
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to assign shadow teacher");
+    } finally {
+      setAssigningShadowTeacher(false);
     }
   }
 
@@ -304,6 +362,87 @@ export default function AdminIntakeReview() {
                   {approvingRec ? "Approving..." : "Approve & Assign Subjects"}
                 </button>
               )}
+            </>
+          )}
+        </div>
+      )}
+
+      {detail.status === "completed" && (
+        <div className="bg-forest-900 rounded-lg p-4 space-y-4">
+          <p className="font-display text-lg text-forest-100">Assign Class</p>
+          {detail.classAssignedAt ? (
+            <div className="flex items-center justify-between">
+              <p className="font-ui text-sm text-forest-100">
+                Assigned to <span className="font-semibold">{detail.currentClassName ?? "—"}</span>
+              </p>
+              <span className="px-3 py-1.5 rounded bg-forest-700 text-forest-300 font-ui text-xs">Assigned</span>
+            </div>
+          ) : (
+            <>
+              <p className="font-ui text-xs text-forest-300">
+                Suggested from the approved level ({detail.approvedLevel ? levelLabel(detail.approvedLevel) : "—"}).
+                Override if needed.
+              </p>
+              <select
+                value={selectedClassId}
+                onChange={(e) => setSelectedClassId(e.target.value)}
+                className="w-full rounded-md border border-forest-700 bg-forest-950 px-3 py-2 font-ui text-sm text-forest-100"
+              >
+                <option value="">Select a class...</option>
+                {classOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                    {c.level ? ` (${levelLabel(c.level)})` : ""}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleAssignClass}
+                disabled={assigningClass || !selectedClassId}
+                className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui text-sm font-semibold disabled:opacity-50"
+              >
+                {assigningClass ? "Assigning..." : "Assign Class"}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {detail.status === "completed" && (
+        <div className="bg-forest-900 rounded-lg p-4 space-y-4">
+          <p className="font-display text-lg text-forest-100">Assign Shadow Teacher</p>
+          {!detail.classAssignedAt ? (
+            <span className="px-3 py-1.5 rounded bg-forest-700 text-forest-300 font-ui text-xs">
+              🔒 Locked — assign a class first
+            </span>
+          ) : detail.shadowTeacherAssignedAt ? (
+            <div className="flex items-center justify-between">
+              <p className="font-ui text-sm text-forest-100">
+                Assigned to <span className="font-semibold">{detail.currentShadowTeacherName ?? "—"}</span>
+              </p>
+              <span className="px-3 py-1.5 rounded bg-forest-700 text-forest-300 font-ui text-xs">Assigned</span>
+            </div>
+          ) : (
+            <>
+              <select
+                value={selectedShadowTeacherId}
+                onChange={(e) => setSelectedShadowTeacherId(e.target.value)}
+                className="w-full rounded-md border border-forest-700 bg-forest-950 px-3 py-2 font-ui text-sm text-forest-100"
+              >
+                <option value="">Select a shadow teacher...</option>
+                {shadowTeacherOptions.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.full_name} — {t.activeStudentCount} student{t.activeStudentCount === 1 ? "" : "s"}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleAssignShadowTeacher}
+                disabled={assigningShadowTeacher || !selectedShadowTeacherId}
+                className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui text-sm font-semibold disabled:opacity-50"
+              >
+                {assigningShadowTeacher ? "Assigning..." : "Assign Shadow Teacher"}
+              </button>
             </>
           )}
         </div>
