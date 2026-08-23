@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useAuth } from "../features/auth/AuthContext";
 import {
   fetchEpisodeDetail,
@@ -84,7 +84,6 @@ function JsonSection({ title, data }: { title: string; data: Record<string, unkn
 
 export default function AdminIntakeReview() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { profile } = useAuth();
 
   const [detail, setDetail] = useState<EpisodeDetail | null>(null);
@@ -139,12 +138,12 @@ export default function AdminIntakeReview() {
   }, [id]);
 
   async function handleApprove() {
-    if (!detail || !profile?.id) return;
+    if (!detail || !profile?.id || !profile?.school_id) return;
     setApproving(true);
     setError(null);
     try {
-      await approveForm1(detail.episodeId, profile.id);
-      navigate("/admin/intake");
+      await approveForm1(detail.episodeId, profile.id, profile.school_id);
+      await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to approve submission");
     } finally {
@@ -153,11 +152,11 @@ export default function AdminIntakeReview() {
   }
 
   async function handleGenerateRecommendation() {
-    if (!detail) return;
+    if (!detail || !profile?.id || !profile?.school_id) return;
     setGenerating(true);
     setError(null);
     try {
-      await generateRecommendation(detail.episodeId);
+      await generateRecommendation(detail.episodeId, profile.school_id, profile.id);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to generate recommendation");
@@ -191,7 +190,7 @@ export default function AdminIntakeReview() {
         selectedLevel as ClassLevel,
         profile.id
       );
-      navigate("/admin/intake");
+      await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to approve recommendation");
     } finally {

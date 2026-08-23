@@ -1,5 +1,8 @@
 import { supabase } from "../../lib/supabase";
 import { logAuditEvent } from "../audit/api";
+import type { Database } from "@natm/supabase";
+
+type ClassLevel = Database["public"]["Enums"]["class_level"];
 
 export const CLASS_LEVELS = [
   { value: "primary_1", label: "Primary 1" },
@@ -60,7 +63,7 @@ export async function createClass(
 ): Promise<SchoolClass> {
   const { data, error } = await supabase
     .from("classes")
-    .insert({ school_id: schoolId, name, level })
+    .insert({ school_id: schoolId, name, level: level as ClassLevel | null })
     .select()
     .single();
   if (error) throw new Error(error.message);
@@ -104,7 +107,7 @@ export async function assignClassLevel(
   schoolId: string,
   actorId: string
 ): Promise<void> {
-  const { error } = await supabase.from("classes").update({ level }).eq("id", classId);
+  const { error } = await supabase.from("classes").update({ level: level as ClassLevel | null }).eq("id", classId);
   if (error) throw new Error(error.message);
   logAuditEvent({
     school_id: schoolId,

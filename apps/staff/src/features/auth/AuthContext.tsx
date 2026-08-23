@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import type { Session } from "@supabase/supabase-js";
+import type { Session } from "@natm/supabase";
 import { supabase } from "../../lib/supabase";
 import { registerPushSubscription } from "../push/subscribe";
 

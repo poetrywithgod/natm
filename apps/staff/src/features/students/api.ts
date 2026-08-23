@@ -6,7 +6,7 @@ export interface Student {
   school_id: string;
   class_id: string | null;
   full_name: string;
-  unique_student_id: string;
+  unique_student_id: string | null;
   photo_url: string | null; // storage path, not a public URL — bucket is private
   created_at: string;
 }
@@ -155,7 +155,7 @@ export interface CreateStudentAccountResult {
 export async function createStudentAccount(
   email: string,
   fullName: string,
-  classId: string
+  classId: string | null
 ): Promise<CreateStudentAccountResult> {
   const { data, error } = await supabase.functions.invoke("create-student", {
     body: { email, full_name: fullName, class_id: classId },

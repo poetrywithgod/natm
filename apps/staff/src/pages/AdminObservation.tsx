@@ -10,11 +10,11 @@ import {
 import { fetchEpisodeDetail } from "../features/assessments/api";
 import {
   CONFIDENCE_OPTIONS,
-  FORM_TWO_DOMAINS,
   OBSERVATION_INFO_FIELDS,
   OBSERVATION_SEGMENTS,
   SNAPSHOT_FIELDS,
 } from "../features/observation/observationTypes";
+import { FORM_TWO_DOMAINS } from "../features/observation/form2Config";
 import Form2DomainRenderer, {
   type Form2DomainValues,
   type Form2ParameterValue,
@@ -60,6 +60,8 @@ export default function AdminObservation() {
   useEffect(() => {
     if (!episodeId || !profile?.school_id) return;
 
+    const safeEpisodeId = episodeId;
+    const safeSchoolId = profile.school_id;
     let cancelled = false;
 
     async function load() {
@@ -67,7 +69,7 @@ export default function AdminObservation() {
       setError(null);
 
       try {
-        const episode = await fetchEpisodeDetail(episodeId);
+        const episode = await fetchEpisodeDetail(safeEpisodeId);
 
         if (episode.status !== "form1_approved" && episode.status !== "form2_draft" && episode.status !== "form2_submitted") {
           if (!cancelled) {
@@ -78,8 +80,8 @@ export default function AdminObservation() {
         }
 
         const result = await fetchOrCreateForm2Draft(
-          episodeId,
-          profile.school_id,
+          safeEpisodeId,
+          safeSchoolId,
           episode.studentId
         );
 
@@ -154,7 +156,7 @@ export default function AdminObservation() {
   }
 
   async function handleSubmit() {
-    if (!draft || !episodeId || !profile?.id) return;
+    if (!draft || !episodeId || !profile?.id || !profile?.school_id) return;
 
     setSubmitting(true);
     setError(null);
@@ -168,9 +170,12 @@ export default function AdminObservation() {
         snapshot,
       });
 
-      await submitForm2(draft.form2Id, episodeId, profile.id);
+      await submitForm2(draft.form2Id, episodeId, profile.id, profile.school_id);
 
-      navigate("/admin/intake");
+      // Back to the episode's own Intake Review page, not the list -- that's
+      // where "Generate Recommendation" now lives, so the admin flows straight
+      // into the next step instead of having to find their way back in.
+      navigate(`/admin/intake/${episodeId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit Form 2");
     } finally {

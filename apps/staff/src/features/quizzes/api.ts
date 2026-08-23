@@ -72,7 +72,7 @@ export async function fetchQuizQuestions(quizId: string): Promise<QuizQuestion[]
     .eq("quiz_id", quizId)
     .order("order_index", { ascending: true });
   if (error) throw new Error(error.message);
-  return data;
+  return data as unknown as QuizQuestion[];
 }
 
 export async function updateQuizQuestion(

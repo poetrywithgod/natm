@@ -1,6 +1,6 @@
 import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "./features/auth/AuthContext";
+import { AuthProvider } from "./features/auth/AuthContext";
 import { ToastProvider } from "./features/toast/ToastContext";
 import { RequireRole } from "./guards/RequireRole";
 import { RedirectIfAuthed } from "./guards/RedirectIfAuthed";
@@ -52,19 +52,6 @@ const ClassTeacherAnnouncements = lazy(() => import("./pages/ClassTeacherAnnounc
 const AdminAuditLog = lazy(() => import("./pages/AdminAuditLog"));
 const AdminProfile = lazy(() => import("./pages/AdminProfile"));
 const AdminSchoolProfile = lazy(() => import("./pages/AdminSchoolProfile"));
-
-function SimpleTopBar() {
-  const { profile, signOut } = useAuth();
-  if (!profile) return null;
-  return (
-    <div className="flex justify-between items-center p-4 bg-forest-900 font-ui text-sm text-forest-100">
-      <span>{profile.full_name} - {profile.role}</span>
-      <button onClick={signOut} className="px-3 py-1 rounded bg-forest-700">
-        Sign out
-      </button>
-    </div>
-  );
-}
 
 function AppRoutes() {
   return (

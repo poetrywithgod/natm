@@ -30,14 +30,16 @@ export async function updateOwnName(
 ): Promise<void> {
   const { error } = await supabase.from("profiles").update({ full_name: fullName }).eq("id", profileId);
   if (error) throw new Error(error.message);
-  logAuditEvent({
-    school_id: schoolId,
-    actor_id: actorId,
-    action: "profile.name_updated",
-    entity_type: "profile",
-    entity_id: profileId,
-    details: { full_name: fullName },
-  });
+  if (schoolId) {
+    logAuditEvent({
+      school_id: schoolId,
+      actor_id: actorId,
+      action: "profile.name_updated",
+      entity_type: "profile",
+      entity_id: profileId,
+      details: { full_name: fullName },
+    });
+  }
 }
 
 export async function uploadOwnPhoto(
@@ -56,13 +58,15 @@ export async function uploadOwnPhoto(
     .update({ photo_url: path })
     .eq("id", profileId);
   if (updateError) throw new Error(updateError.message);
-  logAuditEvent({
-    school_id: schoolId,
-    actor_id: actorId,
-    action: "profile.photo_updated",
-    entity_type: "profile",
-    entity_id: profileId,
-  });
+  if (schoolId) {
+    logAuditEvent({
+      school_id: schoolId,
+      actor_id: actorId,
+      action: "profile.photo_updated",
+      entity_type: "profile",
+      entity_id: profileId,
+    });
+  }
   return path;
 }
 

@@ -11,7 +11,7 @@ export interface MyClass {
 export interface ClassStudent {
   id: string;
   full_name: string;
-  unique_student_id: string;
+  unique_student_id: string | null;
 }
 
 export interface AttendanceRecord {

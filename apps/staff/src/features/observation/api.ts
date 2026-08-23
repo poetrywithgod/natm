@@ -1,4 +1,5 @@
 import { supabase } from "../../lib/supabase";
+import { logAuditEvent } from "../audit/api";
 
 export interface Form2ObservationInfo {
   [key: string]: unknown;
@@ -41,9 +42,9 @@ export async function fetchOrCreateForm2Draft(
     return {
       form2Id: existing.id,
       episodeId,
-      observationInfo: existing.observation_info ?? {},
-      protocolNotes: existing.protocol_notes ?? {},
-      domains: existing.domains ?? {},
+      observationInfo: (existing.observation_info ?? {}) as Form2ObservationInfo,
+      protocolNotes: (existing.protocol_notes ?? {}) as Form2ProtocolNotes,
+      domains: (existing.domains ?? {}) as Form2DomainData,
     };
   }
 
@@ -96,7 +97,7 @@ export async function saveForm2Draft(
   }
 
   const currentSection =
-    (current?.[section] as Record<string, unknown> | null) ?? {};
+    ((current as Record<string, unknown> | null)?.[section] as Record<string, unknown> | null) ?? {};
 
   const merged = {
     ...currentSection,
@@ -105,10 +106,13 @@ export async function saveForm2Draft(
 
   const { error: updateError } = await supabase
     .from("form2_submissions")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- computed
+    // property name (section) can't be typed against Supabase's generated
+    // Update<form2_submissions> shape, which rejects index signatures.
     .update({
       [section]: merged,
       updated_at: new Date().toISOString(),
-    })
+    } as any)
     .eq("id", form2Id);
 
   if (updateError) {
@@ -119,7 +123,8 @@ export async function saveForm2Draft(
 export async function submitForm2(
   form2Id: string,
   episodeId: string,
-  submittedBy: string
+  submittedBy: string,
+  schoolId: string
 ): Promise<void> {
   const now = new Date().toISOString();
 
@@ -146,4 +151,12 @@ export async function submitForm2(
   if (episodeError) {
     throw new Error(episodeError.message);
   }
+
+  await logAuditEvent({
+    school_id: schoolId,
+    actor_id: submittedBy,
+    action: "iep.form2_submitted",
+    entity_type: "assessment_episode",
+    entity_id: episodeId,
+  });
 }

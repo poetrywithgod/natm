@@ -25,7 +25,7 @@ export interface StudentFeeRow {
   fee_id: string;
   amount_due: number;
   amount_paid: number;
-  is_paid: boolean;
+  is_paid: boolean | null;
 }
 
 export async function fetchCurrentTerm(schoolId: string): Promise<CurrentTerm | null> {

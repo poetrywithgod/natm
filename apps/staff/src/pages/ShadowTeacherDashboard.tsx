@@ -86,7 +86,7 @@ export default function ShadowTeacherDashboard() {
                 <Tooltip
                   contentStyle={{ background: "#1f2e28", border: "none", borderRadius: 8 }}
                   labelStyle={{ color: "#e5e7eb" }}
-                  formatter={(value: number) => [`${Math.round(value)}%`, "Average"]}
+                  formatter={(value) => [`${Math.round(Number(value))}%`, "Average"]}
                 />
                 <Bar dataKey="average_score" fill="#6ee7b7" radius={[4, 4, 0, 0]} />
               </BarChart>

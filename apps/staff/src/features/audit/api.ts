@@ -1,4 +1,5 @@
 import { supabase } from "../../lib/supabase";
+import type { Json } from "@natm/supabase";
 
 export interface AuditLogEntry {
   id: string;
@@ -29,7 +30,7 @@ export async function logAuditEvent(input: {
     action: input.action,
     entity_type: input.entity_type,
     entity_id: input.entity_id ?? null,
-    details: input.details ?? null,
+    details: (input.details ?? null) as Json,
   });
   if (error) {
     // Deliberately not thrown — see comment above.

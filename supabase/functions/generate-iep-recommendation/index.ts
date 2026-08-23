@@ -156,7 +156,16 @@ Respond with ONLY a JSON object (no markdown, no prose, no code fences) in exact
 
     if (!anthropicRes.ok) {
       const errText = await anthropicRes.text();
-      return jsonResponse({ error: `AI request failed: ${errText.slice(0, 500)}` }, 502);
+      let friendlyMessage = "The AI recommendation service is temporarily unavailable. Please try again shortly.";
+      try {
+        const parsed = JSON.parse(errText);
+        if (typeof parsed?.error?.message === "string") {
+          friendlyMessage = parsed.error.message;
+        }
+      } catch {
+        // errText wasn't JSON -- keep the generic fallback above
+      }
+      return jsonResponse({ error: friendlyMessage }, 502);
     }
 
     const anthropicData = await anthropicRes.json();

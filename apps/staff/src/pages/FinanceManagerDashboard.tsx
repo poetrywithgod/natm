@@ -209,7 +209,7 @@ export default function FinanceManagerDashboard() {
             <YAxis stroke="#7ED88E" fontSize={12} allowDecimals={false} />
             <Tooltip
               contentStyle={{ background: "#0F2419", border: "1px solid #1F4A2C", fontSize: 12 }}
-              formatter={(value: number) => formatNaira(value)}
+              formatter={(value) => formatNaira(Number(value))}
             />
             <Legend wrapperStyle={{ fontSize: 12, fontFamily: "Inter, sans-serif" }} />
             <Bar dataKey="paid" stackId="fees" fill={COLORS.paid} radius={[0, 0, 0, 0]} />

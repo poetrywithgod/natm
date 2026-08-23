@@ -1,6 +1,6 @@
 import { supabase } from "../../lib/supabase";
 import { logAuditEvent } from "../audit/api";
-import type { Database } from "@natm/supabase";
+import type { Database, Json } from "@natm/supabase";
 
 type ClassLevel = Database["public"]["Enums"]["class_level"];
 
@@ -58,12 +58,19 @@ export interface ShadowTeacherOption {
 }
 
 export async function fetchIntakeQueue(schoolId: string): Promise<IntakeQueueItem[]> {
+  // Deliberately NOT filtered to a single status: an admin needs to navigate
+  // back into any episode regardless of stage (e.g. to continue Form 2 after
+  // approving Form 1, or to revisit a completed one for Assign Class/Shadow
+  // Teacher) -- narrowing this to "pending review only" was the original
+  // design but left no way back into an episode once it moved past that
+  // status, since every stage transition in this file navigates back here.
   const { data, error } = await supabase
     .from("assessment_episodes")
-    .select("id, episode_number, status, form1_submitted_at, student_id, students(full_name, unique_student_id)")
+    .select(
+      "id, episode_number, status, form1_submitted_at, created_at, student_id, students(full_name, unique_student_id)"
+    )
     .eq("school_id", schoolId)
-    .eq("status", "form1_submitted")
-    .order("form1_submitted_at", { ascending: true });
+    .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
 
   return (data ?? []).map((row) => {
@@ -128,9 +135,9 @@ export async function fetchEpisodeDetail(episodeId: string): Promise<EpisodeDeta
     status: episode.status,
     form1SubmittedAt: episode.form1_submitted_at,
     form1ApprovedAt: episode.form1_approved_at,
-    partA: form1.part_a ?? {},
-    partB: form1.part_b ?? {},
-    consents: form1.consents ?? {},
+    partA: (form1.part_a ?? {}) as Record<string, unknown>,
+    partB: (form1.part_b ?? {}) as Record<string, unknown>,
+    consents: (form1.consents ?? {}) as Record<string, unknown>,
     suggestedSubjects: suggested?.subjects ?? [],
     suggestedSummary: suggested?.summary ?? null,
     suggestedLevel: episode.suggested_level,
@@ -262,12 +269,47 @@ export async function assignShadowTeacher(
   });
 }
 
-export async function generateRecommendation(episodeId: string): Promise<void> {
+// supabase.functions.invoke() doesn't surface an Edge Function's actual JSON
+// error body when it returns a non-2xx status -- error.message is just the
+// generic "Edge Function returned a non-2xx status code". The real message
+// (e.g. "AI request failed: ...") lives in error.context, the raw Response,
+// and has to be read out separately.
+async function extractFunctionErrorMessage(error: unknown, fallback: string): Promise<string> {
+  const context = (error as { context?: Response })?.context;
+  if (context && typeof context.json === "function") {
+    try {
+      const body = await context.clone().json();
+      if (typeof body?.error === "string") return body.error;
+    } catch {
+      try {
+        const text = await context.clone().text();
+        if (text) return text;
+      } catch {
+        // fall through to fallback
+      }
+    }
+  }
+  return (error as { message?: string })?.message ?? fallback;
+}
+
+export async function generateRecommendation(
+  episodeId: string,
+  schoolId: string,
+  actorId: string
+): Promise<void> {
   const { data, error } = await supabase.functions.invoke("generate-iep-recommendation", {
     body: { episode_id: episodeId },
   });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(await extractFunctionErrorMessage(error, "Failed to generate recommendation."));
   if (data?.error) throw new Error(data.error);
+
+  await logAuditEvent({
+    school_id: schoolId,
+    actor_id: actorId,
+    action: "iep.recommendation_generated",
+    entity_type: "assessment_episode",
+    entity_id: episodeId,
+  });
 }
 
 export async function approveRecommendation(
@@ -283,7 +325,7 @@ export async function approveRecommendation(
   const { error: episodeError } = await supabase
     .from("assessment_episodes")
     .update({
-      approved_subjects: approvedSubjects,
+      approved_subjects: approvedSubjects as unknown as Json,
       approved_level: approvedLevel as ClassLevel,
       status: "completed",
       completed_at: now,
@@ -305,9 +347,18 @@ export async function approveRecommendation(
     .from("student_subjects")
     .upsert(rows, { onConflict: "student_id,subject_id" });
   if (subjectsError) throw new Error(subjectsError.message);
+
+  await logAuditEvent({
+    school_id: schoolId,
+    actor_id: approvedBy,
+    action: "iep.recommendation_approved",
+    entity_type: "assessment_episode",
+    entity_id: episodeId,
+    details: { approved_level: approvedLevel, subject_count: approvedSubjects.length },
+  });
 }
 
-export async function approveForm1(episodeId: string, approvedBy: string): Promise<void> {
+export async function approveForm1(episodeId: string, approvedBy: string, schoolId: string): Promise<void> {
   const now = new Date().toISOString();
   const { error } = await supabase
     .from("assessment_episodes")
@@ -315,4 +366,12 @@ export async function approveForm1(episodeId: string, approvedBy: string): Promi
     .eq("id", episodeId)
     .eq("status", "form1_submitted");
   if (error) throw new Error(error.message);
+
+  await logAuditEvent({
+    school_id: schoolId,
+    actor_id: approvedBy,
+    action: "iep.form1_approved",
+    entity_type: "assessment_episode",
+    entity_id: episodeId,
+  });
 }
