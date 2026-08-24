@@ -49,6 +49,44 @@ export async function fetchQuizWithQuestions(quizId: string): Promise<QuizWithQu
   };
 }
 
+export interface QuizHistoryEntry {
+  attemptId: string;
+  quizId: string;
+  lessonTitle: string;
+  subjectName: string | null;
+  difficulty: "easy" | "normal" | "hard";
+  score: number;
+  submittedAt: string;
+}
+
+export async function fetchQuizHistory(studentId: string): Promise<QuizHistoryEntry[]> {
+  const { data, error } = await supabase
+    .from("quiz_attempts")
+    .select(
+      "id, quiz_id, score, submitted_at, quizzes(difficulty, lessons(title, subjects(name)))"
+    )
+    .eq("student_id", studentId)
+    .eq("status", "submitted")
+    .order("submitted_at", { ascending: false });
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((row) => {
+    const quiz = row.quizzes as unknown as {
+      difficulty: "easy" | "normal" | "hard";
+      lessons: { title: string; subjects: { name: string } | null } | null;
+    } | null;
+    return {
+      attemptId: row.id,
+      quizId: row.quiz_id,
+      lessonTitle: quiz?.lessons?.title ?? "Untitled Lesson",
+      subjectName: quiz?.lessons?.subjects?.name ?? null,
+      difficulty: quiz?.difficulty ?? "normal",
+      score: row.score ?? 0,
+      submittedAt: row.submitted_at as string,
+    };
+  });
+}
+
 export async function startOrResumeAttempt(quizId: string, studentId: string): Promise<string> {
   const { data: existing, error: fetchError } = await supabase
     .from("quiz_attempts")
