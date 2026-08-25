@@ -19,6 +19,12 @@ import {
   type ClassSuggestion,
 } from "../features/promotion/api";
 import { fetchSubjectProgress, type SubjectProgress } from "../features/grading/api";
+import {
+  fetchLinkedParents,
+  createParentAccount,
+  type LinkedParent,
+  type CreateParentAccountResult,
+} from "../features/parents/api";
 
 const STATUS_LABELS: Record<string, string> = { present: "Present", absent: "Absent", late: "Late" };
 
@@ -37,6 +43,11 @@ export default function AdminStudentProfile() {
   const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
   const [carryovers, setCarryovers] = useState<{ id: string; subject: { name: string } | null }[]>([]);
   const [subjectProgress, setSubjectProgress] = useState<SubjectProgress[]>([]);
+  const [linkedParents, setLinkedParents] = useState<LinkedParent[]>([]);
+  const [newParentName, setNewParentName] = useState("");
+  const [newParentEmail, setNewParentEmail] = useState("");
+  const [creatingParent, setCreatingParent] = useState(false);
+  const [newParentCredentials, setNewParentCredentials] = useState<CreateParentAccountResult | null>(null);
 
   const [decision, setDecision] = useState<"promoted" | "repeated">("promoted");
   const [targetClassId, setTargetClassId] = useState("");
@@ -87,6 +98,9 @@ export default function AdminStudentProfile() {
         const co = await fetchCarryovers(id, currentSessionId);
         setCarryovers(co);
       }
+
+      const parents = await fetchLinkedParents(id);
+      setLinkedParents(parents);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load student profile");
     } finally {
@@ -98,6 +112,26 @@ export default function AdminStudentProfile() {
     loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, schoolId]);
+
+  async function handleCreateParent() {
+    if (!id || !newParentName.trim() || !newParentEmail.trim()) {
+      setError("Parent name and email are required.");
+      return;
+    }
+    setCreatingParent(true);
+    setError(null);
+    try {
+      const result = await createParentAccount(newParentEmail.trim(), newParentName.trim(), id);
+      setNewParentCredentials(result);
+      setNewParentName("");
+      setNewParentEmail("");
+      await loadAll();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create parent account");
+    } finally {
+      setCreatingParent(false);
+    }
+  }
 
   function toggleCarryoverSubject(subjectId: string) {
     setSelectedCarryoverSubjects((prev) =>
@@ -184,6 +218,60 @@ export default function AdminStudentProfile() {
 
       {error && <p className="text-error font-ui text-sm">{error}</p>}
       {success && <p className="text-forest-500 font-ui text-sm">{success}</p>}
+
+      {/* Linked Parents */}
+      <div className="bg-forest-900 rounded-lg p-4 space-y-4">
+        <h2 className="font-display text-lg text-forest-100">Linked Parents</h2>
+
+        {linkedParents.length === 0 ? (
+          <p className="font-ui text-xs text-forest-300">No parent account linked yet.</p>
+        ) : (
+          <ul className="space-y-1">
+            {linkedParents.map((p) => (
+              <li key={p.id} className="font-ui text-sm text-forest-100">
+                {p.full_name}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {newParentCredentials && (
+          <div className="bg-forest-800 rounded p-3 space-y-1">
+            <p className="font-ui text-xs text-forest-300">
+              A login account, temporary password, and Student ID are all generated automatically once added.
+            </p>
+            <p className="font-ui text-sm text-forest-100">
+              <span className="text-forest-300">Email:</span> {newParentCredentials.email}
+            </p>
+            <p className="font-ui text-sm text-forest-100">
+              <span className="text-forest-300">Temporary Password:</span>{" "}
+              {newParentCredentials.temporary_password}
+            </p>
+          </div>
+        )}
+
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            value={newParentName}
+            onChange={(e) => setNewParentName(e.target.value)}
+            placeholder="Parent full name"
+            className="flex-1 rounded-md border border-forest-700 bg-forest-950 px-3 py-2 font-ui text-sm text-forest-100"
+          />
+          <input
+            value={newParentEmail}
+            onChange={(e) => setNewParentEmail(e.target.value)}
+            placeholder="Parent email"
+            className="flex-1 rounded-md border border-forest-700 bg-forest-950 px-3 py-2 font-ui text-sm text-forest-100"
+          />
+          <button
+            onClick={handleCreateParent}
+            disabled={creatingParent}
+            className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui text-sm font-semibold disabled:opacity-50 whitespace-nowrap"
+          >
+            {creatingParent ? "Adding..." : "Add Parent"}
+          </button>
+        </div>
+      </div>
 
       {/* Promotion */}
       <div className="bg-forest-900 rounded-lg p-4 space-y-4">
