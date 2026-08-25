@@ -6,6 +6,7 @@ import { RequireRole } from "./guards/RequireRole";
 import { RedirectIfAuthed } from "./guards/RedirectIfAuthed";
 import { StudentOnboardingGate } from "./guards/StudentOnboardingGate";
 import StudentLayout from "./layouts/StudentLayout";
+import ParentLayout from "./layouts/ParentLayout";
 import PageSkeleton from "./components/PageSkeleton";
 
 const Login = lazy(() => import("./pages/Login"));
@@ -17,7 +18,7 @@ const StudentAssignments = lazy(() => import("./pages/StudentAssignments"));
 const StudentProgress = lazy(() => import("./pages/StudentProgress"));
 const StudentNotifications = lazy(() => import("./pages/StudentNotifications"));
 const StudentSettings = lazy(() => import("./pages/StudentSettings"));
-const ParentComingSoon = lazy(() => import("./pages/ParentComingSoon"));
+const ParentHome = lazy(() => import("./pages/ParentHome"));
 
 export default function App() {
   return (
@@ -72,13 +73,15 @@ export default function App() {
               </Route>
 
               <Route
-                path="/parent/*"
+                path="/parent"
                 element={
                   <RequireRole allow={["parent"]}>
-                    <ParentComingSoon />
+                    <ParentLayout />
                   </RequireRole>
                 }
-              />
+              >
+                <Route index element={<ParentHome />} />
+              </Route>
 
               <Route path="/" element={<Navigate to="/login" replace />} />
               <Route path="*" element={<Navigate to="/login" replace />} />
