@@ -9,6 +9,9 @@ export interface Student {
   unique_student_id: string | null;
   photo_url: string | null; // storage path, not a public URL — bucket is private
   created_at: string;
+  phone: string | null; // student-editable, from Student Settings > Profile
+  address: string | null; // student-editable, from Student Settings > Profile
+  bio: string | null; // student-editable, from Student Settings > Profile
 }
 
 export interface ClassOption {

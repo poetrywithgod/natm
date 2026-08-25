@@ -6,6 +6,7 @@ import {
   getSignedStudentPhotoUrl,
   uploadOwnStudentPhoto,
   changeOwnPassword,
+  updateOwnProfileDetails,
   IncorrectPasswordError,
   type StudentRecord,
 } from "../features/profile/api";
@@ -20,6 +21,13 @@ export default function StudentSettings() {
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [bio, setBio] = useState("");
+  const [detailsSaving, setDetailsSaving] = useState(false);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [detailsSaved, setDetailsSaved] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -39,6 +47,9 @@ export default function StudentSettings() {
       const record = await fetchOwnStudentRecord(profile.id);
       if (cancelled || !record) return;
       setStudent(record);
+      setPhone(record.phone ?? "");
+      setAddress(record.address ?? "");
+      setBio(record.bio ?? "");
       if (record.photo_url) {
         const url = await getSignedStudentPhotoUrl(record.photo_url);
         if (!cancelled) setPhotoUrl(url);
@@ -69,6 +80,21 @@ export default function StudentSettings() {
       setPhotoError(err instanceof Error ? err.message : "Failed to upload photo");
     } finally {
       setPhotoUploading(false);
+    }
+  }
+
+  async function handleSaveDetails() {
+    if (!student) return;
+    setDetailsSaving(true);
+    setDetailsError(null);
+    setDetailsSaved(false);
+    try {
+      await updateOwnProfileDetails(student.id, { phone, address, bio });
+      setDetailsSaved(true);
+    } catch (err) {
+      setDetailsError(err instanceof Error ? err.message : "Failed to save details");
+    } finally {
+      setDetailsSaving(false);
     }
   }
 
@@ -131,6 +157,55 @@ export default function StudentSettings() {
         </div>
         {photoError && <p className="font-ui text-xs text-error">{photoError}</p>}
         {school && <p className="font-ui text-xs text-abyssal-300">{school.name}</p>}
+      </div>
+
+      {/* Contact & About */}
+      <div className="bg-abyssal-900 rounded-lg p-4 space-y-3">
+        <h2 className="font-display text-lg text-abyssal-100">Contact &amp; About</h2>
+
+        <div>
+          <label className="font-ui text-xs text-abyssal-300">Phone</label>
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="Phone number"
+            className="mt-1 w-full rounded-md border border-abyssal-700 bg-abyssal-950 px-3 py-2 font-ui text-sm text-abyssal-100"
+          />
+        </div>
+
+        <div>
+          <label className="font-ui text-xs text-abyssal-300">Address</label>
+          <input
+            type="text"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="Home address"
+            className="mt-1 w-full rounded-md border border-abyssal-700 bg-abyssal-950 px-3 py-2 font-ui text-sm text-abyssal-100"
+          />
+        </div>
+
+        <div>
+          <label className="font-ui text-xs text-abyssal-300">About me</label>
+          <textarea
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            placeholder="A little about yourself — interests, hobbies, favorite subjects..."
+            rows={3}
+            className="mt-1 w-full rounded-md border border-abyssal-700 bg-abyssal-950 px-3 py-2 font-ui text-sm text-abyssal-100 resize-none"
+          />
+        </div>
+
+        {detailsError && <p className="font-ui text-xs text-error">{detailsError}</p>}
+        {detailsSaved && <p className="font-ui text-xs text-success">Saved.</p>}
+
+        <button
+          onClick={handleSaveDetails}
+          disabled={detailsSaving}
+          className="px-4 py-2 rounded bg-abyssal-500 text-abyssal-950 font-ui text-sm font-semibold disabled:opacity-50"
+        >
+          {detailsSaving ? "Saving..." : "Save Details"}
+        </button>
       </div>
 
       {/* Change password */}

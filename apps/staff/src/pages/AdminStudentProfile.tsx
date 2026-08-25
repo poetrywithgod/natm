@@ -219,6 +219,33 @@ export default function AdminStudentProfile() {
       {error && <p className="text-error font-ui text-sm">{error}</p>}
       {success && <p className="text-forest-500 font-ui text-sm">{success}</p>}
 
+      {/* About — student-editable, from Student Settings > Profile */}
+      {(student.phone || student.address || student.bio) && (
+        <div className="bg-forest-900 rounded-lg p-4 space-y-3">
+          <h2 className="font-display text-lg text-forest-100">About</h2>
+          <p className="font-ui text-xs text-forest-300">Updated by the student from their own portal.</p>
+
+          {student.phone && (
+            <div>
+              <p className="font-ui text-xs text-forest-300">Phone</p>
+              <p className="font-ui text-sm text-forest-100">{student.phone}</p>
+            </div>
+          )}
+          {student.address && (
+            <div>
+              <p className="font-ui text-xs text-forest-300">Address</p>
+              <p className="font-ui text-sm text-forest-100">{student.address}</p>
+            </div>
+          )}
+          {student.bio && (
+            <div>
+              <p className="font-ui text-xs text-forest-300">About me</p>
+              <p className="font-ui text-sm text-forest-100 whitespace-pre-wrap">{student.bio}</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Linked Parents */}
       <div className="bg-forest-900 rounded-lg p-4 space-y-4">
         <h2 className="font-display text-lg text-forest-100">Linked Parents</h2>

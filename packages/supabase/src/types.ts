@@ -1859,33 +1859,42 @@ export type Database = {
       }
       students: {
         Row: {
+          address: string | null
+          bio: string | null
           class_id: string | null
           created_at: string
           full_name: string
           id: string
           onboarding_status: Database["public"]["Enums"]["student_onboarding_status"]
+          phone: string | null
           photo_url: string | null
           profile_id: string | null
           school_id: string
           unique_student_id: string | null
         }
         Insert: {
+          address?: string | null
+          bio?: string | null
           class_id?: string | null
           created_at?: string
           full_name: string
           id?: string
           onboarding_status?: Database["public"]["Enums"]["student_onboarding_status"]
+          phone?: string | null
           photo_url?: string | null
           profile_id?: string | null
           school_id: string
           unique_student_id?: string | null
         }
         Update: {
+          address?: string | null
+          bio?: string | null
           class_id?: string | null
           created_at?: string
           full_name?: string
           id?: string
           onboarding_status?: Database["public"]["Enums"]["student_onboarding_status"]
+          phone?: string | null
           photo_url?: string | null
           profile_id?: string | null
           school_id?: string

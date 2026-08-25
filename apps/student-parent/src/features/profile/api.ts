@@ -17,12 +17,17 @@ export interface StudentRecord {
   unique_student_id: string | null;
   photo_url: string | null;
   onboarding_status: OnboardingStatus;
+  phone: string | null;
+  address: string | null;
+  bio: string | null;
 }
 
 export async function fetchOwnStudentRecord(profileId: string): Promise<StudentRecord | null> {
   const { data, error } = await supabase
     .from("students")
-    .select("id, class_id, full_name, unique_student_id, photo_url, onboarding_status, classes(name)")
+    .select(
+      "id, class_id, full_name, unique_student_id, photo_url, onboarding_status, phone, address, bio, classes(name)"
+    )
     .eq("profile_id", profileId)
     .single();
   if (error) return null;
@@ -36,7 +41,31 @@ export async function fetchOwnStudentRecord(profileId: string): Promise<StudentR
     unique_student_id: data.unique_student_id,
     photo_url: data.photo_url,
     onboarding_status: data.onboarding_status,
+    phone: data.phone,
+    address: data.address,
+    bio: data.bio,
   };
+}
+
+export interface StudentProfileDetails {
+  phone: string;
+  address: string;
+  bio: string;
+}
+
+export async function updateOwnProfileDetails(
+  studentId: string,
+  details: StudentProfileDetails
+): Promise<void> {
+  const { error } = await supabase
+    .from("students")
+    .update({
+      phone: details.phone || null,
+      address: details.address || null,
+      bio: details.bio || null,
+    })
+    .eq("id", studentId);
+  if (error) throw new Error(error.message);
 }
 
 export async function getSignedStudentPhotoUrl(path: string): Promise<string | null> {
