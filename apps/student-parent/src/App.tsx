@@ -19,6 +19,7 @@ const StudentProgress = lazy(() => import("./pages/StudentProgress"));
 const StudentNotifications = lazy(() => import("./pages/StudentNotifications"));
 const StudentSettings = lazy(() => import("./pages/StudentSettings"));
 const ParentHome = lazy(() => import("./pages/ParentHome"));
+const ParentFees = lazy(() => import("./pages/ParentFees"));
 
 export default function App() {
   return (
@@ -81,6 +82,7 @@ export default function App() {
                 }
               >
                 <Route index element={<ParentHome />} />
+                <Route path="fees" element={<ParentFees />} />
               </Route>
 
               <Route path="/" element={<Navigate to="/login" replace />} />

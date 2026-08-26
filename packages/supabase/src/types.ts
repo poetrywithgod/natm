@@ -1143,6 +1143,93 @@ export type Database = {
           },
         ]
       }
+      payment_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          failure_reason: string | null
+          fee_type_id: string
+          id: string
+          initiated_by: string | null
+          order_id: string
+          remita_transaction_id: string | null
+          rrr: string | null
+          school_id: string
+          status: string
+          student_id: string
+          term_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          failure_reason?: string | null
+          fee_type_id: string
+          id?: string
+          initiated_by?: string | null
+          order_id: string
+          remita_transaction_id?: string | null
+          rrr?: string | null
+          school_id: string
+          status?: string
+          student_id: string
+          term_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          failure_reason?: string | null
+          fee_type_id?: string
+          id?: string
+          initiated_by?: string | null
+          order_id?: string
+          remita_transaction_id?: string | null
+          rrr?: string | null
+          school_id?: string
+          status?: string
+          student_id?: string
+          term_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_fee_type_id_fkey"
+            columns: ["fee_type_id"]
+            isOneToOne: false
+            referencedRelation: "fee_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_initiated_by_fkey"
+            columns: ["initiated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_transactions_term_id_fkey"
+            columns: ["term_id"]
+            isOneToOne: false
+            referencedRelation: "terms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
