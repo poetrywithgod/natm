@@ -199,8 +199,12 @@ export default function ProfileContent() {
       <section className="space-y-2">
         <h2 className="font-ui text-sm font-semibold text-forest-100">Change password</h2>
         <div className="relative">
+          <label htmlFor="staff-current-password" className="sr-only">Current password</label>
           <input
+            id="staff-current-password"
+            name="staff-current-password"
             type={showCurrentPassword ? "text" : "password"}
+            autoComplete="new-password"
             placeholder="Current password"
             value={currentPassword}
             onChange={(e) => {
@@ -219,8 +223,12 @@ export default function ProfileContent() {
           </button>
         </div>
         <div className="relative">
+          <label htmlFor="staff-new-password" className="sr-only">New password</label>
           <input
+            id="staff-new-password"
+            name="staff-new-password"
             type={showNewPassword ? "text" : "password"}
+            autoComplete="new-password"
             placeholder="New password"
             value={newPassword}
             onChange={(e) => {
@@ -239,8 +247,12 @@ export default function ProfileContent() {
           </button>
         </div>
         <div className="relative">
+          <label htmlFor="staff-confirm-password" className="sr-only">Confirm new password</label>
           <input
+            id="staff-confirm-password"
+            name="staff-confirm-password"
             type={showConfirmPassword ? "text" : "password"}
+            autoComplete="new-password"
             placeholder="Confirm new password"
             value={confirmPassword}
             onChange={(e) => {

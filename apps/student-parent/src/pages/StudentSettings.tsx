@@ -25,6 +25,9 @@ export default function StudentSettings() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [bio, setBio] = useState("");
+  const [emergencyContactName, setEmergencyContactName] = useState("");
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState("");
+  const [emergencyContactPhoneAlt, setEmergencyContactPhoneAlt] = useState("");
   const [detailsSaving, setDetailsSaving] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [detailsSaved, setDetailsSaved] = useState(false);
@@ -50,6 +53,9 @@ export default function StudentSettings() {
       setPhone(record.phone ?? "");
       setAddress(record.address ?? "");
       setBio(record.bio ?? "");
+      setEmergencyContactName(record.emergency_contact_name ?? "");
+      setEmergencyContactPhone(record.emergency_contact_phone ?? "");
+      setEmergencyContactPhoneAlt(record.emergency_contact_phone_alt ?? "");
       if (record.photo_url) {
         const url = await getSignedStudentPhotoUrl(record.photo_url);
         if (!cancelled) setPhotoUrl(url);
@@ -89,7 +95,14 @@ export default function StudentSettings() {
     setDetailsError(null);
     setDetailsSaved(false);
     try {
-      await updateOwnProfileDetails(student.id, { phone, address, bio });
+      await updateOwnProfileDetails(student.id, {
+        phone,
+        address,
+        bio,
+        emergency_contact_name: emergencyContactName,
+        emergency_contact_phone: emergencyContactPhone,
+        emergency_contact_phone_alt: emergencyContactPhoneAlt,
+      });
       setDetailsSaved(true);
     } catch (err) {
       setDetailsError(err instanceof Error ? err.message : "Failed to save details");
@@ -164,9 +177,12 @@ export default function StudentSettings() {
         <h2 className="font-display text-lg text-abyssal-100">Contact &amp; About</h2>
 
         <div>
-          <label className="font-ui text-xs text-abyssal-300">Phone</label>
+          <label htmlFor="student-phone" className="font-ui text-xs text-abyssal-300">Phone</label>
           <input
+            id="student-phone"
+            name="student-phone"
             type="tel"
+            autoComplete="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="Phone number"
@@ -175,9 +191,12 @@ export default function StudentSettings() {
         </div>
 
         <div>
-          <label className="font-ui text-xs text-abyssal-300">Address</label>
+          <label htmlFor="student-address" className="font-ui text-xs text-abyssal-300">Address</label>
           <input
+            id="student-address"
+            name="student-address"
             type="text"
+            autoComplete="off"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             placeholder="Home address"
@@ -186,13 +205,68 @@ export default function StudentSettings() {
         </div>
 
         <div>
-          <label className="font-ui text-xs text-abyssal-300">About me</label>
+          <label htmlFor="student-bio" className="font-ui text-xs text-abyssal-300">About me</label>
           <textarea
+            id="student-bio"
+            name="student-bio"
+            autoComplete="off"
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             placeholder="A little about yourself — interests, hobbies, favorite subjects..."
             rows={3}
             className="mt-1 w-full rounded-md border border-abyssal-700 bg-abyssal-950 px-3 py-2 font-ui text-sm text-abyssal-100 resize-none"
+          />
+        </div>
+      </div>
+
+      {/* Emergency Contact */}
+      <div className="bg-abyssal-900 rounded-lg p-4 space-y-3">
+        <h2 className="font-display text-lg text-abyssal-100">Emergency Contact</h2>
+        <p className="font-ui text-xs text-abyssal-300">
+          Who should the school call if something happens to you?
+        </p>
+
+        <div>
+          <label htmlFor="emergency-contact-name" className="font-ui text-xs text-abyssal-300">Contact name</label>
+          <input
+            id="emergency-contact-name"
+            name="emergency-contact-name"
+            type="text"
+            autoComplete="off"
+            value={emergencyContactName}
+            onChange={(e) => setEmergencyContactName(e.target.value)}
+            placeholder="e.g. Mum, Dad, Guardian"
+            className="mt-1 w-full rounded-md border border-abyssal-700 bg-abyssal-950 px-3 py-2 font-ui text-sm text-abyssal-100"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="emergency-contact-phone" className="font-ui text-xs text-abyssal-300">Phone number</label>
+          <input
+            id="emergency-contact-phone"
+            name="emergency-contact-phone"
+            type="tel"
+            autoComplete="off"
+            value={emergencyContactPhone}
+            onChange={(e) => setEmergencyContactPhone(e.target.value)}
+            placeholder="Primary emergency number"
+            className="mt-1 w-full rounded-md border border-abyssal-700 bg-abyssal-950 px-3 py-2 font-ui text-sm text-abyssal-100"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="emergency-contact-phone-alt" className="font-ui text-xs text-abyssal-300">
+            Alternate phone number <span className="text-abyssal-500">(optional)</span>
+          </label>
+          <input
+            id="emergency-contact-phone-alt"
+            name="emergency-contact-phone-alt"
+            type="tel"
+            autoComplete="off"
+            value={emergencyContactPhoneAlt}
+            onChange={(e) => setEmergencyContactPhoneAlt(e.target.value)}
+            placeholder="A second number, if there is one"
+            className="mt-1 w-full rounded-md border border-abyssal-700 bg-abyssal-950 px-3 py-2 font-ui text-sm text-abyssal-100"
           />
         </div>
 
@@ -213,8 +287,12 @@ export default function StudentSettings() {
         <h2 className="font-display text-lg text-abyssal-100">Change Password</h2>
 
         <div className="relative">
+          <label htmlFor="current-password" className="sr-only">Current password</label>
           <input
+            id="current-password"
+            name="current-password"
             type={showCurrentPassword ? "text" : "password"}
+            autoComplete="new-password"
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
             placeholder="Current password"
@@ -230,8 +308,12 @@ export default function StudentSettings() {
         </div>
 
         <div className="relative">
+          <label htmlFor="new-password" className="sr-only">New password</label>
           <input
+            id="new-password"
+            name="new-password"
             type={showNewPassword ? "text" : "password"}
+            autoComplete="new-password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             placeholder="New password"
@@ -247,8 +329,12 @@ export default function StudentSettings() {
         </div>
 
         <div className="relative">
+          <label htmlFor="confirm-password" className="sr-only">Confirm new password</label>
           <input
+            id="confirm-password"
+            name="confirm-password"
             type={showConfirmPassword ? "text" : "password"}
+            autoComplete="new-password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="Confirm new password"

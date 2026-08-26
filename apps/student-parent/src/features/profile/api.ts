@@ -20,13 +20,16 @@ export interface StudentRecord {
   phone: string | null;
   address: string | null;
   bio: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  emergency_contact_phone_alt: string | null;
 }
 
 export async function fetchOwnStudentRecord(profileId: string): Promise<StudentRecord | null> {
   const { data, error } = await supabase
     .from("students")
     .select(
-      "id, class_id, full_name, unique_student_id, photo_url, onboarding_status, phone, address, bio, classes(name)"
+      "id, class_id, full_name, unique_student_id, photo_url, onboarding_status, phone, address, bio, emergency_contact_name, emergency_contact_phone, emergency_contact_phone_alt, classes(name)"
     )
     .eq("profile_id", profileId)
     .single();
@@ -44,6 +47,9 @@ export async function fetchOwnStudentRecord(profileId: string): Promise<StudentR
     phone: data.phone,
     address: data.address,
     bio: data.bio,
+    emergency_contact_name: data.emergency_contact_name,
+    emergency_contact_phone: data.emergency_contact_phone,
+    emergency_contact_phone_alt: data.emergency_contact_phone_alt,
   };
 }
 
@@ -51,6 +57,9 @@ export interface StudentProfileDetails {
   phone: string;
   address: string;
   bio: string;
+  emergency_contact_name: string;
+  emergency_contact_phone: string;
+  emergency_contact_phone_alt: string;
 }
 
 export async function updateOwnProfileDetails(
@@ -63,6 +72,9 @@ export async function updateOwnProfileDetails(
       phone: details.phone || null,
       address: details.address || null,
       bio: details.bio || null,
+      emergency_contact_name: details.emergency_contact_name || null,
+      emergency_contact_phone: details.emergency_contact_phone || null,
+      emergency_contact_phone_alt: details.emergency_contact_phone_alt || null,
     })
     .eq("id", studentId);
   if (error) throw new Error(error.message);

@@ -12,6 +12,9 @@ export interface Student {
   phone: string | null; // student-editable, from Student Settings > Profile
   address: string | null; // student-editable, from Student Settings > Profile
   bio: string | null; // student-editable, from Student Settings > Profile
+  emergency_contact_name: string | null; // student-editable, from Student Settings > Profile
+  emergency_contact_phone: string | null; // student-editable, from Student Settings > Profile
+  emergency_contact_phone_alt: string | null; // student-editable, from Student Settings > Profile
 }
 
 export interface ClassOption {

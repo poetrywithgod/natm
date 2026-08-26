@@ -1950,6 +1950,9 @@ export type Database = {
           bio: string | null
           class_id: string | null
           created_at: string
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          emergency_contact_phone_alt: string | null
           full_name: string
           id: string
           onboarding_status: Database["public"]["Enums"]["student_onboarding_status"]
@@ -1964,6 +1967,9 @@ export type Database = {
           bio?: string | null
           class_id?: string | null
           created_at?: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_phone_alt?: string | null
           full_name: string
           id?: string
           onboarding_status?: Database["public"]["Enums"]["student_onboarding_status"]
@@ -1978,6 +1984,9 @@ export type Database = {
           bio?: string | null
           class_id?: string | null
           created_at?: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_phone_alt?: string | null
           full_name?: string
           id?: string
           onboarding_status?: Database["public"]["Enums"]["student_onboarding_status"]

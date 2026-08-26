@@ -246,6 +246,33 @@ export default function AdminStudentProfile() {
         </div>
       )}
 
+      {/* Emergency Contact — student-editable, from Student Settings > Profile */}
+      {(student.emergency_contact_name || student.emergency_contact_phone || student.emergency_contact_phone_alt) && (
+        <div className="bg-error/10 border border-error/30 rounded-lg p-4 space-y-3">
+          <h2 className="font-display text-lg text-forest-100">Emergency Contact</h2>
+          <p className="font-ui text-xs text-forest-300">Updated by the student from their own portal.</p>
+
+          {student.emergency_contact_name && (
+            <div>
+              <p className="font-ui text-xs text-forest-300">Contact name</p>
+              <p className="font-ui text-sm text-forest-100">{student.emergency_contact_name}</p>
+            </div>
+          )}
+          {student.emergency_contact_phone && (
+            <div>
+              <p className="font-ui text-xs text-forest-300">Phone number</p>
+              <p className="font-ui text-sm text-forest-100">{student.emergency_contact_phone}</p>
+            </div>
+          )}
+          {student.emergency_contact_phone_alt && (
+            <div>
+              <p className="font-ui text-xs text-forest-300">Alternate phone number</p>
+              <p className="font-ui text-sm text-forest-100">{student.emergency_contact_phone_alt}</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Linked Parents */}
       <div className="bg-forest-900 rounded-lg p-4 space-y-4">
         <h2 className="font-display text-lg text-forest-100">Linked Parents</h2>
