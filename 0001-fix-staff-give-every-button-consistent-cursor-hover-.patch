@@ -1,0 +1,60 @@
+From d0f416ed2d9d1a50e98d1092dea6d91e6cb254be Mon Sep 17 00:00:00 2001
+From: Victor Agi <156893046+poetrywithgod@users.noreply.github.com>
+Date: Wed, 26 Aug 2026 21:24:59 +0000
+Subject: [PATCH] fix(staff): give every button consistent cursor/hover/click
+ feedback
+
+117 buttons across 34 files, but only 1 active: state and cursor-pointer
+on 15 of them in the whole app -- native <button> doesn't get a pointer
+cursor by default (unlike <a>), so most buttons felt inert. Added a
+global @layer base rule instead of touching each of the 117 call sites:
+pointer cursor, a color-agnostic brightness nudge on hover, and a
+brightness+scale-down on click. Layers safely under any button that
+already has its own hover:/active: utility classes, since Tailwind's
+utilities layer always wins over base regardless of source order.
+Respects prefers-reduced-motion (drops the scale, keeps the cursor and
+brightness cues).
+---
+ apps/staff/src/index.css | 29 +++++++++++++++++++++++++++++
+ 1 file changed, 29 insertions(+)
+
+diff --git a/apps/staff/src/index.css b/apps/staff/src/index.css
+index f1b592b..aa4a507 100644
+--- a/apps/staff/src/index.css
++++ b/apps/staff/src/index.css
+@@ -22,3 +22,32 @@ body {
+   @apply bg-forest-950 text-forest-100;
+   font-family: var(--font-body);
+ }
++
++/* Global button feedback -- most buttons in this app carry no hover/
++   active classes of their own (native <button> also doesn't get a
++   pointer cursor by default, unlike <a>), so this is a color-agnostic
++   fallback: brighten on hover, brighten+shrink slightly on click.
++   Any button with its own hover:/active: utility classes still wins,
++   since Tailwind's utilities layer always takes precedence over base. */
++@layer base {
++  button:not(:disabled) {
++    cursor: pointer;
++    transition: filter 150ms ease, transform 100ms ease;
++  }
++  button:not(:disabled):hover {
++    filter: brightness(1.08);
++  }
++  button:not(:disabled):active {
++    filter: brightness(0.94);
++    transform: scale(0.97);
++  }
++  button:disabled {
++    cursor: not-allowed;
++  }
++
++  @media (prefers-reduced-motion: reduce) {
++    button:not(:disabled):active {
++      transform: none;
++    }
++  }
++}
+-- 
+2.43.0
+
