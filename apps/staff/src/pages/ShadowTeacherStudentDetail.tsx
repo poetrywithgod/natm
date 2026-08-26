@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { MessageCircle } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
+import { getOrCreateConversationForStudent } from "../features/messaging/api";
 import {
   fetchStudentInfo,
   fetchStudentAttendance,
@@ -19,6 +21,8 @@ import { getSignedPhotoUrl } from "../features/students/api";
 export default function ShadowTeacherStudentDetail() {
   const { id } = useParams<{ id: string }>();
   const { profile } = useAuth();
+  const navigate = useNavigate();
+  const [messagingParent, setMessagingParent] = useState(false);
 
   const [student, setStudent] = useState<StudentInfo | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -106,6 +110,19 @@ export default function ShadowTeacherStudentDetail() {
   if (loading) return <div className="p-4 font-ui text-forest-100">Loading...</div>;
   if (!student) return <div className="p-4 font-ui text-forest-300">Student not found.</div>;
 
+  async function handleMessageParent() {
+    if (!id || !profile?.id || !profile.school_id) return;
+    setMessagingParent(true);
+    try {
+      const conversationId = await getOrCreateConversationForStudent(id, profile.id, profile.school_id);
+      navigate(`/shadow-teacher/messages/${conversationId}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to open conversation");
+    } finally {
+      setMessagingParent(false);
+    }
+  }
+
   return (
     <div className="p-4 space-y-6">
       {error && <p className="text-error font-ui text-sm">{error}</p>}
@@ -119,10 +136,18 @@ export default function ShadowTeacherStudentDetail() {
             student.full_name.charAt(0)
           )}
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="font-display text-lg text-forest-100">{student.full_name}</h1>
           <p className="font-ui text-xs text-forest-300">{student.class_name ?? "No class"}</p>
         </div>
+        <button
+          onClick={handleMessageParent}
+          disabled={messagingParent}
+          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded bg-forest-700 text-forest-100 font-ui text-xs disabled:opacity-50"
+        >
+          <MessageCircle size={14} />
+          Message Parent
+        </button>
       </div>
 
       {/* Attendance */}

@@ -30,6 +30,9 @@ const ShadowTeacherStudentDetail = lazy(() => import("./pages/ShadowTeacherStude
 const ShadowTeacherAnnouncements = lazy(() => import("./pages/ShadowTeacherAnnouncements"));
 const ShadowTeacherProfile = lazy(() => import("./pages/ShadowTeacherProfile"));
 const ShadowTeacherNotifications = lazy(() => import("./pages/ShadowTeacherNotifications"));
+const ShadowTeacherMessages = lazy(() => import("./pages/ShadowTeacherMessages"));
+const ShadowTeacherChat = lazy(() => import("./pages/ShadowTeacherChat"));
+const ShadowTeacherMore = lazy(() => import("./pages/ShadowTeacherMore"));
 const FinanceManagerDashboard = lazy(() => import("./pages/FinanceManagerDashboard"));
 const FinanceManagerFees = lazy(() => import("./pages/FinanceManagerFees"));
 const FinanceManagerAnnouncements = lazy(() => import("./pages/FinanceManagerAnnouncements"));
@@ -121,6 +124,9 @@ function AppRoutes() {
           <Route path="announcements" element={<ShadowTeacherAnnouncements />} />
           <Route path="profile" element={<ShadowTeacherProfile />} />
           <Route path="notifications" element={<ShadowTeacherNotifications />} />
+          <Route path="messages" element={<ShadowTeacherMessages />} />
+          <Route path="messages/:conversationId" element={<ShadowTeacherChat />} />
+          <Route path="more" element={<ShadowTeacherMore />} />
         </Route>
         <Route
           path="/finance-manager"

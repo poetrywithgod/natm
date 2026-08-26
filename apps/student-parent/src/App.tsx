@@ -20,6 +20,8 @@ const StudentNotifications = lazy(() => import("./pages/StudentNotifications"));
 const StudentSettings = lazy(() => import("./pages/StudentSettings"));
 const ParentHome = lazy(() => import("./pages/ParentHome"));
 const ParentFees = lazy(() => import("./pages/ParentFees"));
+const ParentMessages = lazy(() => import("./pages/ParentMessages"));
+const ParentChat = lazy(() => import("./pages/ParentChat"));
 
 export default function App() {
   return (
@@ -83,6 +85,8 @@ export default function App() {
               >
                 <Route index element={<ParentHome />} />
                 <Route path="fees" element={<ParentFees />} />
+                <Route path="messages" element={<ParentMessages />} />
+                <Route path="messages/:studentId" element={<ParentChat />} />
               </Route>
 
               <Route path="/" element={<Navigate to="/login" replace />} />

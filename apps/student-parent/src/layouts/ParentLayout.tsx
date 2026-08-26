@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import { Home, CreditCard } from "lucide-react";
+import { Home, CreditCard, MessageCircle } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchSchoolInfo, type SchoolInfo } from "../features/schools/api";
 
 const NAV_ITEMS = [
   { to: "/parent", label: "Home", icon: Home, end: true },
   { to: "/parent/fees", label: "Fees", icon: CreditCard, end: false },
+  { to: "/parent/messages", label: "Messages", icon: MessageCircle, end: false },
 ];
 
 export default function ParentLayout() {

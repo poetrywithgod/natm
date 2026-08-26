@@ -1,22 +1,24 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, Megaphone, UserCircle, Bell } from "lucide-react";
+import { LayoutDashboard, Users, MessageCircle, MoreHorizontal, Bell } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchUnreadCount } from "../features/notifications/api";
+import { fetchConversationsForShadowTeacher } from "../features/messaging/api";
 import { fetchSchoolInfo, type SchoolInfo } from "../features/schools/api";
 import { getSignedPhotoUrl } from "../features/profile/api";
 
 const NAV_ITEMS = [
   { to: "/shadow-teacher", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/shadow-teacher/students", label: "Students", icon: Users, end: false },
-  { to: "/shadow-teacher/announcements", label: "Announcements", icon: Megaphone, end: false },
-  { to: "/shadow-teacher/profile", label: "Profile", icon: UserCircle, end: false },
+  { to: "/shadow-teacher/messages", label: "Messages", icon: MessageCircle, end: false },
+  { to: "/shadow-teacher/more", label: "More", icon: MoreHorizontal, end: false },
 ];
 
 export default function ShadowTeacherLayout() {
   const { profile, session, signOut } = useAuth();
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const [schoolInfo, setSchoolInfo] = useState<SchoolInfo | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
@@ -57,6 +59,24 @@ export default function ShadowTeacherLayout() {
       clearInterval(interval);
     };
   }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    let cancelled = false;
+    const load = () => {
+      fetchConversationsForShadowTeacher(profile.id)
+        .then((rows) => {
+          if (!cancelled) setUnreadMessages(rows.reduce((sum, r) => sum + r.unread_count, 0));
+        })
+        .catch((err) => console.error("Failed to load message unread count:", err));
+    };
+    load();
+    const interval = setInterval(load, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [profile?.id]);
 
   return (
     <div className="min-h-screen flex flex-col bg-forest-950">
@@ -115,7 +135,14 @@ export default function ShadowTeacherLayout() {
               }`
             }
           >
-            <Icon size={20} />
+            <span className="relative">
+              <Icon size={20} />
+              {to === "/shadow-teacher/messages" && unreadMessages > 0 && (
+                <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[9px] font-ui rounded-full min-w-3.5 h-3.5 px-1 flex items-center justify-center">
+                  {unreadMessages > 9 ? "9+" : unreadMessages}
+                </span>
+              )}
+            </span>
             {label}
           </NavLink>
         ))}
