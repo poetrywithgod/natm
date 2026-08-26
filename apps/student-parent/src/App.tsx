@@ -5,6 +5,7 @@ import { ToastProvider } from "./features/toast/ToastContext";
 import { RequireRole } from "./guards/RequireRole";
 import { RedirectIfAuthed } from "./guards/RedirectIfAuthed";
 import { StudentOnboardingGate } from "./guards/StudentOnboardingGate";
+import { ParentOnboardingGate } from "./guards/ParentOnboardingGate";
 import StudentLayout from "./layouts/StudentLayout";
 import ParentLayout from "./layouts/ParentLayout";
 import PageSkeleton from "./components/PageSkeleton";
@@ -12,6 +13,7 @@ import PageSkeleton from "./components/PageSkeleton";
 const Login = lazy(() => import("./pages/Login"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const StudentSetPassword = lazy(() => import("./pages/StudentSetPassword"));
+const ParentSetPassword = lazy(() => import("./pages/ParentSetPassword"));
 const StudentIntakeForm = lazy(() => import("./pages/StudentIntakeForm"));
 const StudentHome = lazy(() => import("./pages/StudentHome"));
 const StudentAssignments = lazy(() => import("./pages/StudentAssignments"));
@@ -22,6 +24,7 @@ const ParentHome = lazy(() => import("./pages/ParentHome"));
 const ParentFees = lazy(() => import("./pages/ParentFees"));
 const ParentMessages = lazy(() => import("./pages/ParentMessages"));
 const ParentChat = lazy(() => import("./pages/ParentChat"));
+const ParentSettings = lazy(() => import("./pages/ParentSettings"));
 
 export default function App() {
   return (
@@ -76,10 +79,21 @@ export default function App() {
               </Route>
 
               <Route
+                path="/parent/set-password"
+                element={
+                  <RequireRole allow={["parent"]}>
+                    <ParentSetPassword />
+                  </RequireRole>
+                }
+              />
+
+              <Route
                 path="/parent"
                 element={
                   <RequireRole allow={["parent"]}>
-                    <ParentLayout />
+                    <ParentOnboardingGate>
+                      <ParentLayout />
+                    </ParentOnboardingGate>
                   </RequireRole>
                 }
               >
@@ -87,6 +101,7 @@ export default function App() {
                 <Route path="fees" element={<ParentFees />} />
                 <Route path="messages" element={<ParentMessages />} />
                 <Route path="messages/:studentId" element={<ParentChat />} />
+                <Route path="settings" element={<ParentSettings />} />
               </Route>
 
               <Route path="/" element={<Navigate to="/login" replace />} />

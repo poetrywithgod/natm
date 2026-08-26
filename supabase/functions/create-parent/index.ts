@@ -59,10 +59,11 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { email, full_name, student_id } = body as {
+    const { email, full_name, student_id, relationship } = body as {
       email?: string;
       full_name?: string;
       student_id?: string;
+      relationship?: string;
     };
 
     if (!email || !full_name || !student_id) {
@@ -112,6 +113,7 @@ Deno.serve(async (req) => {
       school_id: callerProfile.school_id,
       role: "parent",
       full_name,
+      must_change_password: true,
     });
     if (profileInsertError) {
       return new Response(JSON.stringify({ error: profileInsertError.message }), {
@@ -123,6 +125,7 @@ Deno.serve(async (req) => {
     const { error: linkError } = await adminClient.from("parent_student_links").insert({
       parent_id: created.user.id,
       student_id: studentRow.id,
+      relationship: relationship || null,
     });
     if (linkError) {
       return new Response(JSON.stringify({ error: linkError.message }), {
@@ -140,6 +143,28 @@ Deno.serve(async (req) => {
       details: { full_name, email, linked_student_id: studentRow.id, linked_student_name: studentRow.full_name },
     });
 
+    // Send the parent a real password-recovery email so they set their
+    // own password without ever needing the admin-generated temporary
+    // one below -- same mechanism the "Forgot password?" flow on the
+    // login screen already uses (Supabase Auth's built-in recovery
+    // email), so it's subject to the same known rate limit on Supabase's
+    // default/free email sending (custom SMTP deferred until a real
+    // domain is registered). STUDENT_PARENT_APP_URL needs to be set as a
+    // Supabase secret to the deployed student-parent app's URL -- if
+    // it isn't set yet, this is skipped (not a hard failure) and the
+    // temporary password below remains the only way in.
+    const appUrl = Deno.env.get("STUDENT_PARENT_APP_URL");
+    let passwordEmailSent = false;
+    if (appUrl) {
+      const { error: resetEmailError } = await adminClient.auth.resetPasswordForEmail(email, {
+        redirectTo: `${appUrl.replace(/\/$/, "")}/reset-password`,
+      });
+      passwordEmailSent = !resetEmailError;
+      if (resetEmailError) {
+        console.error("Failed to send parent password-recovery email:", resetEmailError.message);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -147,6 +172,7 @@ Deno.serve(async (req) => {
         email,
         temporary_password: temporaryPassword,
         linked_student_name: studentRow.full_name,
+        password_email_sent: passwordEmailSent,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

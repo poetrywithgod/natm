@@ -11,6 +11,7 @@ interface Profile {
   role: StudentParentRole;
   full_name: string;
   photo_url: string | null;
+  must_change_password: boolean;
 }
 
 interface AuthContextValue {
@@ -32,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function loadProfile(userId: string) {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, school_id, role, full_name, photo_url")
+      .select("id, school_id, role, full_name, photo_url, must_change_password")
       .eq("id", userId)
       .single();
     if (error) {

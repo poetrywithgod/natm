@@ -13,11 +13,19 @@ export default function ResetPassword() {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
-    const { error } = await supabase.auth.updateUser({ password });
+    const { data: userData, error } = await supabase.auth.updateUser({ password });
     if (error) {
       setError(error.message);
       setSubmitting(false);
       return;
+    }
+    // Covers the parent recovery-email path: they land here already
+    // authenticated by the emailed link, so this is where "must set my
+    // own password" actually gets satisfied. Non-blocking -- if this
+    // update fails for some reason, the fallback ParentOnboardingGate
+    // still catches it on their next visit to /parent.
+    if (userData.user) {
+      await supabase.from("profiles").update({ must_change_password: false }).eq("id", userData.user.id);
     }
     setDone(true);
     setSubmitting(false);
@@ -28,8 +36,12 @@ export default function ResetPassword() {
     <div className="min-h-screen flex items-center justify-center bg-abyssal-950 px-4">
       <form onSubmit={handleSubmit} className="w-full max-w-sm bg-abyssal-900 p-8 rounded-lg space-y-4">
         <h1 className="font-display text-xl text-abyssal-100">Set a New Password</h1>
+        <label htmlFor="reset-password" className="sr-only">New password</label>
         <input
+          id="reset-password"
+          name="reset-password"
           type="password"
+          autoComplete="new-password"
           placeholder="New password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}

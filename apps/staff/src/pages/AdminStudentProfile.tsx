@@ -46,6 +46,7 @@ export default function AdminStudentProfile() {
   const [linkedParents, setLinkedParents] = useState<LinkedParent[]>([]);
   const [newParentName, setNewParentName] = useState("");
   const [newParentEmail, setNewParentEmail] = useState("");
+  const [newParentRelationship, setNewParentRelationship] = useState("");
   const [creatingParent, setCreatingParent] = useState(false);
   const [newParentCredentials, setNewParentCredentials] = useState<CreateParentAccountResult | null>(null);
 
@@ -121,10 +122,16 @@ export default function AdminStudentProfile() {
     setCreatingParent(true);
     setError(null);
     try {
-      const result = await createParentAccount(newParentEmail.trim(), newParentName.trim(), id);
+      const result = await createParentAccount(
+        newParentEmail.trim(),
+        newParentName.trim(),
+        id,
+        newParentRelationship || undefined
+      );
       setNewParentCredentials(result);
       setNewParentName("");
       setNewParentEmail("");
+      setNewParentRelationship("");
       await loadAll();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create parent account");
@@ -284,6 +291,7 @@ export default function AdminStudentProfile() {
             {linkedParents.map((p) => (
               <li key={p.id} className="font-ui text-sm text-forest-100">
                 {p.full_name}
+                {p.relationship && <span className="text-forest-300"> ({p.relationship})</span>}
               </li>
             ))}
           </ul>
@@ -291,9 +299,19 @@ export default function AdminStudentProfile() {
 
         {newParentCredentials && (
           <div className="bg-forest-800 rounded p-3 space-y-1">
-            <p className="font-ui text-xs text-forest-300">
-              A login account, temporary password, and Student ID are all generated automatically once added.
-            </p>
+            {newParentCredentials.password_email_sent ? (
+              <p className="font-ui text-xs text-forest-300">
+                A login account was created and a password-setup email has been sent to the parent — they'll
+                choose their own password, so the temporary one below is a fallback only (in case the email
+                doesn't arrive) and shouldn't normally be needed.
+              </p>
+            ) : (
+              <p className="font-ui text-xs text-forest-300">
+                A login account was created, but the automated password-setup email isn't configured yet
+                (STUDENT_PARENT_APP_URL isn't set) — share the temporary password below with the parent
+                directly. They'll still be forced to set their own password on first login.
+              </p>
+            )}
             <p className="font-ui text-sm text-forest-100">
               <span className="text-forest-300">Email:</span> {newParentCredentials.email}
             </p>
@@ -317,6 +335,17 @@ export default function AdminStudentProfile() {
             placeholder="Parent email"
             className="flex-1 rounded-md border border-forest-700 bg-forest-950 px-3 py-2 font-ui text-sm text-forest-100"
           />
+          <select
+            value={newParentRelationship}
+            onChange={(e) => setNewParentRelationship(e.target.value)}
+            className="rounded-md border border-forest-700 bg-forest-950 px-3 py-2 font-ui text-sm text-forest-100"
+          >
+            <option value="">Relationship</option>
+            <option value="Mother">Mother</option>
+            <option value="Father">Father</option>
+            <option value="Guardian">Guardian</option>
+            <option value="Other">Other</option>
+          </select>
           <button
             onClick={handleCreateParent}
             disabled={creatingParent}

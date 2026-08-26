@@ -3,25 +3,27 @@ import { supabase } from "../../lib/supabase";
 export interface LinkedParent {
   id: string;
   full_name: string;
+  relationship: string | null;
 }
 
 export interface CreateParentAccountResult {
   email: string;
   temporary_password: string;
   linked_student_name: string;
+  password_email_sent: boolean;
 }
 
 export async function fetchLinkedParents(studentId: string): Promise<LinkedParent[]> {
   const { data, error } = await supabase
     .from("parent_student_links")
-    .select("profiles(id, full_name)")
+    .select("relationship, profiles(id, full_name)")
     .eq("student_id", studentId);
   if (error) throw new Error(error.message);
 
   return (data ?? [])
     .map((row) => {
       const parent = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-      return parent ? { id: parent.id, full_name: parent.full_name } : null;
+      return parent ? { id: parent.id, full_name: parent.full_name, relationship: row.relationship } : null;
     })
     .filter((p): p is LinkedParent => p !== null);
 }
@@ -55,10 +57,11 @@ async function extractFunctionErrorMessage(error: unknown, fallback: string): Pr
 export async function createParentAccount(
   email: string,
   fullName: string,
-  studentId: string
+  studentId: string,
+  relationship?: string
 ): Promise<CreateParentAccountResult> {
   const { data, error } = await supabase.functions.invoke("create-parent", {
-    body: { email, full_name: fullName, student_id: studentId },
+    body: { email, full_name: fullName, student_id: studentId, relationship },
   });
   if (error) throw new Error(await extractFunctionErrorMessage(error, "Failed to create parent account."));
   if (data?.error) throw new Error(data.error);

@@ -1219,18 +1219,21 @@ export type Database = {
           created_at: string
           id: string
           parent_id: string
+          relationship: string | null
           student_id: string
         }
         Insert: {
           created_at?: string
           id?: string
           parent_id: string
+          relationship?: string | null
           student_id: string
         }
         Update: {
           created_at?: string
           id?: string
           parent_id?: string
+          relationship?: string | null
           student_id?: string
         }
         Relationships: [
@@ -1339,31 +1342,40 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
           created_at: string
           deactivated_at: string | null
           full_name: string
           id: string
           is_active: boolean
+          must_change_password: boolean
+          phone: string | null
           photo_url: string | null
           role: Database["public"]["Enums"]["staff_role"]
           school_id: string | null
         }
         Insert: {
+          address?: string | null
           created_at?: string
           deactivated_at?: string | null
           full_name: string
           id: string
           is_active?: boolean
+          must_change_password?: boolean
+          phone?: string | null
           photo_url?: string | null
           role: Database["public"]["Enums"]["staff_role"]
           school_id?: string | null
         }
         Update: {
+          address?: string | null
           created_at?: string
           deactivated_at?: string | null
           full_name?: string
           id?: string
           is_active?: boolean
+          must_change_password?: boolean
+          phone?: string | null
           photo_url?: string | null
           role?: Database["public"]["Enums"]["staff_role"]
           school_id?: string | null
