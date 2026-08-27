@@ -54,6 +54,24 @@ export async function fetchCurrentSessionId(schoolId: string): Promise<string | 
   return data?.id ?? null;
 }
 
+// Students already actioned this session -- shown as a badge on the
+// Promotion page so admin doesn't lose track partway through a class,
+// but re-submission isn't blocked (promotions is an append-only history
+// table, same audit-trail philosophy as the rest of this schema, so a
+// correction just adds another row rather than needing an update path).
+export async function fetchPromotionsForSession(
+  schoolId: string,
+  academicSessionId: string
+): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from("promotions")
+    .select("student_id")
+    .eq("school_id", schoolId)
+    .eq("academic_session_id", academicSessionId);
+  if (error) throw new Error(error.message);
+  return new Set((data ?? []).map((r) => r.student_id));
+}
+
 export async function suggestNextClasses(
   schoolId: string,
   currentLevel: string | null
