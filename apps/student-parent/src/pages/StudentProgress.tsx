@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, Flame } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchOwnStudentRecord } from "../features/profile/api";
 import { fetchQuizHistory, type QuizHistoryEntry } from "../features/quiz/api";
+import {
+  fetchGamificationStats,
+  fetchEarnedBadgeKeys,
+  checkAndAwardBadges,
+  BADGE_CATALOG,
+  type GamificationStats,
+} from "../features/gamification/api";
+import { getBadgeIcon } from "../features/gamification/icons";
 
 const DIFFICULTY_LABEL: Record<string, string> = {
   easy: "Easy",
@@ -19,18 +27,34 @@ function scoreColorClass(score: number): string {
 export default function StudentProgress() {
   const { profile } = useAuth();
   const [history, setHistory] = useState<QuizHistoryEntry[]>([]);
+  const [stats, setStats] = useState<GamificationStats | null>(null);
+  const [earnedKeys, setEarnedKeys] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!profile?.id) return;
+    if (!profile?.id || !profile.school_id) return;
     let cancelled = false;
 
     (async () => {
       try {
         const record = await fetchOwnStudentRecord(profile.id);
         if (!record) return;
-        const data = await fetchQuizHistory(record.id);
-        if (!cancelled) setHistory(data);
+        // Harmless catch-all: covers any badge that should have been
+        // awarded but wasn't (e.g. a past submission before this system
+        // existed). Real-time awarding happens right after a quiz
+        // submission in StudentQuiz.tsx -- this is just a safety net.
+        await checkAndAwardBadges(record.id, profile.school_id!);
+
+        const [data, gamificationStats, earned] = await Promise.all([
+          fetchQuizHistory(record.id),
+          fetchGamificationStats(record.id),
+          fetchEarnedBadgeKeys(record.id),
+        ]);
+        if (!cancelled) {
+          setHistory(data);
+          setStats(gamificationStats);
+          setEarnedKeys(earned);
+        }
       } catch (err) {
         console.error("Failed to load quiz history:", err);
       } finally {
@@ -41,7 +65,7 @@ export default function StudentProgress() {
     return () => {
       cancelled = true;
     };
-  }, [profile?.id]);
+  }, [profile?.id, profile?.school_id]);
 
   const average = useMemo(() => {
     if (history.length === 0) return null;
@@ -68,6 +92,39 @@ export default function StudentProgress() {
         </div>
       ) : (
         <>
+          {stats && stats.currentStreak > 0 && (
+            <div className="bg-abyssal-900 rounded-lg p-4 flex items-center gap-3">
+              <Flame className="text-lime shrink-0" size={28} />
+              <div>
+                <p className="font-display text-xl text-abyssal-100">{stats.currentStreak}-day streak</p>
+                <p className="font-ui text-xs text-abyssal-300">
+                  Longest: {stats.longestStreak} day{stats.longestStreak === 1 ? "" : "s"}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <h2 className="font-display text-base text-abyssal-100">My Badges</h2>
+            <div className="grid grid-cols-3 gap-2">
+              {BADGE_CATALOG.map((b) => {
+                const earned = earnedKeys.has(b.key);
+                const Icon = getBadgeIcon(b.icon);
+                return (
+                  <div
+                    key={b.key}
+                    className={`rounded-lg p-3 text-center ${earned ? "bg-abyssal-900" : "bg-abyssal-900/40"}`}
+                  >
+                    <Icon className={`mx-auto mb-1 ${earned ? "text-lime" : "text-abyssal-700"}`} size={22} />
+                    <p className={`font-ui text-[11px] leading-tight ${earned ? "text-abyssal-100" : "text-abyssal-500"}`}>
+                      {b.name}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {average !== null && (
             <div className="bg-abyssal-900 rounded-lg p-4 flex items-center justify-between">
               <div>

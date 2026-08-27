@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { BookOpen, ArrowRight } from "lucide-react";
+import { BookOpen, ArrowRight, Flame } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchOwnStudentRecord, type StudentRecord } from "../features/profile/api";
 import { fetchStudentAssignments, type StudentAssignment } from "../features/assignments/api";
+import { fetchGamificationStats } from "../features/gamification/api";
 
 const DIFFICULTY_LABEL: Record<string, string> = {
   easy: "Easy",
@@ -16,6 +17,7 @@ export default function StudentHome() {
   const navigate = useNavigate();
   const [record, setRecord] = useState<StudentRecord | null>(null);
   const [assignments, setAssignments] = useState<StudentAssignment[]>([]);
+  const [streak, setStreak] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,6 +30,10 @@ export default function StudentHome() {
         const list = await fetchStudentAssignments(rec.id, rec.class_id);
         if (!cancelled) setAssignments(list);
       }
+      if (rec) {
+        const stats = await fetchGamificationStats(rec.id);
+        if (!cancelled) setStreak(stats.currentStreak);
+      }
       if (!cancelled) setLoading(false);
     });
     return () => {
@@ -39,14 +45,22 @@ export default function StudentHome() {
 
   return (
     <div className="p-4 space-y-6">
-      <div>
-        <h1 className="font-display text-xl text-abyssal-100">
-          Welcome back, {profile?.full_name?.split(" ")[0] ?? "there"}!
-        </h1>
-        {record && (
-          <p className="font-body text-sm text-abyssal-300 mt-1">
-            Student ID: {record.unique_student_id}
-          </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-xl text-abyssal-100">
+            Welcome back, {profile?.full_name?.split(" ")[0] ?? "there"}!
+          </h1>
+          {record && (
+            <p className="font-body text-sm text-abyssal-300 mt-1">
+              Student ID: {record.unique_student_id}
+            </p>
+          )}
+        </div>
+        {streak > 0 && (
+          <div className="shrink-0 flex items-center gap-1.5 bg-abyssal-900 rounded-full px-3 py-1.5">
+            <Flame size={16} className="text-lime" />
+            <span className="font-display text-sm text-abyssal-100">{streak}</span>
+          </div>
         )}
       </div>
 
