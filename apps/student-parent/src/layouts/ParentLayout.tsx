@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
-import { Home, CreditCard, MessageCircle, Settings } from "lucide-react";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Home, CreditCard, MessageCircle, Settings, Bell } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchSchoolInfo, type SchoolInfo } from "../features/schools/api";
+import { fetchUnreadCount } from "../features/notifications/api";
 
 const NAV_ITEMS = [
   { to: "/parent", label: "Home", icon: Home, end: true },
@@ -12,14 +13,36 @@ const NAV_ITEMS = [
 ];
 
 export default function ParentLayout() {
-  const { profile, signOut } = useAuth();
+  const { profile, session, signOut } = useAuth();
+  const navigate = useNavigate();
   const [schoolInfo, setSchoolInfo] = useState<SchoolInfo | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     if (profile?.school_id) {
       fetchSchoolInfo(profile.school_id).then(setSchoolInfo);
     }
   }, [profile?.school_id]);
+
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+
+    let cancelled = false;
+    const load = () => {
+      fetchUnreadCount(userId)
+        .then((count) => {
+          if (!cancelled) setUnreadCount(count);
+        })
+        .catch((err) => console.error("Failed to load unread count:", err));
+    };
+    load();
+    const interval = setInterval(load, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [session?.user?.id]);
 
   return (
     <div className="min-h-screen flex flex-col bg-abyssal-950">
@@ -37,12 +60,26 @@ export default function ParentLayout() {
             <p className="font-ui text-xs text-abyssal-300">{profile?.full_name}</p>
           </div>
         </div>
-        <button
-          onClick={signOut}
-          className="text-xs px-3 py-1.5 rounded bg-abyssal-700 text-abyssal-100 font-ui"
-        >
-          Sign out
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate("/parent/notifications")}
+            className="relative p-1.5 rounded bg-abyssal-700 text-abyssal-100"
+            aria-label="Notifications"
+          >
+            <Bell size={18} />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-ui rounded-full min-w-4 h-4 px-1 flex items-center justify-center">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={signOut}
+            className="text-xs px-3 py-1.5 rounded bg-abyssal-700 text-abyssal-100 font-ui"
+          >
+            Sign out
+          </button>
+        </div>
       </header>
       <main className="flex-1 overflow-auto pb-16">
         <Outlet />

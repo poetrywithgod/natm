@@ -136,6 +136,55 @@ export async function sendMessage(
   if (insertError) throw new Error(insertError.message);
 
   await supabase.from("conversations").update({ last_message_at: new Date().toISOString() }).eq("id", conversationId);
+
+  // Notify the other party -- best-effort: the message itself already sent
+  // successfully above, so a notification failure here is logged, not thrown,
+  // and never surfaces as a failed send in the chat UI.
+  notifyOtherParty(conversationId, senderRole, trimmed).catch((err) => {
+    console.error("Failed to notify other party of new message:", err);
+  });
+}
+
+// Looks up who else is on this conversation and writes them a `notifications`
+// row + triggers push delivery, same pattern as Assign Work / payment-recorded
+// notifications elsewhere in the app.
+async function notifyOtherParty(
+  conversationId: string,
+  senderRole: "parent" | "shadow_teacher",
+  messageBody: string
+): Promise<void> {
+  const { data: conv, error } = await supabase
+    .from("conversations")
+    .select(
+      "school_id, parent_id, shadow_teacher_id, students(full_name), parent:profiles!conversations_parent_id_fkey(full_name), shadow_teacher:profiles!conversations_shadow_teacher_id_fkey(full_name)"
+    )
+    .eq("id", conversationId)
+    .single();
+  if (error || !conv) throw new Error(error?.message ?? "Conversation not found");
+
+  const student = Array.isArray(conv.students) ? conv.students[0] : conv.students;
+  const parent = Array.isArray(conv.parent) ? conv.parent[0] : conv.parent;
+  const shadowTeacher = Array.isArray(conv.shadow_teacher) ? conv.shadow_teacher[0] : conv.shadow_teacher;
+
+  const recipientId = senderRole === "parent" ? conv.shadow_teacher_id : conv.parent_id;
+  const senderName = senderRole === "parent" ? parent?.full_name ?? "Parent" : shadowTeacher?.full_name ?? "Shadow Teacher";
+  const studentName = student?.full_name ?? "your student";
+  const preview = messageBody.length > 100 ? `${messageBody.slice(0, 100)}…` : messageBody;
+
+  const { error: notifyError } = await supabase.from("notifications").insert({
+    school_id: conv.school_id,
+    recipient_id: recipientId,
+    type: "message_received",
+    title: `New message re: ${studentName}`,
+    body: `${senderName}: ${preview}`,
+    related_entity_type: "conversation",
+    related_entity_id: conversationId,
+  });
+  if (notifyError) throw new Error(notifyError.message);
+
+  supabase.functions.invoke("send-push", { body: {} }).catch((err) => {
+    console.error("send-push invoke failed:", err);
+  });
 }
 
 export async function markConversationRead(
