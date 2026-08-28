@@ -4,6 +4,7 @@ import { useToast } from "../features/toast/ToastContext";
 import { supabase } from "../lib/supabase";
 import { fetchClasses } from "../features/classes/api";
 import type { SchoolClass } from "../features/classes/api";
+import { fetchSchoolInfo, type FinancialModel } from "../features/schools/api";
 import {
   fetchCurrentTerm,
   fetchFeeTypes,
@@ -19,6 +20,7 @@ export default function FinanceManagerFees() {
   const { profile } = useAuth();
   const { showToast } = useToast();
   const [term, setTerm] = useState<CurrentTerm | null>(null);
+  const [financialModel, setFinancialModel] = useState<FinancialModel>("fees");
   const [feeTypes, setFeeTypes] = useState<FeeType[]>([]);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [selectedFeeTypeId, setSelectedFeeTypeId] = useState<string | null>(null);
@@ -65,12 +67,14 @@ export default function FinanceManagerFees() {
     setLoading(true);
     setError(null);
     try {
-      const [currentTerm, classList] = await Promise.all([
+      const [currentTerm, classList, schoolInfo] = await Promise.all([
         fetchCurrentTerm(schoolId),
         fetchClasses(schoolId),
+        fetchSchoolInfo(schoolId),
       ]);
       setTerm(currentTerm);
       setClasses(classList);
+      setFinancialModel(schoolInfo?.financial_model ?? "fees");
       if (currentTerm) await loadFeeTypes(currentTerm);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load fees");
@@ -180,16 +184,29 @@ export default function FinanceManagerFees() {
   if (loading) return <div className="p-6 font-ui text-forest-100">Loading...</div>;
 
   const selectedFeeType = feeTypes.find((f) => f.id === selectedFeeTypeId) ?? null;
+  const isPartnership = financialModel === "partnership";
+  const pageTitle = isPartnership ? "Support & Partnership" : "Fees";
+  const createLabel = isPartnership ? "Create Support Item" : "Create Fee";
+  const namePlaceholder = isPartnership
+    ? 'Name, e.g. "Child Developmental Support"'
+    : 'Fee name, e.g. "School Fees"';
 
   return (
     <div className="p-6 space-y-6">
-      <h1 className="font-display text-2xl text-forest-100">Fees</h1>
+      <h1 className="font-display text-2xl text-forest-100">{pageTitle}</h1>
+      {isPartnership && (
+        <p className="font-ui text-xs text-forest-300 -mt-4">
+          This school runs on the Partnership model. Items you create here (e.g. quarterly Child
+          Developmental Support) appear to parents alongside a tier choice (Gold / Silver /
+          Resource Men Support) they pick when contributing.
+        </p>
+      )}
 
       {error && <p className="text-error font-ui text-sm">{error}</p>}
 
       {!term && (
         <p className="font-ui text-sm text-forest-300 bg-forest-900 rounded-lg p-3">
-          No current session/term is set — ask School Admin to set one under Sessions & Terms before creating fees.
+          No current session/term is set — ask School Admin to set one under Sessions & Terms before creating {isPartnership ? "support items" : "fees"}.
         </p>
       )}
 
@@ -202,7 +219,7 @@ export default function FinanceManagerFees() {
           <div className="bg-forest-900 rounded-lg p-4 flex flex-col sm:flex-row gap-2">
             <input
               type="text"
-              placeholder='Fee name, e.g. "School Fees"'
+              placeholder={namePlaceholder}
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               className="p-2 rounded bg-forest-700 text-forest-100 font-ui placeholder:text-forest-300/60 flex-1"
@@ -231,13 +248,15 @@ export default function FinanceManagerFees() {
               disabled={creating}
               className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui font-semibold whitespace-nowrap hover:bg-forest-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {creating ? "Creating..." : "Create Fee"}
+              {creating ? "Creating..." : createLabel}
             </button>
           </div>
 
           <div className="space-y-2">
             {feeTypes.length === 0 && (
-              <p className="text-forest-300 font-ui text-sm">No fee types yet — create one above.</p>
+              <p className="text-forest-300 font-ui text-sm">
+                {isPartnership ? "No support items yet — create one above." : "No fee types yet — create one above."}
+              </p>
             )}
             {feeTypes.map((f) => (
               <button

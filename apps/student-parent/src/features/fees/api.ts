@@ -96,6 +96,8 @@ export async function fetchChildrenFeesDue(parentId: string): Promise<ChildFeeRo
   return rows;
 }
 
+export type PartnershipTier = "gold" | "silver" | "resource_men_support";
+
 export interface InitiatePaymentResult {
   rrr: string;
   order_id: string;
@@ -107,10 +109,11 @@ export interface InitiatePaymentResult {
 
 export async function initiateRemitaPayment(
   studentFeeId: string,
-  amount: number
+  amount: number,
+  partnershipTier?: PartnershipTier | null
 ): Promise<InitiatePaymentResult> {
   const { data, error } = await supabase.functions.invoke("initiate-remita-payment", {
-    body: { student_fee_id: studentFeeId, amount },
+    body: { student_fee_id: studentFeeId, amount, partnership_tier: partnershipTier ?? null },
   });
   if (error) throw new Error(error.message);
   if (data?.error) throw new Error(data.error);

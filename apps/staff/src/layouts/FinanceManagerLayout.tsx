@@ -1,19 +1,31 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { LayoutDashboard, Wallet, Megaphone, Bell, UserCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
+import { fetchSchoolInfo, type SchoolInfo } from "../features/schools/api";
 
-const NAV_ITEMS = [
-  { to: "/finance-manager", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/finance-manager/fees", label: "Fees", icon: Wallet, end: false },
-  { to: "/finance-manager/announcements", label: "Announcements", icon: Megaphone, end: false },
-  { to: "/finance-manager/notifications", label: "Notifications", icon: Bell, end: false },
-  { to: "/finance-manager/profile", label: "Profile", icon: UserCircle, end: false },
-];
+function navItems(feesLabel: string) {
+  return [
+    { to: "/finance-manager", label: "Dashboard", icon: LayoutDashboard, end: true },
+    { to: "/finance-manager/fees", label: feesLabel, icon: Wallet, end: false },
+    { to: "/finance-manager/announcements", label: "Announcements", icon: Megaphone, end: false },
+    { to: "/finance-manager/notifications", label: "Notifications", icon: Bell, end: false },
+    { to: "/finance-manager/profile", label: "Profile", icon: UserCircle, end: false },
+  ];
+}
 
 export default function FinanceManagerLayout() {
   const { profile, signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const [schoolInfo, setSchoolInfo] = useState<SchoolInfo | null>(null);
+
+  useEffect(() => {
+    if (profile?.school_id) {
+      fetchSchoolInfo(profile.school_id).then(setSchoolInfo);
+    }
+  }, [profile?.school_id]);
+
+  const NAV_ITEMS = navItems(schoolInfo?.financial_model === "partnership" ? "Support" : "Fees");
 
   return (
     <div className="flex min-h-screen bg-forest-950">

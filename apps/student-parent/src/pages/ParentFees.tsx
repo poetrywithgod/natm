@@ -7,9 +7,17 @@ import {
   fetchOwnPaymentHistory,
   type ChildFeeRow,
   type PaymentHistoryRow,
+  type PartnershipTier,
 } from "../features/fees/api";
 import { openRemitaCheckout } from "../features/fees/remitaCheckout";
 import { useToast } from "../features/toast/ToastContext";
+import { fetchSchoolInfo, type FinancialModel } from "../features/schools/api";
+
+const TIER_OPTIONS: { value: PartnershipTier; label: string; blurb: string }[] = [
+  { value: "gold", label: "Gold Partner", blurb: "₦1,000,000+ per year" },
+  { value: "silver", label: "Silver Partner", blurb: "Sustained, ongoing support" },
+  { value: "resource_men_support", label: "Resource Men Support", blurb: "In-kind or occasional support" },
+];
 
 export default function ParentFees() {
   const { profile } = useAuth();
@@ -18,22 +26,28 @@ export default function ParentFees() {
   const [fees, setFees] = useState<ChildFeeRow[]>([]);
   const [history, setHistory] = useState<PaymentHistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [financialModel, setFinancialModel] = useState<FinancialModel>("fees");
 
   const [payingFee, setPayingFee] = useState<ChildFeeRow | null>(null);
   const [payAmount, setPayAmount] = useState("");
+  const [selectedTier, setSelectedTier] = useState<PartnershipTier | null>(null);
   const [paySubmitting, setPaySubmitting] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+
+  const isPartnership = financialModel === "partnership";
 
   async function loadAll() {
     if (!profile?.id) return;
     setLoading(true);
     try {
-      const [feeRows, historyRows] = await Promise.all([
+      const [feeRows, historyRows, schoolInfo] = await Promise.all([
         fetchChildrenFeesDue(profile.id),
         fetchOwnPaymentHistory(profile.id),
+        profile.school_id ? fetchSchoolInfo(profile.school_id) : Promise.resolve(null),
       ]);
       setFees(feeRows);
       setHistory(historyRows);
+      setFinancialModel(schoolInfo?.financial_model ?? "fees");
     } catch (err) {
       console.error("Failed to load fees:", err);
     } finally {
@@ -49,6 +63,7 @@ export default function ParentFees() {
   function openPayModal(fee: ChildFeeRow) {
     setPayingFee(fee);
     setPayAmount(fee.balance.toFixed(2));
+    setSelectedTier(null);
     setPayError(null);
   }
 
@@ -63,11 +78,15 @@ export default function ParentFees() {
       setPayError(`Amount can't exceed the balance of ₦${payingFee.balance.toLocaleString()}.`);
       return;
     }
+    if (isPartnership && !selectedTier) {
+      setPayError("Choose a partnership tier to continue.");
+      return;
+    }
 
     setPaySubmitting(true);
     setPayError(null);
     try {
-      const result = await initiateRemitaPayment(payingFee.student_fee_id, amount);
+      const result = await initiateRemitaPayment(payingFee.student_fee_id, amount, selectedTier);
       setPaySubmitting(false);
       await openRemitaCheckout({
         publicKey: result.public_key,
@@ -104,7 +123,9 @@ export default function ParentFees() {
 
   return (
     <div className="p-4 space-y-6">
-      <h1 className="font-display text-xl text-abyssal-100">Fees</h1>
+      <h1 className="font-display text-xl text-abyssal-100">
+        {isPartnership ? "Partnership" : "Fees"}
+      </h1>
 
       {loading ? (
         <div className="space-y-2 animate-pulse">
@@ -114,7 +135,9 @@ export default function ParentFees() {
       ) : fees.length === 0 ? (
         <div className="bg-abyssal-900 rounded-lg p-6 text-center">
           <CreditCard className="mx-auto text-abyssal-300 mb-2" size={24} />
-          <p className="font-body text-sm text-abyssal-300">No fees due right now.</p>
+          <p className="font-body text-sm text-abyssal-300">
+            {isPartnership ? "No support due right now." : "No fees due right now."}
+          </p>
         </div>
       ) : (
         Object.entries(groupedByChild).map(([childName, childFees]) => (
@@ -209,6 +232,38 @@ export default function ParentFees() {
                 You can pay in installments — enter less than the full balance if you'd like.
               </p>
             </div>
+
+            {isPartnership && (
+              <div>
+                <label className="font-ui text-xs text-abyssal-300">
+                  Contributing as a...
+                </label>
+                <div className="mt-1 space-y-2">
+                  {TIER_OPTIONS.map((tier) => (
+                    <label
+                      key={tier.value}
+                      className={`flex items-start gap-2 p-2 rounded-md border cursor-pointer ${
+                        selectedTier === tier.value
+                          ? "border-lime bg-abyssal-800"
+                          : "border-abyssal-700 bg-abyssal-950"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="partnership_tier"
+                        checked={selectedTier === tier.value}
+                        onChange={() => setSelectedTier(tier.value)}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        <span className="block font-ui text-sm text-abyssal-100">{tier.label}</span>
+                        <span className="block font-ui text-xs text-abyssal-300">{tier.blurb}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {payError && <p className="font-ui text-xs text-error">{payError}</p>}
 

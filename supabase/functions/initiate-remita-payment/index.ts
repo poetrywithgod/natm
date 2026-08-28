@@ -71,9 +71,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { student_fee_id, amount } = await req.json();
+    const { student_fee_id, amount, partnership_tier } = await req.json();
     if (!student_fee_id || typeof amount !== "number" || amount <= 0) {
       return new Response(JSON.stringify({ error: "student_fee_id and a positive amount are required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const VALID_TIERS = ["gold", "silver", "resource_men_support"];
+    if (partnership_tier !== undefined && partnership_tier !== null && !VALID_TIERS.includes(partnership_tier)) {
+      return new Response(JSON.stringify({ error: "Invalid partnership_tier" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -175,6 +183,7 @@ Deno.serve(async (req) => {
       status: "pending",
       order_id: orderId,
       rrr,
+      partnership_tier: partnership_tier ?? null,
     });
     if (insertError) {
       return new Response(JSON.stringify({ error: insertError.message }), {

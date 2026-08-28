@@ -5,12 +5,14 @@ import { useAuth } from "../features/auth/AuthContext";
 import { fetchSchoolInfo, type SchoolInfo } from "../features/schools/api";
 import { fetchUnreadCount } from "../features/notifications/api";
 
-const NAV_ITEMS = [
-  { to: "/parent", label: "Home", icon: Home, end: true },
-  { to: "/parent/fees", label: "Fees", icon: CreditCard, end: false },
-  { to: "/parent/messages", label: "Messages", icon: MessageCircle, end: false },
-  { to: "/parent/settings", label: "Settings", icon: Settings, end: false },
-];
+function navItems(feesLabel: string) {
+  return [
+    { to: "/parent", label: "Home", icon: Home, end: true },
+    { to: "/parent/fees", label: feesLabel, icon: CreditCard, end: false },
+    { to: "/parent/messages", label: "Messages", icon: MessageCircle, end: false },
+    { to: "/parent/settings", label: "Settings", icon: Settings, end: false },
+  ];
+}
 
 export default function ParentLayout() {
   const { profile, session, signOut } = useAuth();
@@ -23,6 +25,8 @@ export default function ParentLayout() {
       fetchSchoolInfo(profile.school_id).then(setSchoolInfo);
     }
   }, [profile?.school_id]);
+
+  const NAV_ITEMS = navItems(schoolInfo?.financial_model === "partnership" ? "Partnership" : "Fees");
 
   useEffect(() => {
     const userId = session?.user?.id;

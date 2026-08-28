@@ -1,5 +1,7 @@
 import { supabase } from "../../lib/supabase";
 
+export type FinancialModel = "fees" | "partnership";
+
 export interface SchoolInfo {
   name: string;
   logo_url: string | null;
@@ -11,13 +13,14 @@ export interface SchoolInfo {
   motto: string | null;
   year_established: number | null;
   principal_name: string | null;
+  financial_model: FinancialModel;
 }
 
 export async function fetchSchoolInfo(schoolId: string): Promise<SchoolInfo | null> {
   const { data, error } = await supabase
     .from("schools")
     .select(
-      "name, logo_url, contact_email, address, phone_1, phone_2, website, motto, year_established, principal_name"
+      "name, logo_url, contact_email, address, phone_1, phone_2, website, motto, year_established, principal_name, financial_model"
     )
     .eq("id", schoolId)
     .single();

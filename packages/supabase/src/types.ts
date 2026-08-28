@@ -1262,6 +1262,7 @@ export type Database = {
           id: string
           initiated_by: string | null
           order_id: string
+          partnership_tier: string | null
           remita_transaction_id: string | null
           rrr: string | null
           school_id: string
@@ -1278,6 +1279,7 @@ export type Database = {
           id?: string
           initiated_by?: string | null
           order_id: string
+          partnership_tier?: string | null
           remita_transaction_id?: string | null
           rrr?: string | null
           school_id: string
@@ -1294,6 +1296,7 @@ export type Database = {
           id?: string
           initiated_by?: string | null
           order_id?: string
+          partnership_tier?: string | null
           remita_transaction_id?: string | null
           rrr?: string | null
           school_id?: string
@@ -1781,6 +1784,7 @@ export type Database = {
           address: string | null
           contact_email: string | null
           created_at: string
+          financial_model: string
           id: string
           is_active: boolean
           logo_url: string | null
@@ -1796,6 +1800,7 @@ export type Database = {
           address?: string | null
           contact_email?: string | null
           created_at?: string
+          financial_model?: string
           id?: string
           is_active?: boolean
           logo_url?: string | null
@@ -1811,6 +1816,7 @@ export type Database = {
           address?: string | null
           contact_email?: string | null
           created_at?: string
+          financial_model?: string
           id?: string
           is_active?: boolean
           logo_url?: string | null

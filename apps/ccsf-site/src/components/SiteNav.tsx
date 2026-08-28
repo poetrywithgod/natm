@@ -20,6 +20,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Get Involved",
     items: [
       { href: "/get-involved/donate", label: "Donate" },
+      { href: "/get-involved/become-a-partner", label: "Become a Partner" },
       { href: "/get-involved/volunteer", label: "Volunteer" },
       { href: "/get-involved/partner", label: "Partner With Us" },
       { href: "/get-involved/sponsor-a-child", label: "Sponsor a Child" },

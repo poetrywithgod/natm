@@ -1,0 +1,107 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import ScrollReveal from "../../components/ScrollReveal";
+
+const tiers = [
+  {
+    name: "Gold Partner",
+    threshold: "\u20a61,000,000+ per year",
+    description:
+      "CCSF's highest tier of sustained support, for partners committing significant annual resources to our programmes.",
+  },
+  {
+    name: "Silver Partner",
+    threshold: "Ongoing, sustained support",
+    description:
+      "For partners who wish to give regularly at a level below Gold, providing dependable support CCSF can plan programmes around.",
+  },
+  {
+    name: "Resource Men Support",
+    threshold: "In-kind or occasional support",
+    description:
+      "For partners offering resources, skills, materials, or occasional contributions rather than a fixed recurring amount.",
+  },
+];
+---
+
+<SiteLayout
+  title="Become a Partner"
+  description="Become a CCSF Partner. Choose a partnership tier and support Child Developmental Support programmes for children with Special Educational Needs at Cherries Children School Foundation."
+>
+  <section class="bg-pine-900 text-cream-100 py-20">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h1 class="font-display text-4xl mb-4">Become a Partner</h1>
+      <p class="font-body text-cream-100/80">
+        Partner with CCSF at a level that fits you, and help sustain quarterly Child Developmental
+        Support for children with Special Educational Needs.
+      </p>
+    </div>
+  </section>
+
+  <img
+    src="https://images.unsplash.com/photo-1607748862156-7c548e7e98f4?auto=format&fit=crop&w=1600&h=700&q=80"
+    alt="Partnership and support"
+    loading="lazy"
+    decoding="async"
+    class="w-full h-56 sm:h-72 object-cover"
+  />
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-100 py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <p class="font-body text-ink/80 leading-relaxed mb-4">
+        Child Developmental Support is CCSF's quarterly programme of individualized learning,
+        therapy, and developmental interventions for children with Special Educational Needs.
+        Becoming a Partner is how individuals and organisations sustain this support on an
+        ongoing basis, choosing the tier that best fits what they're able to give.
+      </p>
+      <p class="font-body text-ink/80 leading-relaxed">
+        This is distinct from a one-off gift -- see our <a href="/get-involved/donate" class="text-pine-700 underline">Donate</a>
+        page for single contributions, or <a href="/get-involved/partner" class="text-pine-700 underline">Partner With Us</a>
+        if you represent an organisation or institution interested in programme collaboration.
+      </p>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal client:visible>
+  <section class="bg-cream-200 py-16">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6">
+      <h2 class="font-display text-2xl text-pine-900 mb-8 text-center">Partnership Tiers</h2>
+      <div class="grid sm:grid-cols-3 gap-6">
+        {tiers.map((tier) => (
+          <div class="bg-cream-100 rounded-2xl p-6 border border-pine-900/10">
+            <h3 class="font-display text-lg text-pine-900 mb-1">{tier.name}</h3>
+            <p class="font-body text-xs text-cherry-600 font-semibold mb-3">{tier.threshold}</p>
+            <p class="font-body text-sm text-ink/70 leading-relaxed">{tier.description}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+  </ScrollReveal>
+
+  <ScrollReveal client:visible>
+  <section class="bg-pine-900 text-cream-100 py-20">
+    <div class="max-w-2xl mx-auto px-4 sm:px-6 text-center">
+      <h2 class="font-display text-2xl mb-4">Ready to Partner?</h2>
+      <p class="font-body text-cream-100/80 leading-relaxed mb-8">
+        Contributions can be made directly to CCSF's account below. Let us know which tier you're
+        joining as when you send your confirmation, so we can set up your ongoing Partnership.
+      </p>
+      <div class="bg-pine-700 rounded-2xl p-8 inline-block text-left">
+        <p class="font-body text-sm text-cream-100/70 mb-1">Account Name</p>
+        <p class="font-display text-lg mb-4">Cherries Children School Foundation</p>
+        <p class="font-body text-sm text-cream-100/70 mb-1">Bank</p>
+        <p class="font-display text-lg mb-4">Keystone Bank</p>
+        <p class="font-body text-sm text-cream-100/70 mb-1">Account Number</p>
+        <p class="font-display text-2xl">1013582929</p>
+      </div>
+      <p class="font-body text-cream-100/80 mt-8">
+        Partnership Enquiries: Phone / WhatsApp
+        <a href="https://wa.me/2349153114330" class="text-gold-500 hover:underline">0915 311 4330</a>
+      </p>
+    </div>
+  </section>
+  </ScrollReveal>
+</SiteLayout>

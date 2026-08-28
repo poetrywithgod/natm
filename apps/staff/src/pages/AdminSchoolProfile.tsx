@@ -4,9 +4,11 @@ import {
   fetchSchoolInfo,
   updateSchoolName,
   updateSchoolDetails,
+  updateFinancialModel,
   uploadSchoolLogo,
   type SchoolInfo,
   type SchoolDetailsInput,
+  type FinancialModel,
 } from "../features/schools/api";
 
 const EMPTY_DETAILS: SchoolDetailsInput = {
@@ -37,6 +39,9 @@ export default function AdminSchoolProfile() {
   const [detailsSaving, setDetailsSaving] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [detailsSaved, setDetailsSaved] = useState(false);
+
+  const [modelSaving, setModelSaving] = useState(false);
+  const [modelError, setModelError] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile?.school_id) {
@@ -88,6 +93,20 @@ export default function AdminSchoolProfile() {
     } finally {
       setLogoLoading(false);
       e.target.value = "";
+    }
+  }
+
+  async function handleModelChange(nextModel: FinancialModel) {
+    if (!profile?.school_id || nextModel === school?.financial_model) return;
+    setModelError(null);
+    setModelSaving(true);
+    try {
+      await updateFinancialModel(profile.school_id, nextModel, profile.id);
+      setSchool((prev) => (prev ? { ...prev, financial_model: nextModel } : prev));
+    } catch (err) {
+      setModelError(err instanceof Error ? err.message : "Failed to update financial model.");
+    } finally {
+      setModelSaving(false);
     }
   }
 
@@ -183,6 +202,54 @@ export default function AdminSchoolProfile() {
         </div>
         {nameError && <p className="font-ui text-xs text-red-400">{nameError}</p>}
         {nameSaved && <p className="font-ui text-xs text-forest-400">Name updated.</p>}
+      </section>
+
+      {/* Financial model */}
+      <section className="space-y-3">
+        <h2 className="font-ui text-sm font-semibold text-forest-100">Financial model</h2>
+        <p className="font-ui text-xs text-forest-300">
+          Choose how billing is framed across the app for this school. This doesn't change the
+          underlying fee terms/amounts your Finance Manager sets up -- it only changes labels and,
+          on the Partnership model, lets parents pick a partnership tier when they pay.
+        </p>
+        <div className="space-y-2">
+          <label className="flex items-start gap-3 p-3 rounded-lg border border-forest-700 bg-forest-900 cursor-pointer">
+            <input
+              type="radio"
+              name="financial_model"
+              checked={school?.financial_model === "fees"}
+              onChange={() => handleModelChange("fees")}
+              disabled={modelSaving}
+              className="mt-1"
+            />
+            <span>
+              <span className="block font-ui text-sm text-forest-100 font-semibold">Fees</span>
+              <span className="block font-ui text-xs text-forest-300">
+                Standard school fees, billed by term.
+              </span>
+            </span>
+          </label>
+          <label className="flex items-start gap-3 p-3 rounded-lg border border-forest-700 bg-forest-900 cursor-pointer">
+            <input
+              type="radio"
+              name="financial_model"
+              checked={school?.financial_model === "partnership"}
+              onChange={() => handleModelChange("partnership")}
+              disabled={modelSaving}
+              className="mt-1"
+            />
+            <span>
+              <span className="block font-ui text-sm text-forest-100 font-semibold">
+                Partnership (Foundation)
+              </span>
+              <span className="block font-ui text-xs text-forest-300">
+                Fees are shown as quarterly Child Developmental Support, and parents choose a
+                Partnership tier (Gold / Silver / Resource Men Support) each time they contribute.
+              </span>
+            </span>
+          </label>
+        </div>
+        {modelError && <p className="font-ui text-xs text-red-400">{modelError}</p>}
       </section>
 
       {/* Details */}
