@@ -79,7 +79,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const VALID_TIERS = ["gold", "silver", "resource_men_support"];
+    // Bronze (volunteer/in-kind) never reaches this function -- it has no
+    // amount and is recorded via partnership_pledges instead, client-side.
+    const VALID_TIERS = ["gold", "silver"];
     if (partnership_tier !== undefined && partnership_tier !== null && !VALID_TIERS.includes(partnership_tier)) {
       return new Response(JSON.stringify({ error: "Invalid partnership_tier" }), {
         status: 400,

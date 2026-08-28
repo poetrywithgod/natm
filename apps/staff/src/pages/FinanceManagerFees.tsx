@@ -10,6 +10,7 @@ import {
   fetchFeeTypes,
   createFeeType,
   archiveFeeType,
+  ensureQuarterlyCDS,
   fetchStudentFeeRowsForType,
   upsertStudentFee,
   type CurrentTerm,
@@ -31,6 +32,7 @@ export default function FinanceManagerFees() {
   const [newName, setNewName] = useState("");
   const [newAmount, setNewAmount] = useState("");
   const [newClassId, setNewClassId] = useState("");
+  const [newIsOpenAmount, setNewIsOpenAmount] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [rowsLoading, setRowsLoading] = useState(false);
@@ -76,8 +78,14 @@ export default function FinanceManagerFees() {
       ]);
       setTerm(currentTerm);
       setClasses(classList);
-      setFinancialModel(schoolInfo?.financial_model ?? "fees");
-      if (currentTerm) await loadFeeTypes(currentTerm);
+      const model = schoolInfo?.financial_model ?? "fees";
+      setFinancialModel(model);
+      if (currentTerm) {
+        if (model === "partnership") {
+          await ensureQuarterlyCDS(schoolId, currentTerm.id, profile!.id);
+        }
+        await loadFeeTypes(currentTerm);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load fees");
     } finally {
@@ -113,18 +121,28 @@ export default function FinanceManagerFees() {
   }, [schoolId, selectedFeeTypeId]);
 
   async function handleCreateFeeType() {
-    if (!schoolId || !term || !newName.trim() || !newAmount) return;
+    if (!schoolId || !term || !newName.trim()) return;
+    if (!newIsOpenAmount && !newAmount) return;
     const amount = parseFloat(newAmount) || 0;
     setCreating(true);
     setError(null);
     try {
       const createdName = newName.trim();
-      await createFeeType(schoolId, term.id, createdName, amount, newClassId || null, profile!.id);
+      await createFeeType(
+        schoolId,
+        term.id,
+        createdName,
+        amount,
+        newClassId || null,
+        profile!.id,
+        newIsOpenAmount
+      );
       setNewName("");
       setNewAmount("");
       setNewClassId("");
+      setNewIsOpenAmount(false);
       await loadFeeTypes(term);
-      showToast(`"${createdName}" fee type created`, "success");
+      showToast(`"${createdName}" ${isPartnership ? "support item" : "fee type"} created`, "success");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to create fee type";
       setError(msg);
@@ -225,8 +243,9 @@ export default function FinanceManagerFees() {
       {isPartnership && (
         <p className="font-ui text-xs text-forest-300 -mt-4">
           This school runs on the Partnership model. Items you create here (e.g. quarterly Child
-          Developmental Support) appear to parents alongside a tier choice (Gold / Silver /
-          Resource Men Support) they pick when contributing.
+          Developmental Support) appear to parents alongside a tier choice (Gold / Silver / Bronze)
+          they pick when contributing. Gold and Silver are monetary; Bronze is a volunteer/in-kind
+          commitment with no payment attached.
         </p>
       )}
 
@@ -244,40 +263,54 @@ export default function FinanceManagerFees() {
             {term.session_name} · Term {term.term_number}
           </p>
 
-          <div className="bg-forest-900 rounded-lg p-4 flex flex-col sm:flex-row gap-2">
-            <input
-              type="text"
-              placeholder={namePlaceholder}
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              className="p-2 rounded bg-forest-700 text-forest-100 font-ui placeholder:text-forest-300/60 flex-1"
-            />
-            <input
-              type="number"
-              placeholder="Amount"
-              value={newAmount}
-              onChange={(e) => setNewAmount(e.target.value)}
-              className="w-32 p-2 rounded bg-forest-700 text-forest-100 font-ui placeholder:text-forest-300/60"
-            />
-            <select
-              value={newClassId}
-              onChange={(e) => setNewClassId(e.target.value)}
-              className="p-2 rounded bg-forest-700 text-forest-100 font-ui"
-            >
-              <option value="">Whole School</option>
-              {classes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={handleCreateFeeType}
-              disabled={creating}
-              className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui font-semibold whitespace-nowrap hover:bg-forest-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {creating ? "Creating..." : createLabel}
-            </button>
+          <div className="bg-forest-900 rounded-lg p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                placeholder={namePlaceholder}
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                className="p-2 rounded bg-forest-700 text-forest-100 font-ui placeholder:text-forest-300/60 flex-1"
+              />
+              {!newIsOpenAmount && (
+                <input
+                  type="number"
+                  placeholder="Amount"
+                  value={newAmount}
+                  onChange={(e) => setNewAmount(e.target.value)}
+                  className="w-32 p-2 rounded bg-forest-700 text-forest-100 font-ui placeholder:text-forest-300/60"
+                />
+              )}
+              <select
+                value={newClassId}
+                onChange={(e) => setNewClassId(e.target.value)}
+                className="p-2 rounded bg-forest-700 text-forest-100 font-ui"
+              >
+                <option value="">Whole School</option>
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleCreateFeeType}
+                disabled={creating}
+                className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui font-semibold whitespace-nowrap hover:bg-forest-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {creating ? "Creating..." : createLabel}
+              </button>
+            </div>
+            {isPartnership && (
+              <label className="flex items-center gap-2 font-ui text-xs text-forest-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={newIsOpenAmount}
+                  onChange={(e) => setNewIsOpenAmount(e.target.checked)}
+                />
+                Open contribution — no fixed amount (Gold / Silver / Bronze tiers apply instead)
+              </label>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -304,7 +337,15 @@ export default function FinanceManagerFees() {
                   <p className="font-ui text-xs text-forest-300">{f.class_name ?? "Whole School"}</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-ui text-forest-100">₦{f.amount.toLocaleString()}</span>
+                  <span className="font-ui text-forest-100">
+                    {f.is_open_amount ? (
+                      <span className="text-xs px-2 py-0.5 rounded bg-forest-700 text-forest-300">
+                        Open — tier-based
+                      </span>
+                    ) : (
+                      `₦${f.amount.toLocaleString()}`
+                    )}
+                  </span>
                   <button
                     type="button"
                     onClick={(e) => handleArchive(f, e)}

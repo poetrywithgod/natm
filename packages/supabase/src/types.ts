@@ -803,6 +803,7 @@ export type Database = {
           created_at: string
           id: string
           is_archived: boolean
+          is_open_amount: boolean
           name: string
           school_id: string
           term_id: string
@@ -813,6 +814,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_archived?: boolean
+          is_open_amount?: boolean
           name: string
           school_id: string
           term_id: string
@@ -823,6 +825,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_archived?: boolean
+          is_open_amount?: boolean
           name?: string
           school_id?: string
           term_id?: string
@@ -1342,6 +1345,55 @@ export type Database = {
             columns: ["term_id"]
             isOneToOne: false
             referencedRelation: "terms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partnership_pledges: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          parent_id: string
+          school_id: string
+          student_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          parent_id: string
+          school_id: string
+          student_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          parent_id?: string
+          school_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partnership_pledges_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partnership_pledges_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partnership_pledges_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
         ]

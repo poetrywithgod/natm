@@ -6,6 +6,7 @@ export interface ChildFeeRow {
   full_name: string;
   fee_type_id: string;
   fee_type_name: string;
+  is_open_amount: boolean;
   term_id: string;
   amount_due: number;
   amount_paid: number;
@@ -53,7 +54,7 @@ export async function fetchChildrenFeesDue(parentId: string): Promise<ChildFeeRo
   for (const child of children) {
     const { data: feeTypes, error: feeTypesError } = await supabase
       .from("fee_types")
-      .select("id, name, amount, class_id")
+      .select("id, name, amount, is_open_amount, class_id")
       .eq("school_id", schoolId)
       .eq("term_id", term.id)
       .eq("is_archived", false);
@@ -86,6 +87,7 @@ export async function fetchChildrenFeesDue(parentId: string): Promise<ChildFeeRo
         full_name: child.full_name,
         fee_type_id: feeType.id,
         fee_type_name: feeType.name,
+        is_open_amount: feeType.is_open_amount,
         term_id: term.id,
         amount_due: amountDue,
         amount_paid: amountPaid,
@@ -97,7 +99,7 @@ export async function fetchChildrenFeesDue(parentId: string): Promise<ChildFeeRo
   return rows;
 }
 
-export type PartnershipTier = "gold" | "silver" | "resource_men_support";
+export type PartnershipTier = "gold" | "silver" | "bronze";
 
 export interface InitiatePaymentResult {
   rrr: string;
@@ -119,6 +121,47 @@ export async function initiateRemitaPayment(
   if (error) throw new Error(error.message);
   if (data?.error) throw new Error(data.error);
   return data as InitiatePaymentResult;
+}
+
+// Bronze is a volunteer/in-kind commitment, not a payment -- it never
+// touches Remita or payment_transactions (that table requires amount >
+// 0). This records the pledge and notifies the school's Finance
+// Managers so they can follow up directly with the parent.
+export async function registerVolunteerPledge(
+  schoolId: string,
+  studentId: string,
+  parentId: string,
+  note: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("partnership_pledges")
+    .insert({ school_id: schoolId, student_id: studentId, parent_id: parentId, note: note || null });
+  if (error) throw new Error(error.message);
+
+  const [{ data: student }, { data: recipients }] = await Promise.all([
+    supabase.from("students").select("full_name").eq("id", studentId).single(),
+    supabase.from("profiles").select("id").eq("school_id", schoolId).eq("role", "finance_manager").eq("is_active", true),
+  ]);
+
+  if (!recipients || recipients.length === 0) return;
+
+  const studentName = student?.full_name ?? "A family";
+  const notificationRows = recipients.map((r) => ({
+    school_id: schoolId,
+    recipient_id: r.id,
+    type: "partnership_pledge",
+    title: "New Bronze partnership interest",
+    body: `${studentName}'s family registered interest in volunteering (Bronze partnership).`,
+    related_entity_type: "partnership_pledge",
+    related_entity_id: studentId,
+  }));
+
+  const { error: notifyError } = await supabase.from("notifications").insert(notificationRows);
+  if (notifyError) throw new Error(notifyError.message);
+
+  supabase.functions.invoke("send-push", { body: {} }).catch((err) => {
+    console.error("send-push invoke failed:", err);
+  });
 }
 
 export interface PaymentHistoryRow {

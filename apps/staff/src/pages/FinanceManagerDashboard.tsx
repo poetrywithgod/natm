@@ -16,13 +16,16 @@ import {
   fetchCurrentTerm,
   fetchFeesSummary,
   fetchFeeTypes,
+  ensureQuarterlyCDS,
   fetchStudentFeeRowsForType,
   fetchAnnualRevenue,
+  fetchPartnershipTierStats,
   summarizeByClass,
   type CurrentTerm,
   type FeeTypeSummary,
   type FeeType,
   type ClassFeeBreakdown,
+  type PartnershipTierStat,
 } from "../features/fees/api";
 
 const COLORS = {
@@ -61,6 +64,32 @@ function FeeProgressBar({ summary }: { summary: FeeTypeSummary }) {
   );
 }
 
+function TierBar({ stat, maxCount }: { stat: PartnershipTierStat; maxCount: number }) {
+  const pct = maxCount > 0 ? (stat.count / maxCount) * 100 : 0;
+  const tierColors: Record<string, string> = {
+    gold: "#D9A441",
+    silver: "#94A3B8",
+    bronze: "#B45309",
+  };
+  return (
+    <div className="space-y-1">
+      <div className="flex justify-between items-baseline">
+        <span className="font-ui text-sm text-forest-100">{stat.label}</span>
+        <span className="font-ui text-xs text-forest-300">
+          {stat.count} {stat.count === 1 ? "partner" : "partners"}
+          {stat.tier !== "bronze" ? ` · ${formatNaira(stat.totalAmount)}` : ""}
+        </span>
+      </div>
+      <div className="h-2 rounded-full bg-forest-700 overflow-hidden">
+        <div
+          className="h-full"
+          style={{ width: `${pct}%`, backgroundColor: tierColors[stat.tier] }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function FinanceManagerDashboard() {
   const { profile } = useAuth();
   const [term, setTerm] = useState<CurrentTerm | null>(null);
@@ -70,6 +99,7 @@ export default function FinanceManagerDashboard() {
   const [selectedFeeTypeId, setSelectedFeeTypeId] = useState<string | null>(null);
   const [classBreakdown, setClassBreakdown] = useState<ClassFeeBreakdown[]>([]);
   const [annualRevenue, setAnnualRevenue] = useState<number>(0);
+  const [tierStats, setTierStats] = useState<PartnershipTierStat[]>([]);
   const [loading, setLoading] = useState(true);
   const [breakdownLoading, setBreakdownLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,8 +119,17 @@ export default function FinanceManagerDashboard() {
       ]);
       setTerm(currentTerm);
       setAnnualRevenue(revenue);
-      setFinancialModel(schoolInfo?.financial_model ?? "fees");
+      const model = schoolInfo?.financial_model ?? "fees";
+      setFinancialModel(model);
+      if (model === "partnership") {
+        fetchPartnershipTierStats(schoolId)
+          .then(setTierStats)
+          .catch((e) => console.error("Failed to load tier stats:", e));
+      }
       if (currentTerm) {
+        if (model === "partnership") {
+          await ensureQuarterlyCDS(schoolId, currentTerm.id, profile!.id);
+        }
         const [s, types] = await Promise.all([
           fetchFeesSummary(schoolId, currentTerm.id),
           fetchFeeTypes(schoolId, currentTerm.id),
@@ -219,6 +258,24 @@ export default function FinanceManagerDashboard() {
         </div>
       )}
 
+      {isPartnership && (
+        <div className="bg-forest-900 rounded-lg p-4 space-y-4">
+          <h2 className="font-display text-lg text-forest-100">Partnership Tiers — Which Partners Prefer</h2>
+          <p className="font-ui text-xs text-forest-300 -mt-2">
+            Gold and Silver counts reflect payment attempts (Remita isn't live yet, so these may
+            include pending transactions, not just completed ones). Bronze counts volunteer/in-kind
+            pledges registered by parents.
+          </p>
+          {tierStats.every((t) => t.count === 0) ? (
+            <p className="font-ui text-xs text-forest-300">No tier selections recorded yet.</p>
+          ) : (
+            tierStats.map((t) => (
+              <TierBar key={t.tier} stat={t} maxCount={Math.max(...tierStats.map((s) => s.count), 1)} />
+            ))
+          )}
+        </div>
+      )}
+
       <div className="bg-forest-900 rounded-lg p-4">
         <h2 className="font-display text-lg text-forest-100 mb-4">{byTypeHeading}</h2>
         <ResponsiveContainer width="100%" height={280}>
@@ -256,7 +313,9 @@ export default function FinanceManagerDashboard() {
           </div>
           {selectedFeeType && (
             <p className="font-ui text-xs text-forest-300 mb-3">
-              Per-student amount: {formatNaira(selectedFeeType.amount)}
+              {selectedFeeType.is_open_amount
+                ? "Open contribution — tier-based, no fixed per-student amount"
+                : `Per-student amount: ${formatNaira(selectedFeeType.amount)}`}
               {selectedFeeType.class_name ? ` · ${selectedFeeType.class_name} only` : " · whole school"}
             </p>
           )}

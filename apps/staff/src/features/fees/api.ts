@@ -11,6 +11,7 @@ export interface FeeType {
   id: string;
   name: string;
   amount: number;
+  is_open_amount: boolean;
   class_id: string | null;
   class_name: string | null; // null = whole school
   term_id: string;
@@ -53,7 +54,7 @@ export async function fetchCurrentTerm(schoolId: string): Promise<CurrentTerm | 
 export async function fetchFeeTypes(schoolId: string, termId: string): Promise<FeeType[]> {
   const { data, error } = await supabase
     .from("fee_types")
-    .select("id, name, amount, class_id, term_id, created_at, classes(name)")
+    .select("id, name, amount, is_open_amount, class_id, term_id, created_at, classes(name)")
     .eq("school_id", schoolId)
     .eq("term_id", termId)
     .eq("is_archived", false)
@@ -66,6 +67,7 @@ export async function fetchFeeTypes(schoolId: string, termId: string): Promise<F
       id: f.id,
       name: f.name,
       amount: f.amount,
+      is_open_amount: f.is_open_amount,
       class_id: f.class_id,
       class_name: classInfo?.name ?? null,
       term_id: f.term_id,
@@ -77,17 +79,31 @@ export async function fetchFeeTypes(schoolId: string, termId: string): Promise<F
 // Creates the fee type, then generates a student_fees row for every
 // applicable student (whole school if classId is null, otherwise just
 // that class) so paid/unpaid tracking for this fee starts immediately.
+// isOpenAmount marks an item as having no fixed target (used for
+// Partnership-model items like Child Developmental Support, where the
+// actual amount depends entirely on the partner's tier) -- amount is
+// forced to 0 and student_fees rows are seeded at 0/0, since there's
+// nothing to be "due".
 export async function createFeeType(
   schoolId: string,
   termId: string,
   name: string,
   amount: number,
   classId: string | null,
-  actorId: string
+  actorId: string,
+  isOpenAmount = false
 ): Promise<void> {
+  const effectiveAmount = isOpenAmount ? 0 : amount;
   const { data: feeType, error: feeTypeError } = await supabase
     .from("fee_types")
-    .insert({ school_id: schoolId, term_id: termId, name, amount, class_id: classId })
+    .insert({
+      school_id: schoolId,
+      term_id: termId,
+      name,
+      amount: effectiveAmount,
+      class_id: classId,
+      is_open_amount: isOpenAmount,
+    })
     .select()
     .single();
   if (feeTypeError) throw new Error(feeTypeError.message);
@@ -103,7 +119,7 @@ export async function createFeeType(
     action: "fee_type.created",
     entity_type: "fee_type",
     entity_id: feeType.id,
-    details: { name, amount, class_id: classId },
+    details: { name, amount: effectiveAmount, class_id: classId, is_open_amount: isOpenAmount },
   });
 
   if (!students || students.length === 0) return;
@@ -113,7 +129,7 @@ export async function createFeeType(
     student_id: s.id,
     term_id: termId,
     fee_type_id: feeType.id,
-    amount_due: amount,
+    amount_due: effectiveAmount,
     amount_paid: 0,
   }));
 
@@ -121,6 +137,27 @@ export async function createFeeType(
     .from("student_fees")
     .upsert(rows, { onConflict: "student_id,fee_type_id" });
   if (insertError) throw new Error(insertError.message);
+}
+
+// Under the Partnership model, every term should have a standing
+// "Child Developmental Support" item so parents always have somewhere
+// to contribute -- Finance Manager shouldn't have to remember to
+// re-create it each term. Idempotent: checks for an existing active
+// (non-archived) one first, so calling this on every page load under
+// Partnership is safe.
+export async function ensureQuarterlyCDS(schoolId: string, termId: string, actorId: string): Promise<void> {
+  const { data: existing, error } = await supabase
+    .from("fee_types")
+    .select("id")
+    .eq("school_id", schoolId)
+    .eq("term_id", termId)
+    .eq("is_archived", false)
+    .ilike("name", "Child Developmental Support")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (existing) return;
+
+  await createFeeType(schoolId, termId, "Child Developmental Support", 0, null, actorId, true);
 }
 
 // Hides a fee/support item going forward (Finance Manager list, School Admin
@@ -139,6 +176,56 @@ export async function archiveFeeType(feeTypeId: string, schoolId: string, actorI
     entity_id: feeTypeId,
     details: {},
   });
+}
+
+export interface PartnershipTierStat {
+  tier: "gold" | "silver" | "bronze";
+  label: string;
+  count: number;
+  totalAmount: number;
+}
+
+// Combines the two places tier choices live: payment_transactions for
+// Gold/Silver (monetary, tier stored alongside the amount) and
+// partnership_pledges for Bronze (non-monetary, no amount column at
+// all -- see the partnership_tiers_v2 migration for why). All-time,
+// not scoped to the current term, since which tier partners gravitate
+// to is a longer-running signal than a single term's collection.
+export async function fetchPartnershipTierStats(schoolId: string): Promise<PartnershipTierStat[]> {
+  const [{ data: txns, error: txnsError }, { data: pledges, error: pledgesError }] = await Promise.all([
+    supabase
+      .from("payment_transactions")
+      .select("partnership_tier, amount")
+      .eq("school_id", schoolId)
+      .not("partnership_tier", "is", null),
+    supabase.from("partnership_pledges").select("id").eq("school_id", schoolId),
+  ]);
+  if (txnsError) throw new Error(txnsError.message);
+  if (pledgesError) throw new Error(pledgesError.message);
+
+  const gold = (txns ?? []).filter((t) => t.partnership_tier === "gold");
+  const silver = (txns ?? []).filter((t) => t.partnership_tier === "silver");
+
+  return [
+    {
+      tier: "gold",
+      label: "Gold",
+      count: gold.length,
+      totalAmount: gold.reduce((sum, t) => sum + t.amount, 0),
+    },
+    {
+      tier: "silver",
+      label: "Silver",
+      count: silver.length,
+      totalAmount: silver.reduce((sum, t) => sum + t.amount, 0),
+    },
+    {
+      tier: "bronze",
+      label: "Bronze",
+      count: (pledges ?? []).length,
+      totalAmount: 0,
+    },
+  ];
 }
 
 export async function fetchStudentFeeRowsForType(feeTypeId: string): Promise<StudentFeeRow[]> {

@@ -4,6 +4,7 @@ import { useAuth } from "../features/auth/AuthContext";
 import {
   fetchChildrenFeesDue,
   initiateRemitaPayment,
+  registerVolunteerPledge,
   fetchOwnPaymentHistory,
   type ChildFeeRow,
   type PaymentHistoryRow,
@@ -13,10 +14,12 @@ import { openRemitaCheckout } from "../features/fees/remitaCheckout";
 import { useToast } from "../features/toast/ToastContext";
 import { fetchSchoolInfo, type FinancialModel } from "../features/schools/api";
 
+const GOLD_MINIMUM = 1_000_000;
+
 const TIER_OPTIONS: { value: PartnershipTier; label: string; blurb: string }[] = [
-  { value: "gold", label: "Gold Partner", blurb: "₦1,000,000+ per year" },
-  { value: "silver", label: "Silver Partner", blurb: "Sustained, ongoing support" },
-  { value: "resource_men_support", label: "Resource Men Support", blurb: "In-kind or occasional support" },
+  { value: "gold", label: "Gold Partner", blurb: `₦${GOLD_MINIMUM.toLocaleString()}+ per contribution` },
+  { value: "silver", label: "Silver Partner", blurb: "Any amount you're able to give" },
+  { value: "bronze", label: "Bronze Partner", blurb: "Volunteer your time or service — no payment" },
 ];
 
 export default function ParentFees() {
@@ -31,6 +34,7 @@ export default function ParentFees() {
   const [payingFee, setPayingFee] = useState<ChildFeeRow | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const [selectedTier, setSelectedTier] = useState<PartnershipTier | null>(null);
+  const [pledgeNote, setPledgeNote] = useState("");
   const [paySubmitting, setPaySubmitting] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
 
@@ -62,24 +66,48 @@ export default function ParentFees() {
 
   function openPayModal(fee: ChildFeeRow) {
     setPayingFee(fee);
-    setPayAmount(fee.balance.toFixed(2));
+    setPayAmount(fee.is_open_amount ? "" : fee.balance.toFixed(2));
     setSelectedTier(null);
+    setPledgeNote("");
     setPayError(null);
+  }
+
+  async function handlePledge() {
+    if (!payingFee || !profile?.id || !profile.school_id) return;
+    setPaySubmitting(true);
+    setPayError(null);
+    try {
+      await registerVolunteerPledge(profile.school_id, payingFee.student_id, profile.id, pledgeNote);
+      showToast("Interest registered — the school will reach out to arrange details.", "success");
+      setPayingFee(null);
+    } catch (err) {
+      setPayError(err instanceof Error ? err.message : "Failed to register interest");
+    } finally {
+      setPaySubmitting(false);
+    }
   }
 
   async function handlePay() {
     if (!payingFee) return;
+    if (isPartnership && !selectedTier) {
+      setPayError("Choose a partnership tier to continue.");
+      return;
+    }
+    if (selectedTier === "bronze") {
+      return handlePledge();
+    }
+
     const amount = Number(payAmount);
     if (!amount || amount <= 0) {
       setPayError("Enter a valid amount.");
       return;
     }
-    if (amount > payingFee.balance + 0.01) {
-      setPayError(`Amount can't exceed the balance of ₦${payingFee.balance.toLocaleString()}.`);
+    if (selectedTier === "gold" && amount < GOLD_MINIMUM) {
+      setPayError(`Gold partnership requires at least ₦${GOLD_MINIMUM.toLocaleString()}.`);
       return;
     }
-    if (isPartnership && !selectedTier) {
-      setPayError("Choose a partnership tier to continue.");
+    if (!payingFee.is_open_amount && amount > payingFee.balance + 0.01) {
+      setPayError(`Amount can't exceed the balance of ₦${payingFee.balance.toLocaleString()}.`);
       return;
     }
 
@@ -147,7 +175,11 @@ export default function ParentFees() {
               <div key={fee.student_fee_id} className="bg-abyssal-900 rounded-lg p-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="font-ui text-sm text-abyssal-100">{fee.fee_type_name}</p>
-                  {fee.balance <= 0 ? (
+                  {fee.is_open_amount ? (
+                    <span className="font-ui text-xs text-abyssal-300">
+                      {fee.amount_paid > 0 ? `₦${fee.amount_paid.toLocaleString()} contributed` : "Open"}
+                    </span>
+                  ) : fee.balance <= 0 ? (
                     <span className="font-ui text-xs text-success">Paid</span>
                   ) : (
                     <span className="font-ui text-xs text-abyssal-300">
@@ -155,16 +187,18 @@ export default function ParentFees() {
                     </span>
                   )}
                 </div>
-                <div className="flex justify-between font-ui text-xs text-abyssal-300">
-                  <span>Due: ₦{fee.amount_due.toLocaleString()}</span>
-                  <span>Paid: ₦{fee.amount_paid.toLocaleString()}</span>
-                </div>
-                {fee.balance > 0 && (
+                {!fee.is_open_amount && (
+                  <div className="flex justify-between font-ui text-xs text-abyssal-300">
+                    <span>Due: ₦{fee.amount_due.toLocaleString()}</span>
+                    <span>Paid: ₦{fee.amount_paid.toLocaleString()}</span>
+                  </div>
+                )}
+                {(fee.is_open_amount || fee.balance > 0) && (
                   <button
                     onClick={() => openPayModal(fee)}
                     className="w-full mt-1 px-4 py-2 rounded bg-lime text-abyssal-950 font-ui text-sm font-semibold"
                   >
-                    Pay
+                    {fee.is_open_amount ? "Contribute" : "Pay"}
                   </button>
                 )}
               </div>
@@ -214,24 +248,33 @@ export default function ParentFees() {
               Pay {payingFee.fee_type_name}
             </h2>
             <p className="font-ui text-xs text-abyssal-300">
-              {payingFee.full_name} · Balance: ₦{payingFee.balance.toLocaleString()}
+              {payingFee.full_name}
+              {payingFee.is_open_amount
+                ? " · Open contribution — no fixed target"
+                : ` · Balance: ₦${payingFee.balance.toLocaleString()}`}
             </p>
 
-            <div>
-              <label className="font-ui text-xs text-abyssal-300">Amount to pay</label>
-              <input
-                type="number"
-                value={payAmount}
-                onChange={(e) => setPayAmount(e.target.value)}
-                min={0}
-                max={payingFee.balance}
-                step="0.01"
-                className="mt-1 w-full rounded-md border border-abyssal-700 bg-abyssal-950 px-3 py-2 font-ui text-sm text-abyssal-100"
-              />
-              <p className="font-ui text-xs text-abyssal-300 mt-1">
-                You can pay in installments — enter less than the full balance if you'd like.
-              </p>
-            </div>
+            {selectedTier !== "bronze" && (
+              <div>
+                <label className="font-ui text-xs text-abyssal-300">Amount to pay</label>
+                <input
+                  type="number"
+                  value={payAmount}
+                  onChange={(e) => setPayAmount(e.target.value)}
+                  min={0}
+                  max={payingFee.is_open_amount ? undefined : payingFee.balance}
+                  step="0.01"
+                  className="mt-1 w-full rounded-md border border-abyssal-700 bg-abyssal-950 px-3 py-2 font-ui text-sm text-abyssal-100"
+                />
+                <p className="font-ui text-xs text-abyssal-300 mt-1">
+                  {selectedTier === "gold"
+                    ? `Gold partnership requires at least ₦${GOLD_MINIMUM.toLocaleString()}.`
+                    : payingFee.is_open_amount
+                    ? "Contribute whatever amount you'd like."
+                    : "You can pay in installments — enter less than the full balance if you'd like."}
+                </p>
+              </div>
+            )}
 
             {isPartnership && (
               <div>
@@ -265,6 +308,24 @@ export default function ParentFees() {
               </div>
             )}
 
+            {selectedTier === "bronze" && (
+              <div>
+                <label className="font-ui text-xs text-abyssal-300">
+                  How would you like to help? (optional)
+                </label>
+                <textarea
+                  value={pledgeNote}
+                  onChange={(e) => setPledgeNote(e.target.value)}
+                  rows={3}
+                  placeholder="e.g. weekend maintenance, event setup, transport..."
+                  className="mt-1 w-full rounded-md border border-abyssal-700 bg-abyssal-950 px-3 py-2 font-ui text-sm text-abyssal-100"
+                />
+                <p className="font-ui text-xs text-abyssal-300 mt-1">
+                  No payment is needed for Bronze — the school will reach out to arrange details.
+                </p>
+              </div>
+            )}
+
             {payError && <p className="font-ui text-xs text-error">{payError}</p>}
 
             <div className="flex gap-2">
@@ -279,7 +340,11 @@ export default function ParentFees() {
                 disabled={paySubmitting}
                 className="flex-1 px-4 py-2 rounded bg-lime text-abyssal-950 font-ui text-sm font-semibold disabled:opacity-50"
               >
-                {paySubmitting ? "Starting..." : "Continue"}
+                {paySubmitting
+                  ? "Submitting..."
+                  : selectedTier === "bronze"
+                  ? "Register Interest"
+                  : "Continue"}
               </button>
             </div>
           </div>
