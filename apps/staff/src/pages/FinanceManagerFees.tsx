@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import { useAuth } from "../features/auth/AuthContext";
 import { useToast } from "../features/toast/ToastContext";
 import { supabase } from "../lib/supabase";
@@ -9,6 +9,7 @@ import {
   fetchCurrentTerm,
   fetchFeeTypes,
   createFeeType,
+  archiveFeeType,
   fetchStudentFeeRowsForType,
   upsertStudentFee,
   type CurrentTerm,
@@ -35,6 +36,7 @@ export default function FinanceManagerFees() {
   const [rowsLoading, setRowsLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [archivingId, setArchivingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const schoolId = profile?.school_id;
@@ -129,6 +131,32 @@ export default function FinanceManagerFees() {
       showToast(msg, "error");
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleArchive(feeType: FeeType, e: MouseEvent) {
+    e.stopPropagation();
+    if (!schoolId || !term) return;
+    const itemWord = isPartnership ? "support item" : "fee";
+    if (
+      !window.confirm(
+        `Archive "${feeType.name}"? It will stop showing here and to parents, but existing payment records for it are kept.`
+      )
+    ) {
+      return;
+    }
+    setArchivingId(feeType.id);
+    try {
+      await archiveFeeType(feeType.id, schoolId, profile!.id);
+      if (selectedFeeTypeId === feeType.id) setSelectedFeeTypeId(null);
+      await loadFeeTypes(term);
+      showToast(`"${feeType.name}" archived`, "success");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : `Failed to archive ${itemWord}`;
+      setError(msg);
+      showToast(msg, "error");
+    } finally {
+      setArchivingId(null);
     }
   }
 
@@ -259,9 +287,14 @@ export default function FinanceManagerFees() {
               </p>
             )}
             {feeTypes.map((f) => (
-              <button
+              <div
                 key={f.id}
                 onClick={() => selectFeeType(f.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") selectFeeType(f.id);
+                }}
                 className={`w-full text-left bg-forest-900 rounded-lg p-4 flex items-center justify-between hover:bg-forest-700 transition-colors cursor-pointer ${
                   selectedFeeTypeId === f.id ? "ring-2 ring-forest-500" : ""
                 }`}
@@ -270,8 +303,18 @@ export default function FinanceManagerFees() {
                   <p className="font-display text-forest-100">{f.name}</p>
                   <p className="font-ui text-xs text-forest-300">{f.class_name ?? "Whole School"}</p>
                 </div>
-                <span className="font-ui text-forest-100">₦{f.amount.toLocaleString()}</span>
-              </button>
+                <div className="flex items-center gap-3">
+                  <span className="font-ui text-forest-100">₦{f.amount.toLocaleString()}</span>
+                  <button
+                    type="button"
+                    onClick={(e) => handleArchive(f, e)}
+                    disabled={archivingId === f.id}
+                    className="px-2 py-1 rounded text-xs font-ui text-error hover:bg-error/10 disabled:opacity-50 transition-colors"
+                  >
+                    {archivingId === f.id ? "Archiving..." : "Archive"}
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
 

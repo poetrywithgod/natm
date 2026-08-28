@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { useAuth } from "../features/auth/AuthContext";
 import { supabase } from "../lib/supabase";
+import { fetchSchoolInfo, type FinancialModel } from "../features/schools/api";
 import {
   fetchCurrentTerm,
   fetchFeesSummary,
@@ -63,6 +64,7 @@ function FeeProgressBar({ summary }: { summary: FeeTypeSummary }) {
 export default function FinanceManagerDashboard() {
   const { profile } = useAuth();
   const [term, setTerm] = useState<CurrentTerm | null>(null);
+  const [financialModel, setFinancialModel] = useState<FinancialModel>("fees");
   const [summary, setSummary] = useState<FeeTypeSummary[]>([]);
   const [feeTypes, setFeeTypes] = useState<FeeType[]>([]);
   const [selectedFeeTypeId, setSelectedFeeTypeId] = useState<string | null>(null);
@@ -80,12 +82,14 @@ export default function FinanceManagerDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const [currentTerm, revenue] = await Promise.all([
+      const [currentTerm, revenue, schoolInfo] = await Promise.all([
         fetchCurrentTerm(schoolId),
         fetchAnnualRevenue(schoolId, currentYear),
+        fetchSchoolInfo(schoolId),
       ]);
       setTerm(currentTerm);
       setAnnualRevenue(revenue);
+      setFinancialModel(schoolInfo?.financial_model ?? "fees");
       if (currentTerm) {
         const [s, types] = await Promise.all([
           fetchFeesSummary(schoolId, currentTerm.id),
@@ -171,6 +175,21 @@ export default function FinanceManagerDashboard() {
   }));
 
   const selectedFeeType = feeTypes.find((f) => f.id === selectedFeeTypeId);
+  const isPartnership = financialModel === "partnership";
+  const itemsLabel = isPartnership ? "Support Items" : "Fee Types";
+  const collectionHeading = isPartnership
+    ? "Support Progress by Item"
+    : "Collection Progress by Fee Type";
+  const byTypeHeading = isPartnership
+    ? "Support by Item — Contributed vs Outstanding"
+    : "Fees by Type — Paid vs Outstanding";
+  const noDataLabel = isPartnership
+    ? "No support data yet for the current term."
+    : "No fee data yet for the current term.";
+  const noItemsAssignedLabel = isPartnership
+    ? "No students assigned to this item yet."
+    : "No students assigned to this fee yet.";
+  const paidByClassLabel = isPartnership ? "Students Contributed by Class" : "Students Paid by Class";
 
   return (
     <div className="p-6 space-y-6">
@@ -180,12 +199,12 @@ export default function FinanceManagerDashboard() {
 
       {!term && (
         <p className="font-ui text-sm text-forest-300">
-          No current term set — set one under Sessions & Terms to see fee data here.
+          No current term set — set one under Sessions & Terms to see {isPartnership ? "support" : "fee"} data here.
         </p>
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <SummaryCard label="Fee Types" value={summary.length} />
+        <SummaryCard label={itemsLabel} value={summary.length} />
         <SummaryCard label={`Term Revenue${term ? ` (T${term.term_number})` : ""}`} value={formatNaira(totalPaid)} />
         <SummaryCard label="Outstanding" value={formatNaira(outstanding)} />
         <SummaryCard label={`Annual Revenue (${currentYear})`} value={formatNaira(annualRevenue)} />
@@ -193,7 +212,7 @@ export default function FinanceManagerDashboard() {
 
       {summary.length > 0 && (
         <div className="bg-forest-900 rounded-lg p-4 space-y-4">
-          <h2 className="font-display text-lg text-forest-100">Collection Progress by Fee Type</h2>
+          <h2 className="font-display text-lg text-forest-100">{collectionHeading}</h2>
           {summary.map((s) => (
             <FeeProgressBar key={s.fee_type_id} summary={s} />
           ))}
@@ -201,7 +220,7 @@ export default function FinanceManagerDashboard() {
       )}
 
       <div className="bg-forest-900 rounded-lg p-4">
-        <h2 className="font-display text-lg text-forest-100 mb-4">Fees by Type — Paid vs Outstanding</h2>
+        <h2 className="font-display text-lg text-forest-100 mb-4">{byTypeHeading}</h2>
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={chartData}>
             <CartesianGrid stroke={COLORS.grid} strokeDasharray="3 3" />
@@ -216,15 +235,13 @@ export default function FinanceManagerDashboard() {
             <Bar dataKey="outstanding" stackId="fees" fill={COLORS.outstanding} radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
-        {chartData.length === 0 && (
-          <p className="font-ui text-xs text-forest-300 mt-2">No fee data yet for the current term.</p>
-        )}
+        {chartData.length === 0 && <p className="font-ui text-xs text-forest-300 mt-2">{noDataLabel}</p>}
       </div>
 
       {feeTypes.length > 0 && (
         <div className="bg-forest-900 rounded-lg p-4">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <h2 className="font-display text-lg text-forest-100">Students Paid by Class</h2>
+            <h2 className="font-display text-lg text-forest-100">{paidByClassLabel}</h2>
             <select
               value={selectedFeeTypeId ?? ""}
               onChange={(e) => setSelectedFeeTypeId(e.target.value || null)}
@@ -259,7 +276,7 @@ export default function FinanceManagerDashboard() {
                 </BarChart>
               </ResponsiveContainer>
               {classChartData.length === 0 && (
-                <p className="font-ui text-xs text-forest-300 mt-2">No students assigned to this fee yet.</p>
+                <p className="font-ui text-xs text-forest-300 mt-2">{noItemsAssignedLabel}</p>
               )}
             </>
           )}

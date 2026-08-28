@@ -802,6 +802,7 @@ export type Database = {
           class_id: string | null
           created_at: string
           id: string
+          is_archived: boolean
           name: string
           school_id: string
           term_id: string
@@ -811,6 +812,7 @@ export type Database = {
           class_id?: string | null
           created_at?: string
           id?: string
+          is_archived?: boolean
           name: string
           school_id: string
           term_id: string
@@ -820,6 +822,7 @@ export type Database = {
           class_id?: string | null
           created_at?: string
           id?: string
+          is_archived?: boolean
           name?: string
           school_id?: string
           term_id?: string

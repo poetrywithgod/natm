@@ -56,6 +56,7 @@ export async function fetchFeeTypes(schoolId: string, termId: string): Promise<F
     .select("id, name, amount, class_id, term_id, created_at, classes(name)")
     .eq("school_id", schoolId)
     .eq("term_id", termId)
+    .eq("is_archived", false)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
 
@@ -122,6 +123,24 @@ export async function createFeeType(
   if (insertError) throw new Error(insertError.message);
 }
 
+// Hides a fee/support item going forward (Finance Manager list, School Admin
+// views, and parents' fees-due lists all filter on is_archived=false) without
+// touching any existing student_fees or payment_transactions rows -- payment
+// history for it stays intact and queryable, it just stops being collected
+// against or shown as active.
+export async function archiveFeeType(feeTypeId: string, schoolId: string, actorId: string): Promise<void> {
+  const { error } = await supabase.from("fee_types").update({ is_archived: true }).eq("id", feeTypeId);
+  if (error) throw new Error(error.message);
+  logAuditEvent({
+    school_id: schoolId,
+    actor_id: actorId,
+    action: "fee_type.archived",
+    entity_type: "fee_type",
+    entity_id: feeTypeId,
+    details: {},
+  });
+}
+
 export async function fetchStudentFeeRowsForType(feeTypeId: string): Promise<StudentFeeRow[]> {
   const { data, error } = await supabase
     .from("student_fees")
@@ -162,9 +181,10 @@ export interface FeeTypeSummary {
 export async function fetchFeesSummary(schoolId: string, termId: string): Promise<FeeTypeSummary[]> {
   const { data, error } = await supabase
     .from("student_fees")
-    .select("amount_due, amount_paid, fee_type:fee_types(id, name)")
+    .select("amount_due, amount_paid, fee_type:fee_types!inner(id, name, is_archived)")
     .eq("school_id", schoolId)
-    .eq("term_id", termId);
+    .eq("term_id", termId)
+    .eq("fee_type.is_archived", false);
   if (error) throw new Error(error.message);
 
   const totals = new Map<string, FeeTypeSummary>();

@@ -55,7 +55,8 @@ export async function fetchChildrenFeesDue(parentId: string): Promise<ChildFeeRo
       .from("fee_types")
       .select("id, name, amount, class_id")
       .eq("school_id", schoolId)
-      .eq("term_id", term.id);
+      .eq("term_id", term.id)
+      .eq("is_archived", false);
     if (feeTypesError) throw new Error(feeTypesError.message);
 
     const applicable = (feeTypes ?? []).filter((f) => f.class_id === null || f.class_id === child.class_id);
