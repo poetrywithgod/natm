@@ -139,3 +139,40 @@ export async function renameClass(
     details: { name },
   });
 }
+
+// Blocks deletion if any students are still assigned to the class --
+// deleting would cascade to that class's timetable, lessons, class
+// work, class subjects, and fee types (all "on delete cascade" against
+// classes), which is fine for an accidental/empty class but would
+// silently wipe real academic data for a class students are actually
+// in. Reassign or promote students out first.
+export async function deleteClass(classId: string, schoolId: string, actorId: string): Promise<void> {
+  const { count, error: countError } = await supabase
+    .from("students")
+    .select("id", { count: "exact", head: true })
+    .eq("class_id", classId);
+  if (countError) throw new Error(countError.message);
+  if (count && count > 0) {
+    throw new Error(
+      `${count} student${count === 1 ? " is" : "s are"} still assigned to this class. Reassign or promote them out before deleting.`
+    );
+  }
+
+  const { data: cls, error: fetchError } = await supabase
+    .from("classes")
+    .select("name")
+    .eq("id", classId)
+    .single();
+  if (fetchError) throw new Error(fetchError.message);
+
+  const { error } = await supabase.from("classes").delete().eq("id", classId);
+  if (error) throw new Error(error.message);
+  logAuditEvent({
+    school_id: schoolId,
+    actor_id: actorId,
+    action: "class.deleted",
+    entity_type: "class",
+    entity_id: classId,
+    details: { name: cls.name },
+  });
+}

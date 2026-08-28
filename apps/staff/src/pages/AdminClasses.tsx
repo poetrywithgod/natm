@@ -8,6 +8,7 @@ import {
   assignClassTeacher,
   assignClassLevel,
   renameClass,
+  deleteClass,
   CLASS_LEVELS,
   type SchoolClass,
   type ClassTeacherOption,
@@ -33,6 +34,7 @@ export default function AdminClasses() {
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const schoolId = profile?.school_id;
 
@@ -107,6 +109,21 @@ export default function AdminClasses() {
       await loadAll();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to rename class");
+    }
+  }
+
+  async function handleDeleteClass(cls: SchoolClass) {
+    if (!schoolId) return;
+    if (!window.confirm(`Delete "${cls.name}"? This can't be undone.`)) return;
+    setDeletingId(cls.id);
+    setError(null);
+    try {
+      await deleteClass(cls.id, schoolId, profile!.id);
+      await loadAll();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to delete class");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -265,6 +282,14 @@ export default function AdminClasses() {
                   ))}
                 </select>
               </div>
+
+              <button
+                onClick={() => handleDeleteClass(cls)}
+                disabled={deletingId === cls.id}
+                className="px-3 py-1.5 rounded text-xs font-ui text-error hover:bg-error/10 disabled:opacity-50 transition-colors whitespace-nowrap"
+              >
+                {deletingId === cls.id ? "Deleting..." : "Delete"}
+              </button>
             </div>
 
             <div className="border-t border-forest-700 pt-3">

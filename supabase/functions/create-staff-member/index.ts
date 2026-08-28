@@ -83,7 +83,19 @@ Deno.serve(async (req) => {
       appUrl ? { redirectTo: `${appUrl}/reset-password` } : undefined
     );
     if (inviteError || !invited.user) {
-      return new Response(JSON.stringify({ error: inviteError?.message ?? "Invite failed" }), {
+      const raw = inviteError?.message ?? "Invite failed";
+      // Supabase Auth rejects inviting an email that's already a confirmed
+      // user. The most common way that happens here: someone tried to
+      // permanently delete a staff member earlier, but the delete failed
+      // (blocked by historical records like attendance or logged work --
+      // see delete-staff-member) and the auth account never actually went
+      // away, even though it may have been deactivated. Give a pointer to
+      // the fix instead of the raw, easy-to-misread Auth error.
+      const alreadyRegistered = /already.*(registered|exist)/i.test(raw);
+      const message = alreadyRegistered
+        ? "A staff account with this email already exists in the system. If they used to work here, check \"Show deactivated staff\" and reactivate them instead of inviting again -- if Delete was tried on them before, it likely didn't fully complete because of historical records tied to their account."
+        : raw;
+      return new Response(JSON.stringify({ error: message }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

@@ -25,6 +25,24 @@ export async function fetchStaff(schoolId: string, includeInactive: boolean): Pr
   return data as StaffMember[];
 }
 
+// supabase.functions.invoke()'s error.message is a generic "Edge Function
+// returned a non-2xx status code" for any failure response -- it never
+// surfaces the actual { error: "..." } body the function sent back.
+// error.context is the raw Response object; this pulls the real reason
+// out of it, matching the pattern already used by deactivateStaffMember.
+async function parseFunctionError(error: unknown, fallback: string): Promise<Error> {
+  const response = (error as { context?: Response } | null)?.context;
+  if (response) {
+    try {
+      const body = await response.json();
+      if (body?.error) return new Error(body.error);
+    } catch {
+      // response wasn't JSON -- fall through to the generic message
+    }
+  }
+  return new Error(error instanceof Error ? error.message : fallback);
+}
+
 // Calls the create-staff-member Edge Function, which uses the service role
 // to invite a real auth.users account by email (they set their own password
 // via the invite link) and creates the linked profiles row.
@@ -36,7 +54,7 @@ export async function createStaffMember(
   const { data, error } = await supabase.functions.invoke("create-staff-member", {
     body: { full_name: fullName, email, role },
   });
-  if (error) throw new Error(error.message);
+  if (error) throw await parseFunctionError(error, "Failed to invite staff member");
   if (data?.error) throw new Error(data.error);
 }
 
@@ -92,6 +110,6 @@ export async function deleteStaffMember(staffId: string): Promise<void> {
   const { data, error } = await supabase.functions.invoke("delete-staff-member", {
     body: { staff_id: staffId },
   });
-  if (error) throw new Error(error.message);
+  if (error) throw await parseFunctionError(error, "Failed to delete staff member");
   if (data?.error) throw new Error(data.error);
 }
