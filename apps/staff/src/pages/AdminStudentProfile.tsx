@@ -307,9 +307,9 @@ export default function AdminStudentProfile() {
               </p>
             ) : (
               <p className="font-ui text-xs text-forest-300">
-                A login account was created, but the automated password-setup email isn't configured yet
-                (STUDENT_PARENT_APP_URL isn't set) — share the temporary password below with the parent
-                directly. They'll still be forced to set their own password on first login.
+                A login account was created, but the automated password-setup email couldn't be sent
+                (likely Supabase's free email rate limit) — share the temporary password below with the
+                parent directly. They'll still be forced to set their own password on first login.
               </p>
             )}
             <p className="font-ui text-sm text-forest-100">

@@ -77,11 +77,16 @@ Deno.serve(async (req) => {
     // Service-role client — only ever used server-side, never exposed to the browser.
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    const appUrl = Deno.env.get("APP_URL");
-    const { data: invited, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(
-      email,
-      appUrl ? { redirectTo: `${appUrl}/reset-password` } : undefined
-    );
+    // APP_URL should be set as a Supabase secret, but if it's ever unset,
+    // falling back to `undefined` here would let Supabase Auth use whatever
+    // "Site URL" is configured in the dashboard's Auth settings instead --
+    // which defaults to http://localhost:3000 on a fresh project and is
+    // easy to leave misconfigured. Hardcode the real deployed URL as a
+    // safety net so an invite link never silently points at localhost.
+    const appUrl = (Deno.env.get("APP_URL") ?? "https://natm-staff-puce.vercel.app").replace(/\/$/, "");
+    const { data: invited, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
+      redirectTo: `${appUrl}/reset-password`,
+    });
     if (inviteError || !invited.user) {
       const raw = inviteError?.message ?? "Invite failed";
       // Supabase Auth rejects inviting an email that's already a confirmed

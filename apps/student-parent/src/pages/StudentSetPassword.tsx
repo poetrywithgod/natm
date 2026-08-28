@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { supabase } from "../lib/supabase";
 import { fetchOwnStudentRecord, advanceOnboardingStatus } from "../features/profile/api";
@@ -9,6 +10,8 @@ export default function StudentSetPassword() {
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -74,24 +77,52 @@ export default function StudentSetPassword() {
             Welcome! Choose a new password to secure your account.
           </p>
         </div>
-        <input
-          type="password"
-          placeholder="New password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full p-2 rounded bg-abyssal-700 text-abyssal-100 font-ui placeholder:text-abyssal-300/60"
-          required
-          minLength={8}
-        />
-        <input
-          type="password"
-          placeholder="Confirm password"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          className="w-full p-2 rounded bg-abyssal-700 text-abyssal-100 font-ui placeholder:text-abyssal-300/60"
-          required
-          minLength={8}
-        />
+        <div className="relative">
+          <label htmlFor="student-new-password" className="sr-only">New password</label>
+          <input
+            id="student-new-password"
+            name="student-new-password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="new-password"
+            placeholder="New password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full p-2 pr-10 rounded bg-abyssal-700 text-abyssal-100 font-ui placeholder:text-abyssal-300/60"
+            required
+            minLength={8}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-abyssal-300"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        </div>
+        <div className="relative">
+          <label htmlFor="student-confirm-password" className="sr-only">Confirm password</label>
+          <input
+            id="student-confirm-password"
+            name="student-confirm-password"
+            type={showConfirm ? "text" : "password"}
+            autoComplete="new-password"
+            placeholder="Confirm password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            className="w-full p-2 pr-10 rounded bg-abyssal-700 text-abyssal-100 font-ui placeholder:text-abyssal-300/60"
+            required
+            minLength={8}
+          />
+          <button
+            type="button"
+            onClick={() => setShowConfirm((v) => !v)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-abyssal-300"
+            aria-label={showConfirm ? "Hide password" : "Show password"}
+          >
+            {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        </div>
         {error && <p className="text-error text-sm font-ui">{error}</p>}
         <button
           type="submit"

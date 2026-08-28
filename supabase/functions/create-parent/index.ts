@@ -149,20 +149,23 @@ Deno.serve(async (req) => {
     // login screen already uses (Supabase Auth's built-in recovery
     // email), so it's subject to the same known rate limit on Supabase's
     // default/free email sending (custom SMTP deferred until a real
-    // domain is registered). STUDENT_PARENT_APP_URL needs to be set as a
-    // Supabase secret to the deployed student-parent app's URL -- if
-    // it isn't set yet, this is skipped (not a hard failure) and the
-    // temporary password below remains the only way in.
-    const appUrl = Deno.env.get("STUDENT_PARENT_APP_URL");
+    // domain is registered). STUDENT_PARENT_APP_URL should be set as a
+    // Supabase secret to the deployed student-parent app's URL, but if
+    // it's ever unset, fall back to the known production URL rather than
+    // skipping the email (as before) or letting Supabase Auth's dashboard
+    // "Site URL" take over, which defaults to http://localhost:3000 on a
+    // fresh project.
+    const appUrl = (Deno.env.get("STUDENT_PARENT_APP_URL") ?? "https://natm-student-parent.vercel.app").replace(
+      /\/$/,
+      ""
+    );
     let passwordEmailSent = false;
-    if (appUrl) {
-      const { error: resetEmailError } = await adminClient.auth.resetPasswordForEmail(email, {
-        redirectTo: `${appUrl.replace(/\/$/, "")}/reset-password`,
-      });
-      passwordEmailSent = !resetEmailError;
-      if (resetEmailError) {
-        console.error("Failed to send parent password-recovery email:", resetEmailError.message);
-      }
+    const { error: resetEmailError } = await adminClient.auth.resetPasswordForEmail(email, {
+      redirectTo: `${appUrl}/reset-password`,
+    });
+    passwordEmailSent = !resetEmailError;
+    if (resetEmailError) {
+      console.error("Failed to send parent password-recovery email:", resetEmailError.message);
     }
 
     return new Response(
