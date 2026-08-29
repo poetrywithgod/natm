@@ -1,111 +1,62 @@
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+@import "tailwindcss";
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+@theme {
+  /* Distinct "control room" palette -- deliberately not the staff app's
+     forest green or the CCSF site's pine/cherry, so this always reads as
+     a different, higher-privilege surface at a glance. Graphite/slate
+     base with an amber accent (authority, not celebration -- amber is
+     used sparingly: primary actions, active states, key numbers). */
+  --color-slate-950: #0B0E14;
+  --color-slate-900: #131722;
+  --color-slate-800: #1B2130;
+  --color-slate-700: #2A3244;
+  --color-slate-500: #64748B;
+  --color-slate-300: #A9B4C4;
+  --color-slate-100: #E8EAF0;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --color-amber-600: #B7791F;
+  --color-amber-500: #D9A441;
+  --color-amber-300: #F0CB82;
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
-}
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-info: #64748B;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+  /* Manrope: bold geometric display face, distinct from the staff app's
+     Space Grotesk and the CCSF site's Fraunces. IBM Plex Sans: engineered/
+     technical body face. JetBrains Mono for UI chrome (nav, labels, stat
+     numbers) -- reinforces the "console" feel without hurting paragraph
+     readability, since it's never used for body copy. */
+  --font-display: "Manrope", sans-serif;
+  --font-body: "IBM Plex Sans", sans-serif;
+  --font-ui: "JetBrains Mono", monospace;
 }
 
 body {
-  margin: 0;
+  @apply bg-slate-950 text-slate-100;
+  font-family: var(--font-body);
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
+@layer base {
+  button:not(:disabled) {
+    cursor: pointer;
+    transition: filter 150ms ease, transform 100ms ease;
   }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
+  button:not(:disabled):hover {
+    filter: brightness(1.1);
   }
-}
-p {
-  margin: 0;
-}
+  button:not(:disabled):active {
+    filter: brightness(0.92);
+    transform: scale(0.97);
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+  @media (prefers-reduced-motion: reduce) {
+    button:not(:disabled):active {
+      transform: none;
+    }
+  }
 }
