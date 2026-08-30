@@ -17,6 +17,7 @@ import {
   Image,
   ChevronLeft,
   ChevronRight,
+  BookOpen,
 } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
   { to: "/admin/staff", label: "Staff Management", icon: UserCog, end: false },
   { to: "/admin/attendance", label: "Attendance", icon: ClipboardCheck, end: false },
   { to: "/admin/timetable", label: "Timetable", icon: Clock, end: false },
+  { to: "/admin/curriculum", label: "Curriculum", icon: BookOpen, end: false },
   { to: "/admin/promotion", label: "Promotion", icon: ArrowUpCircle, end: false },
   { to: "/admin/announcements", label: "Announcements", icon: Megaphone, end: false },
   { to: "/admin/news", label: "News", icon: Newspaper, end: false },

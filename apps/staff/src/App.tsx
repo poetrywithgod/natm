@@ -55,6 +55,9 @@ const ClassTeacherAnnouncements = lazy(() => import("./pages/ClassTeacherAnnounc
 const AdminAuditLog = lazy(() => import("./pages/AdminAuditLog"));
 const AdminProfile = lazy(() => import("./pages/AdminProfile"));
 const AdminSchoolProfile = lazy(() => import("./pages/AdminSchoolProfile"));
+const AdminCurriculum = lazy(() => import("./pages/AdminCurriculum"));
+const ClassTeacherCurriculum = lazy(() => import("./pages/ClassTeacherCurriculum"));
+const ShadowTeacherCurriculum = lazy(() => import("./pages/ShadowTeacherCurriculum"));
 
 function AppRoutes() {
   return (
@@ -89,6 +92,7 @@ function AppRoutes() {
           <Route path="audit-log" element={<AdminAuditLog />} />
           <Route path="profile" element={<AdminProfile />} />
           <Route path="school-profile" element={<AdminSchoolProfile />} />
+          <Route path="curriculum" element={<AdminCurriculum />} />
         </Route>
 
         <Route
@@ -104,6 +108,7 @@ function AppRoutes() {
           <Route path="activities" element={<ClassTeacherActivities />} />
           <Route path="lessons" element={<ClassTeacherLessons />} />
           <Route path="assign-work" element={<ClassTeacherAssignWork />} />
+          <Route path="curriculum" element={<ClassTeacherCurriculum />} />
           <Route path="notifications" element={<ClassTeacherNotifications />} />
           <Route path="announcements" element={<ClassTeacherAnnouncements />} />
           <Route path="profile" element={<ClassTeacherProfile />} />
@@ -126,6 +131,7 @@ function AppRoutes() {
           <Route path="notifications" element={<ShadowTeacherNotifications />} />
           <Route path="messages" element={<ShadowTeacherMessages />} />
           <Route path="messages/:conversationId" element={<ShadowTeacherChat />} />
+          <Route path="curriculum" element={<ShadowTeacherCurriculum />} />
           <Route path="more" element={<ShadowTeacherMore />} />
         </Route>
         <Route

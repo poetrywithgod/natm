@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
-import { Megaphone, UserCircle, ChevronRight, LogOut } from "lucide-react";
+import { Megaphone, UserCircle, ChevronRight, LogOut, BookOpen } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 
 const MORE_ITEMS = [
+  { to: "/shadow-teacher/curriculum", label: "Curriculum", icon: BookOpen },
   { to: "/shadow-teacher/announcements", label: "Announcements", icon: Megaphone },
   { to: "/shadow-teacher/profile", label: "Profile", icon: UserCircle },
 ];

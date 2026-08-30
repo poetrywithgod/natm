@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { Home, BookOpen, TrendingUp, Bell, Settings } from "lucide-react";
+import { Home, BookOpen, TrendingUp, Bell, Settings, Library } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchUnreadCount } from "../features/notifications/api";
 import { fetchSchoolInfo, type SchoolInfo } from "../features/schools/api";
@@ -9,6 +9,7 @@ import { fetchOwnStudentRecord, getSignedStudentPhotoUrl } from "../features/pro
 const NAV_ITEMS = [
   { to: "/student", label: "Home", icon: Home, end: true },
   { to: "/student/assignments", label: "Assignments", icon: BookOpen, end: false },
+  { to: "/student/curriculum", label: "Curriculum", icon: Library, end: false },
   { to: "/student/progress", label: "Progress", icon: TrendingUp, end: false },
   { to: "/student/notifications", label: "Alerts", icon: Bell, end: false },
   { to: "/student/settings", label: "Settings", icon: Settings, end: false },

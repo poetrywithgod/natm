@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import { LayoutDashboard, Building2, ScrollText, ShieldCheck, ChevronLeft, ChevronRight, LogOut } from "lucide-react";
+import { LayoutDashboard, Building2, ScrollText, ShieldCheck, ChevronLeft, ChevronRight, LogOut, BookOpen } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 
 const NAV_ITEMS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/schools", label: "Schools", icon: Building2, end: false },
+  { to: "/curriculum", label: "Curriculum", icon: BookOpen, end: false },
   { to: "/audit-log", label: "Audit Log", icon: ScrollText, end: false },
 ];
 

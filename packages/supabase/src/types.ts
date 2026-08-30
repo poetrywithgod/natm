@@ -712,6 +712,9 @@ export type Database = {
           learning_outcomes: string[] | null
           learning_resources: string | null
           level: Database["public"]["Enums"]["class_level"]
+          pdf_filename: string | null
+          pdf_uploaded_at: string | null
+          pdf_url: string | null
           portfolio_evidence: string | null
           subject_id: string
           teacher_reflection: string | null
@@ -727,6 +730,9 @@ export type Database = {
           learning_outcomes?: string[] | null
           learning_resources?: string | null
           level: Database["public"]["Enums"]["class_level"]
+          pdf_filename?: string | null
+          pdf_uploaded_at?: string | null
+          pdf_url?: string | null
           portfolio_evidence?: string | null
           subject_id: string
           teacher_reflection?: string | null
@@ -742,6 +748,9 @@ export type Database = {
           learning_outcomes?: string[] | null
           learning_resources?: string | null
           level?: Database["public"]["Enums"]["class_level"]
+          pdf_filename?: string | null
+          pdf_uploaded_at?: string | null
+          pdf_url?: string | null
           portfolio_evidence?: string | null
           subject_id?: string
           teacher_reflection?: string | null
