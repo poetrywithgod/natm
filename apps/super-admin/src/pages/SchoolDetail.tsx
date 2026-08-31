@@ -12,13 +12,14 @@ import {
   type SchoolAdminRow,
 } from "../features/schools/api";
 import {
-  fetchSubscriptionFee,
-  saveSubscriptionFee,
+  fetchFeeSchedule,
+  setTermFee,
   fetchSchoolInvoices,
   ensureTermSubscriptionInvoice,
   updateInvoiceAmount,
   deleteInvoice,
   fetchInvoicePayments,
+  type TermFee,
   type SubscriptionInvoice,
   type SubscriptionPayment,
 } from "../features/subscriptions/api";
@@ -43,10 +44,10 @@ export default function SchoolDetail() {
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
 
-  const [subscriptionFee, setSubscriptionFeeState] = useState("");
-  const [savingFee, setSavingFee] = useState(false);
-  const [feeError, setFeeError] = useState<string | null>(null);
+  const [feeSchedule, setFeeSchedule] = useState<TermFee[]>([]);
   const [invoices, setInvoices] = useState<SubscriptionInvoice[]>([]);
+  const [feeNotice, setFeeNotice] = useState<string | null>(null);
+  const [feeError, setFeeError] = useState<string | null>(null);
 
   async function load() {
     if (!id) return;
@@ -61,11 +62,11 @@ export default function SchoolDetail() {
       setAdmins(a);
       setName(s.name);
       setContactEmail(s.contact_email ?? "");
-      const fee = await fetchSubscriptionFee(id);
-      setSubscriptionFeeState(fee === null ? "" : String(fee));
-      // Creates the current term's invoice if the fee is set and none
-      // exists yet (e.g. the school just rolled over to a new term) --
-      // never touches an existing one, that's saveSubscriptionFee's job.
+      setFeeSchedule(await fetchFeeSchedule(id));
+      // Creates the current term's invoice if a rate is set for that
+      // term number and none exists yet (e.g. the school just rolled
+      // over to a new term) -- never touches an existing one, that's
+      // setTermFee's job.
       await ensureTermSubscriptionInvoice(id);
       setInvoices(await fetchSchoolInvoices(id));
     } catch (e) {
@@ -107,22 +108,31 @@ export default function SchoolDetail() {
     }
   }
 
-  async function handleSaveFee() {
+  async function handleSetTermFee(termNumber: number, amount: number) {
     if (!id) return;
-    const parsed = subscriptionFee.trim() === "" ? null : Number(subscriptionFee);
-    if (parsed !== null && (Number.isNaN(parsed) || parsed < 0)) {
-      setFeeError("Enter a valid amount.");
-      return;
-    }
-    setSavingFee(true);
+    setFeeNotice(null);
     setFeeError(null);
     try {
-      await saveSubscriptionFee(id, parsed);
+      const result = await setTermFee(id, termNumber, amount);
+      setFeeSchedule(await fetchFeeSchedule(id));
       setInvoices(await fetchSchoolInvoices(id));
+
+      if (result.noCurrentTerm) {
+        setFeeNotice(
+          `Term ${termNumber} rate saved. No current term is set for this school yet, so no invoice was created — one will appear automatically once a term is marked current.`
+        );
+      } else if (result.invoiceLocked) {
+        setFeeNotice(
+          `Term ${termNumber} rate saved for future terms. This term's invoice already has a payment recorded, so it wasn't changed.`
+        );
+      } else if (result.invoiceCreated) {
+        setFeeNotice(`Term ${termNumber} rate saved and an invoice was created for the current term.`);
+      } else if (result.invoiceSynced) {
+        setFeeNotice(`Term ${termNumber} rate saved and the current term's invoice was updated to match.`);
+      }
     } catch (e) {
-      setFeeError(e instanceof Error ? e.message : "Failed to save fee");
-    } finally {
-      setSavingFee(false);
+      setFeeError(e instanceof Error ? e.message : "Failed to save rate");
+      throw e;
     }
   }
 
@@ -225,31 +235,17 @@ export default function SchoolDetail() {
 
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
         <h2 className="font-display font-bold text-slate-100">Subscription</h2>
-        <div>
-          <label className="font-ui text-xs text-slate-400">Termly fee (₦)</label>
-          <div className="flex gap-2 mt-1">
-            <input
-              type="number"
-              min={0}
-              value={subscriptionFee}
-              onChange={(e) => setSubscriptionFeeState(e.target.value)}
-              placeholder="Not set"
-              className="flex-1 p-2 rounded bg-slate-800 border border-slate-700 text-slate-100 font-body text-sm"
-            />
-            <button
-              onClick={handleSaveFee}
-              disabled={savingFee}
-              className="px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-ui text-sm font-semibold disabled:opacity-60"
-            >
-              {savingFee ? "Saving..." : "Save"}
-            </button>
-          </div>
-          {feeError && <p className="font-ui text-xs text-error mt-1">{feeError}</p>}
-          <p className="font-ui text-xs text-slate-500 mt-1">
-            Saving updates the current term's invoice too, as long as it hasn't received any payment yet. Once
-            paid, changes apply from the next term.
-          </p>
+        <p className="font-ui text-xs text-slate-500">
+          Set a rate for each term. Saving a term's rate applies immediately if that's the school's current term
+          (and it hasn't been paid for yet) — otherwise it just applies whenever that term is next current.
+        </p>
+        <div className="space-y-2">
+          {feeSchedule.map((tf) => (
+            <TermFeeRow key={tf.term_number} termFee={tf} onSave={(amount) => handleSetTermFee(tf.term_number, amount)} />
+          ))}
         </div>
+        {feeError && <p className="font-ui text-xs text-error">{feeError}</p>}
+        {feeNotice && <p className="font-ui text-xs text-amber-400">{feeNotice}</p>}
 
         {invoices.length > 0 && (
           <div className="pt-2 border-t border-slate-800">
@@ -371,6 +367,80 @@ export default function SchoolDetail() {
           <Trash2 size={14} /> {deleting ? "Deleting..." : "Delete School"}
         </button>
       </div>
+    </div>
+  );
+}
+
+function TermFeeRow({ termFee, onSave }: { termFee: TermFee; onSave: (amount: number) => Promise<void> }) {
+  const isSet = termFee.amount !== null;
+  const [editing, setEditing] = useState(!isSet);
+  const [value, setValue] = useState(termFee.amount !== null ? String(termFee.amount) : "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSave() {
+    const amount = Number(value);
+    if (value.trim() === "" || Number.isNaN(amount) || amount < 0) {
+      setError("Enter a valid amount.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave(amount);
+      setEditing(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="flex items-center justify-between bg-slate-800 rounded-lg p-3">
+      <span className="font-body text-sm text-slate-100">Term {termFee.term_number}</span>
+      {editing ? (
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            min={0}
+            autoFocus
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="Amount"
+            className="w-28 p-1.5 rounded bg-slate-700 border border-slate-600 text-slate-100 font-body text-sm"
+          />
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-3 py-1.5 rounded bg-amber-500 text-slate-950 font-ui text-xs font-semibold disabled:opacity-60"
+          >
+            {saving ? "Saving..." : "Set"}
+          </button>
+          {isSet && (
+            <button
+              onClick={() => {
+                setEditing(false);
+                setValue(String(termFee.amount));
+                setError(null);
+              }}
+              className="font-ui text-xs text-slate-400 hover:underline"
+            >
+              Cancel
+            </button>
+          )}
+          {error && <p className="font-ui text-xs text-error">{error}</p>}
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <span className="font-ui text-sm px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 font-semibold">
+            ₦{termFee.amount!.toLocaleString()}
+          </span>
+          <button onClick={() => setEditing(true)} className="text-slate-400 hover:text-amber-400" aria-label="Edit rate">
+            <Pencil size={14} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

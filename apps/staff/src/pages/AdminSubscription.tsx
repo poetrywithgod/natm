@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { CreditCard, ChevronDown, ChevronRight } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import {
-  fetchSubscriptionFee,
+  fetchFeeSchedule,
   ensureTermSubscriptionInvoice,
   fetchSchoolInvoices,
   fetchInvoicePayments,
   initiateSubscriptionPayment,
+  type TermFee,
   type SubscriptionInvoice,
   type SubscriptionPayment,
 } from "../features/subscription/api";
@@ -14,7 +15,7 @@ import { openRemitaCheckout } from "../features/subscription/remitaCheckout";
 
 export default function AdminSubscription() {
   const { profile } = useAuth();
-  const [fee, setFee] = useState<number | null>(null);
+  const [schedule, setSchedule] = useState<TermFee[]>([]);
   const [invoices, setInvoices] = useState<SubscriptionInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,8 +25,7 @@ export default function AdminSubscription() {
     if (!profile?.school_id) return;
     setLoading(true);
     try {
-      const f = await fetchSubscriptionFee(profile.school_id);
-      setFee(f);
+      setSchedule(await fetchFeeSchedule(profile.school_id));
       await ensureTermSubscriptionInvoice(profile.school_id);
       setInvoices(await fetchSchoolInvoices(profile.school_id));
     } catch (e) {
@@ -79,18 +79,25 @@ export default function AdminSubscription() {
 
       {loading ? (
         <p className="font-ui text-sm text-forest-300">Loading...</p>
-      ) : fee === null ? (
+      ) : schedule.every((t) => t.amount === null) ? (
         <div className="bg-forest-900 rounded-lg p-6 text-center">
           <CreditCard className="mx-auto text-forest-300 mb-2" size={24} />
           <p className="font-ui text-sm text-forest-300">
-            No subscription fee has been set for your school yet — contact NATM if you believe this is a mistake.
+            No subscription rates have been set for your school yet — contact NATM if you believe this is a
+            mistake.
           </p>
         </div>
       ) : (
         <>
-          <div className="bg-forest-900 rounded-lg p-4">
-            <p className="font-ui text-xs text-forest-300">Termly fee</p>
-            <p className="font-display text-2xl text-forest-100">₦{fee.toLocaleString()}</p>
+          <div className="grid grid-cols-3 gap-2">
+            {schedule.map((t) => (
+              <div key={t.term_number} className="bg-forest-900 rounded-lg p-3">
+                <p className="font-ui text-xs text-forest-300">Term {t.term_number}</p>
+                <p className="font-display text-lg text-forest-100">
+                  {t.amount === null ? "—" : `₦${t.amount.toLocaleString()}`}
+                </p>
+              </div>
+            ))}
           </div>
 
           {invoices.length === 0 ? (

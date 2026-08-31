@@ -9,21 +9,29 @@ export interface SubscriptionInvoice {
   created_at: string;
 }
 
-export async function fetchSubscriptionFee(schoolId: string): Promise<number | null> {
-  const { data, error } = await supabase.from("schools").select("subscription_fee").eq("id", schoolId).single();
+export interface TermFee {
+  term_number: number;
+  amount: number | null;
+}
+
+// Always returns exactly 3 rows (Term 1/2/3), amount null where no rate
+// has been set by Super Admin yet.
+export async function fetchFeeSchedule(schoolId: string): Promise<TermFee[]> {
+  const { data, error } = await supabase
+    .from("subscription_fee_schedule")
+    .select("term_number, amount")
+    .eq("school_id", schoolId);
   if (error) throw new Error(error.message);
-  return data.subscription_fee;
+  const byTerm = new Map((data ?? []).map((r) => [r.term_number, r.amount]));
+  return [1, 2, 3].map((n) => ({ term_number: n, amount: byTerm.get(n) ?? null }));
 }
 
 // Idempotent -- safe to call on every page load. Creates the current
-// term's invoice if the school's fee is set and no invoice exists for
-// it yet (e.g. the school just rolled over to a new term); never
-// touches an existing invoice, whether paid or not. Mirrors
+// term's invoice from the rate schedule if a rate is set for that term
+// number and no invoice exists yet (e.g. the school just rolled over to
+// a new term); never touches an existing invoice. Mirrors
 // apps/super-admin's version of the same function.
 export async function ensureTermSubscriptionInvoice(schoolId: string): Promise<void> {
-  const { data: school } = await supabase.from("schools").select("subscription_fee").eq("id", schoolId).single();
-  if (!school?.subscription_fee) return;
-
   const { data: session } = await supabase
     .from("academic_sessions")
     .select("id")
@@ -34,11 +42,19 @@ export async function ensureTermSubscriptionInvoice(schoolId: string): Promise<v
 
   const { data: term } = await supabase
     .from("terms")
-    .select("id")
+    .select("id, term_number")
     .eq("session_id", session.id)
     .eq("is_current", true)
     .maybeSingle();
   if (!term) return;
+
+  const { data: rate } = await supabase
+    .from("subscription_fee_schedule")
+    .select("amount")
+    .eq("school_id", schoolId)
+    .eq("term_number", term.term_number)
+    .maybeSingle();
+  if (!rate) return;
 
   const { data: existing } = await supabase
     .from("subscription_invoices")
@@ -51,7 +67,7 @@ export async function ensureTermSubscriptionInvoice(schoolId: string): Promise<v
   await supabase.from("subscription_invoices").insert({
     school_id: schoolId,
     term_id: term.id,
-    amount_due: school.subscription_fee,
+    amount_due: rate.amount,
   });
 }
 

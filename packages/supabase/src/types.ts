@@ -2269,6 +2269,41 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_fee_schedule: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          school_id: string
+          term_number: number
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          school_id: string
+          term_number: number
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          school_id?: string
+          term_number?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_fee_schedule_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_invoices: {
         Row: {
           amount_due: number
