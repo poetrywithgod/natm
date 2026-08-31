@@ -11,6 +11,13 @@ import {
   type SchoolRow,
   type SchoolAdminRow,
 } from "../features/schools/api";
+import {
+  fetchSubscriptionFee,
+  setSubscriptionFee,
+  fetchSchoolInvoices,
+  ensureTermSubscriptionInvoice,
+  type SubscriptionInvoice,
+} from "../features/subscriptions/api";
 
 export default function SchoolDetail() {
   const { id } = useParams<{ id: string }>();
@@ -32,6 +39,11 @@ export default function SchoolDetail() {
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
 
+  const [subscriptionFee, setSubscriptionFeeState] = useState("");
+  const [savingFee, setSavingFee] = useState(false);
+  const [feeError, setFeeError] = useState<string | null>(null);
+  const [invoices, setInvoices] = useState<SubscriptionInvoice[]>([]);
+
   async function load() {
     if (!id) return;
     setLoading(true);
@@ -45,6 +57,11 @@ export default function SchoolDetail() {
       setAdmins(a);
       setName(s.name);
       setContactEmail(s.contact_email ?? "");
+      const fee = await fetchSubscriptionFee(id);
+      setSubscriptionFeeState(fee === null ? "" : String(fee));
+
+      await ensureTermSubscriptionInvoice(id);
+      setInvoices(await fetchSchoolInvoices(id));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load school");
     } finally {
@@ -81,6 +98,26 @@ export default function SchoolDetail() {
       setError(e instanceof Error ? e.message : "Failed to update status");
     } finally {
       setTogglingActive(false);
+    }
+  }
+
+  async function handleSaveFee() {
+    if (!id) return;
+    const parsed = subscriptionFee.trim() === "" ? null : Number(subscriptionFee);
+    if (parsed !== null && (Number.isNaN(parsed) || parsed < 0)) {
+      setFeeError("Enter a valid amount.");
+      return;
+    }
+    setSavingFee(true);
+    setFeeError(null);
+    try {
+      await setSubscriptionFee(id, parsed);
+      await ensureTermSubscriptionInvoice(id);
+      setInvoices(await fetchSchoolInvoices(id));
+    } catch (e) {
+      setFeeError(e instanceof Error ? e.message : "Failed to save fee");
+    } finally {
+      setSavingFee(false);
     }
   }
 
@@ -179,6 +216,60 @@ export default function SchoolDetail() {
             <p className="font-ui text-xs text-slate-400">Staff (incl. Admins)</p>
           </div>
         </div>
+      </div>
+
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+        <h2 className="font-display font-bold text-slate-100">Subscription</h2>
+        <div>
+          <label className="font-ui text-xs text-slate-400">Termly fee (₦)</label>
+          <div className="flex gap-2 mt-1">
+            <input
+              type="number"
+              min={0}
+              value={subscriptionFee}
+              onChange={(e) => setSubscriptionFeeState(e.target.value)}
+              placeholder="Not set"
+              className="flex-1 p-2 rounded bg-slate-800 border border-slate-700 text-slate-100 font-body text-sm"
+            />
+            <button
+              onClick={handleSaveFee}
+              disabled={savingFee}
+              className="px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-ui text-sm font-semibold disabled:opacity-60"
+            >
+              {savingFee ? "Saving..." : "Save"}
+            </button>
+          </div>
+          {feeError && <p className="font-ui text-xs text-error mt-1">{feeError}</p>}
+          <p className="font-ui text-xs text-slate-500 mt-1">
+            An invoice for the school's current term is created automatically once a fee is set.
+          </p>
+        </div>
+
+        {invoices.length > 0 && (
+          <div className="space-y-2 pt-2 border-t border-slate-800">
+            {invoices.map((inv) => {
+              const balance = inv.amount_due - inv.amount_paid;
+              const isPaid = balance <= 0.01;
+              return (
+                <div key={inv.id} className="flex items-center justify-between bg-slate-800 rounded-lg p-3">
+                  <div>
+                    <p className="font-body text-sm text-slate-100">{inv.term_label}</p>
+                    <p className="font-ui text-xs text-slate-400">
+                      ₦{inv.amount_due.toLocaleString()} due · ₦{inv.amount_paid.toLocaleString()} paid
+                    </p>
+                  </div>
+                  <span
+                    className={`font-ui text-xs px-2 py-0.5 rounded-full ${
+                      isPaid ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
+                    }`}
+                  >
+                    {isPaid ? "Paid" : "Outstanding"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">

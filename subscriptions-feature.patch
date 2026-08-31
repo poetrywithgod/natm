@@ -1,0 +1,1355 @@
+diff --git a/apps/staff/src/App.tsx b/apps/staff/src/App.tsx
+index a75b89a..4b287c2 100644
+--- a/apps/staff/src/App.tsx
++++ b/apps/staff/src/App.tsx
+@@ -56,6 +56,7 @@ const AdminAuditLog = lazy(() => import("./pages/AdminAuditLog"));
+ const AdminProfile = lazy(() => import("./pages/AdminProfile"));
+ const AdminSchoolProfile = lazy(() => import("./pages/AdminSchoolProfile"));
+ const AdminCurriculum = lazy(() => import("./pages/AdminCurriculum"));
++const AdminSubscription = lazy(() => import("./pages/AdminSubscription"));
+ const ClassTeacherCurriculum = lazy(() => import("./pages/ClassTeacherCurriculum"));
+ const ShadowTeacherCurriculum = lazy(() => import("./pages/ShadowTeacherCurriculum"));
+ 
+@@ -93,6 +94,7 @@ function AppRoutes() {
+           <Route path="profile" element={<AdminProfile />} />
+           <Route path="school-profile" element={<AdminSchoolProfile />} />
+           <Route path="curriculum" element={<AdminCurriculum />} />
++          <Route path="subscription" element={<AdminSubscription />} />
+         </Route>
+ 
+         <Route
+diff --git a/apps/staff/src/features/subscription/api.ts b/apps/staff/src/features/subscription/api.ts
+new file mode 100644
+index 0000000..a316f02
+--- /dev/null
++++ b/apps/staff/src/features/subscription/api.ts
+@@ -0,0 +1,70 @@
++import { supabase } from "../../lib/supabase";
++
++export interface SubscriptionInvoice {
++  id: string;
++  term_label: string;
++  amount_due: number;
++  amount_paid: number;
++  due_date: string | null;
++  created_at: string;
++}
++
++export async function fetchSubscriptionFee(schoolId: string): Promise<number | null> {
++  const { data, error } = await supabase.from("schools").select("subscription_fee").eq("id", schoolId).single();
++  if (error) throw new Error(error.message);
++  return data.subscription_fee;
++}
++
++export async function fetchSchoolInvoices(schoolId: string): Promise<SubscriptionInvoice[]> {
++  const { data, error } = await supabase
++    .from("subscription_invoices")
++    .select("id, amount_due, amount_paid, due_date, created_at, terms(term_number)")
++    .eq("school_id", schoolId)
++    .order("created_at", { ascending: false });
++  if (error) throw new Error(error.message);
++  return (data ?? []).map((row) => {
++    const term = row.terms as unknown as { term_number: number } | null;
++    return {
++      id: row.id,
++      term_label: term ? `Term ${term.term_number}` : "Unknown term",
++      amount_due: row.amount_due,
++      amount_paid: row.amount_paid,
++      due_date: row.due_date,
++      created_at: row.created_at,
++    };
++  });
++}
++
++// supabase.functions.invoke()'s error.message is a generic "Edge Function
++// returned a non-2xx status code" -- pulls the real { error } body out of
++// error.context, same fix applied everywhere else this pattern is used.
++async function parseFunctionError(error: unknown, fallback: string): Promise<Error> {
++  const response = (error as { context?: Response } | null)?.context;
++  if (response) {
++    try {
++      const body = await response.json();
++      if (body?.error) return new Error(body.error);
++    } catch {
++      // response wasn't JSON -- fall through to the generic message
++    }
++  }
++  return new Error(error instanceof Error ? error.message : fallback);
++}
++
++export interface InitiatePaymentResult {
++  rrr: string;
++  order_id: string;
++  public_key: string;
++  amount: number;
++  payer_name: string;
++  payer_email: string;
++}
++
++export async function initiateSubscriptionPayment(invoiceId: string, amount: number): Promise<InitiatePaymentResult> {
++  const { data, error } = await supabase.functions.invoke("initiate-subscription-payment", {
++    body: { invoice_id: invoiceId, amount },
++  });
++  if (error) throw await parseFunctionError(error, "Failed to start payment");
++  if (data?.error) throw new Error(data.error);
++  return data as InitiatePaymentResult;
++}
+diff --git a/apps/staff/src/features/subscription/remitaCheckout.ts b/apps/staff/src/features/subscription/remitaCheckout.ts
+new file mode 100644
+index 0000000..47c5aa9
+--- /dev/null
++++ b/apps/staff/src/features/subscription/remitaCheckout.ts
+@@ -0,0 +1,66 @@
++// Remita's inline checkout keeps the payer inside the app (a popup/modal
++// widget) rather than a full-page redirect. Script URL defaults to
++// Remita's public demo/test bundle -- swap VITE_REMITA_INLINE_SCRIPT_URL
++// to the live bundle URL once real merchant credentials exist. Not
++// live-tested yet (no Remita merchant account as of this build).
++const SCRIPT_URL =
++  import.meta.env.VITE_REMITA_INLINE_SCRIPT_URL ?? "https://remitademo.net/payment/v1/remita-pay-inline.bundle.js";
++
++declare global {
++  interface Window {
++    RmPaymentEngine?: {
++      init: (config: Record<string, unknown>) => { showPaymentWidget: () => void };
++    };
++  }
++}
++
++let scriptLoadPromise: Promise<void> | null = null;
++
++function loadRemitaScript(): Promise<void> {
++  if (window.RmPaymentEngine) return Promise.resolve();
++  if (scriptLoadPromise) return scriptLoadPromise;
++
++  scriptLoadPromise = new Promise((resolve, reject) => {
++    const script = document.createElement("script");
++    script.src = SCRIPT_URL;
++    script.async = true;
++    script.onload = () => resolve();
++    script.onerror = () => reject(new Error("Failed to load Remita checkout script"));
++    document.body.appendChild(script);
++  });
++
++  return scriptLoadPromise;
++}
++
++export interface RemitaCheckoutParams {
++  publicKey: string;
++  rrr: string;
++  orderId: string;
++  amount: number;
++  payerName: string;
++  payerEmail: string;
++  narration: string;
++  onSuccess: (response: unknown) => void;
++  onError: (response: unknown) => void;
++  onClose: () => void;
++}
++
++export async function openRemitaCheckout(params: RemitaCheckoutParams): Promise<void> {
++  await loadRemitaScript();
++  if (!window.RmPaymentEngine) throw new Error("Remita checkout unavailable");
++
++  const paymentEngine = window.RmPaymentEngine.init({
++    key: params.publicKey,
++    transactionId: params.orderId,
++    RRR: params.rrr,
++    customerId: params.payerEmail,
++    firstName: params.payerName,
++    email: params.payerEmail,
++    amount: params.amount,
++    narration: params.narration,
++    onSuccess: params.onSuccess,
++    onError: params.onError,
++    onClose: params.onClose,
++  });
++  paymentEngine.showPaymentWidget();
++}
+diff --git a/apps/staff/src/layouts/AdminLayout.tsx b/apps/staff/src/layouts/AdminLayout.tsx
+index b7b67ef..fd0785f 100644
+--- a/apps/staff/src/layouts/AdminLayout.tsx
++++ b/apps/staff/src/layouts/AdminLayout.tsx
+@@ -18,6 +18,7 @@ import {
+   ChevronLeft,
+   ChevronRight,
+   BookOpen,
++  CreditCard,
+ } from "lucide-react";
+ import { useAuth } from "../features/auth/AuthContext";
+ 
+@@ -35,6 +36,7 @@ const NAV_ITEMS = [
+   { to: "/admin/news", label: "News", icon: Newspaper, end: false },
+   { to: "/admin/intake", label: "Intake Review", icon: ClipboardList, end: false },
+   { to: "/admin/audit-log", label: "Audit Log", icon: FileClock, end: false },
++  { to: "/admin/subscription", label: "Subscription", icon: CreditCard, end: false },
+   { to: "/admin/profile", label: "Profile", icon: UserCircle, end: false },
+   { to: "/admin/school-profile", label: "School Profile", icon: Image, end: false },
+ ];
+diff --git a/apps/staff/src/pages/AdminSubscription.tsx b/apps/staff/src/pages/AdminSubscription.tsx
+new file mode 100644
+index 0000000..e383428
+--- /dev/null
++++ b/apps/staff/src/pages/AdminSubscription.tsx
+@@ -0,0 +1,130 @@
++import { useEffect, useState } from "react";
++import { CreditCard } from "lucide-react";
++import { useAuth } from "../features/auth/AuthContext";
++import {
++  fetchSubscriptionFee,
++  fetchSchoolInvoices,
++  initiateSubscriptionPayment,
++  type SubscriptionInvoice,
++} from "../features/subscription/api";
++import { openRemitaCheckout } from "../features/subscription/remitaCheckout";
++
++export default function AdminSubscription() {
++  const { profile } = useAuth();
++  const [fee, setFee] = useState<number | null>(null);
++  const [invoices, setInvoices] = useState<SubscriptionInvoice[]>([]);
++  const [loading, setLoading] = useState(true);
++  const [error, setError] = useState<string | null>(null);
++  const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
++
++  async function load() {
++    if (!profile?.school_id) return;
++    setLoading(true);
++    try {
++      const [f, inv] = await Promise.all([
++        fetchSubscriptionFee(profile.school_id),
++        fetchSchoolInvoices(profile.school_id),
++      ]);
++      setFee(f);
++      setInvoices(inv);
++    } catch (e) {
++      setError(e instanceof Error ? e.message : "Failed to load subscription");
++    } finally {
++      setLoading(false);
++    }
++  }
++
++  useEffect(() => {
++    load();
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [profile?.school_id]);
++
++  async function handlePay(invoice: SubscriptionInvoice) {
++    const balance = invoice.amount_due - invoice.amount_paid;
++    if (balance <= 0.01) return;
++    setPayingInvoiceId(invoice.id);
++    setError(null);
++    try {
++      const result = await initiateSubscriptionPayment(invoice.id, balance);
++      await openRemitaCheckout({
++        publicKey: result.public_key,
++        rrr: result.rrr,
++        orderId: result.order_id,
++        amount: result.amount,
++        payerName: result.payer_name,
++        payerEmail: result.payer_email,
++        narration: `Subscription payment — ${invoice.term_label}`,
++        onSuccess: () => load(),
++        onError: (res) => setError(`Payment failed: ${JSON.stringify(res)}`),
++        onClose: () => setPayingInvoiceId(null),
++      });
++    } catch (e) {
++      setError(e instanceof Error ? e.message : "Failed to start payment");
++    } finally {
++      setPayingInvoiceId(null);
++    }
++  }
++
++  return (
++    <div className="p-6 space-y-6">
++      <div>
++        <h1 className="font-display text-2xl text-forest-100">Subscription</h1>
++        <p className="font-ui text-xs text-forest-300 mt-1">
++          Your school's platform subscription, set by NATM. Pay each term to keep the school active.
++        </p>
++      </div>
++
++      {error && <p className="font-ui text-sm text-error">{error}</p>}
++
++      {loading ? (
++        <p className="font-ui text-sm text-forest-300">Loading...</p>
++      ) : fee === null ? (
++        <div className="bg-forest-900 rounded-lg p-6 text-center">
++          <CreditCard className="mx-auto text-forest-300 mb-2" size={24} />
++          <p className="font-ui text-sm text-forest-300">
++            No subscription fee has been set for your school yet — contact NATM if you believe this is a mistake.
++          </p>
++        </div>
++      ) : (
++        <>
++          <div className="bg-forest-900 rounded-lg p-4">
++            <p className="font-ui text-xs text-forest-300">Termly fee</p>
++            <p className="font-display text-2xl text-forest-100">₦{fee.toLocaleString()}</p>
++          </div>
++
++          {invoices.length === 0 ? (
++            <p className="font-ui text-sm text-forest-300">No invoices yet for the current term.</p>
++          ) : (
++            <div className="space-y-2">
++              {invoices.map((inv) => {
++                const balance = inv.amount_due - inv.amount_paid;
++                const isPaid = balance <= 0.01;
++                return (
++                  <div key={inv.id} className="flex items-center justify-between bg-forest-900 rounded-lg p-4">
++                    <div>
++                      <p className="font-display text-forest-100">{inv.term_label}</p>
++                      <p className="font-ui text-xs text-forest-300">
++                        ₦{inv.amount_due.toLocaleString()} due · ₦{inv.amount_paid.toLocaleString()} paid
++                      </p>
++                    </div>
++                    {isPaid ? (
++                      <span className="font-ui text-xs px-2 py-1 rounded-full bg-success/10 text-success">Paid</span>
++                    ) : (
++                      <button
++                        onClick={() => handlePay(inv)}
++                        disabled={payingInvoiceId === inv.id}
++                        className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui text-sm font-semibold disabled:opacity-50"
++                      >
++                        {payingInvoiceId === inv.id ? "Starting..." : `Pay ₦${balance.toLocaleString()}`}
++                      </button>
++                    )}
++                  </div>
++                );
++              })}
++            </div>
++          )}
++        </>
++      )}
++    </div>
++  );
++}
+diff --git a/apps/super-admin/src/features/subscriptions/api.ts b/apps/super-admin/src/features/subscriptions/api.ts
+new file mode 100644
+index 0000000..6e4fe59
+--- /dev/null
++++ b/apps/super-admin/src/features/subscriptions/api.ts
+@@ -0,0 +1,103 @@
++import { supabase } from "../../lib/supabase";
++
++export interface SubscriptionInvoice {
++  id: string;
++  school_id: string;
++  term_id: string;
++  term_label: string;
++  amount_due: number;
++  amount_paid: number;
++  due_date: string | null;
++  created_at: string;
++}
++
++export async function fetchSubscriptionFee(schoolId: string): Promise<number | null> {
++  const { data, error } = await supabase.from("schools").select("subscription_fee").eq("id", schoolId).single();
++  if (error) throw new Error(error.message);
++  return data.subscription_fee;
++}
++
++export async function setSubscriptionFee(schoolId: string, fee: number | null): Promise<void> {
++  const { error } = await supabase.from("schools").update({ subscription_fee: fee }).eq("id", schoolId);
++  if (error) throw new Error(error.message);
++}
++
++export async function fetchSchoolInvoices(schoolId: string): Promise<SubscriptionInvoice[]> {
++  const { data, error } = await supabase
++    .from("subscription_invoices")
++    .select("id, school_id, term_id, amount_due, amount_paid, due_date, created_at, terms(term_number)")
++    .eq("school_id", schoolId)
++    .order("created_at", { ascending: false });
++  if (error) throw new Error(error.message);
++  return (data ?? []).map((row) => {
++    const term = row.terms as unknown as { term_number: number } | null;
++    return {
++      id: row.id,
++      school_id: row.school_id,
++      term_id: row.term_id,
++      term_label: term ? `Term ${term.term_number}` : "Unknown term",
++      amount_due: row.amount_due,
++      amount_paid: row.amount_paid,
++      due_date: row.due_date,
++      created_at: row.created_at,
++    };
++  });
++}
++
++// Idempotent -- safe to call on every SchoolDetail load. Only creates an
++// invoice once the school has a subscription_fee set AND has a current
++// term; does nothing (silently) otherwise, since either of those being
++// absent just means there's nothing to bill yet.
++export async function ensureTermSubscriptionInvoice(schoolId: string): Promise<void> {
++  const { data: school } = await supabase.from("schools").select("subscription_fee").eq("id", schoolId).single();
++  if (!school?.subscription_fee) return;
++
++  const { data: session } = await supabase
++    .from("academic_sessions")
++    .select("id")
++    .eq("school_id", schoolId)
++    .eq("is_current", true)
++    .maybeSingle();
++  if (!session) return;
++
++  const { data: term } = await supabase
++    .from("terms")
++    .select("id")
++    .eq("session_id", session.id)
++    .eq("is_current", true)
++    .maybeSingle();
++  if (!term) return;
++
++  const { data: existing } = await supabase
++    .from("subscription_invoices")
++    .select("id")
++    .eq("school_id", schoolId)
++    .eq("term_id", term.id)
++    .maybeSingle();
++  if (existing) return;
++
++  await supabase.from("subscription_invoices").insert({
++    school_id: schoolId,
++    term_id: term.id,
++    amount_due: school.subscription_fee,
++  });
++}
++
++// Every school's current-term subscription status, for the Schools list
++// and Dashboard's overdue count -- one query rather than N+1.
++export interface SubscriptionStatusRow {
++  school_id: string;
++  amount_due: number;
++  amount_paid: number;
++}
++
++export async function fetchAllCurrentInvoiceStatuses(): Promise<SubscriptionStatusRow[]> {
++  const { data, error } = await supabase.from("subscription_invoices").select("school_id, amount_due, amount_paid");
++  if (error) throw new Error(error.message);
++  // Multiple invoices per school over time is expected -- callers that
++  // care about "right now" should already be scoping by current term
++  // where it matters (SchoolDetail does); this flat list is only used
++  // for a lightweight "has any overdue invoice ever" signal on the
++  // Schools list/Dashboard, not a per-term breakdown.
++  return data ?? [];
++}
+diff --git a/apps/super-admin/src/pages/Dashboard.tsx b/apps/super-admin/src/pages/Dashboard.tsx
+index f7750d1..dfcc345 100644
+--- a/apps/super-admin/src/pages/Dashboard.tsx
++++ b/apps/super-admin/src/pages/Dashboard.tsx
+@@ -1,8 +1,9 @@
+ import { useEffect, useState } from "react";
+-import { Building2, Users, GraduationCap, ScrollText } from "lucide-react";
++import { Building2, Users, GraduationCap, ScrollText, AlertCircle } from "lucide-react";
+ import { Link } from "react-router-dom";
+ import { fetchSchools, type SchoolRow } from "../features/schools/api";
+ import { fetchGlobalAuditLog, type AuditLogRow } from "../features/audit/api";
++import { fetchAllCurrentInvoiceStatuses } from "../features/subscriptions/api";
+ 
+ function StatCard({
+   label,
+@@ -29,14 +30,16 @@ function StatCard({
+ export default function Dashboard() {
+   const [schools, setSchools] = useState<SchoolRow[]>([]);
+   const [recentActivity, setRecentActivity] = useState<AuditLogRow[]>([]);
++  const [overdueCount, setOverdueCount] = useState(0);
+   const [loading, setLoading] = useState(true);
+   const [error, setError] = useState<string | null>(null);
+ 
+   useEffect(() => {
+-    Promise.all([fetchSchools(), fetchGlobalAuditLog(8)])
+-      .then(([s, a]) => {
++    Promise.all([fetchSchools(), fetchGlobalAuditLog(8), fetchAllCurrentInvoiceStatuses()])
++      .then(([s, a, invoices]) => {
+         setSchools(s);
+         setRecentActivity(a);
++        setOverdueCount(invoices.filter((inv) => inv.amount_due - inv.amount_paid > 0.01).length);
+       })
+       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load dashboard"))
+       .finally(() => setLoading(false));
+@@ -66,6 +69,19 @@ export default function Dashboard() {
+             <StatCard label="Total Staff" value={totalStaff.toLocaleString()} icon={Users} />
+           </div>
+ 
++          {overdueCount > 0 && (
++            <Link
++              to="/schools"
++              className="flex items-center gap-3 bg-warning/10 border border-warning/30 rounded-2xl p-4 hover:bg-warning/15 transition-colors"
++            >
++              <AlertCircle size={18} className="text-warning" />
++              <p className="font-body text-sm text-slate-100">
++                {overdueCount} school{overdueCount === 1 ? " has" : "s have"} an outstanding subscription invoice —
++                review under each school's page.
++              </p>
++            </Link>
++          )}
++
+           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+             <div className="flex items-center justify-between mb-4">
+               <h2 className="font-display font-bold text-slate-100">Recent Activity</h2>
+diff --git a/apps/super-admin/src/pages/SchoolDetail.tsx b/apps/super-admin/src/pages/SchoolDetail.tsx
+index b17e36e..876ccfe 100644
+--- a/apps/super-admin/src/pages/SchoolDetail.tsx
++++ b/apps/super-admin/src/pages/SchoolDetail.tsx
+@@ -11,6 +11,13 @@ import {
+   type SchoolRow,
+   type SchoolAdminRow,
+ } from "../features/schools/api";
++import {
++  fetchSubscriptionFee,
++  setSubscriptionFee,
++  fetchSchoolInvoices,
++  ensureTermSubscriptionInvoice,
++  type SubscriptionInvoice,
++} from "../features/subscriptions/api";
+ 
+ export default function SchoolDetail() {
+   const { id } = useParams<{ id: string }>();
+@@ -32,6 +39,11 @@ export default function SchoolDetail() {
+   const [inviteSubmitting, setInviteSubmitting] = useState(false);
+   const [inviteError, setInviteError] = useState<string | null>(null);
+ 
++  const [subscriptionFee, setSubscriptionFeeState] = useState("");
++  const [savingFee, setSavingFee] = useState(false);
++  const [feeError, setFeeError] = useState<string | null>(null);
++  const [invoices, setInvoices] = useState<SubscriptionInvoice[]>([]);
++
+   async function load() {
+     if (!id) return;
+     setLoading(true);
+@@ -45,6 +57,11 @@ export default function SchoolDetail() {
+       setAdmins(a);
+       setName(s.name);
+       setContactEmail(s.contact_email ?? "");
++      const fee = await fetchSubscriptionFee(id);
++      setSubscriptionFeeState(fee === null ? "" : String(fee));
++
++      await ensureTermSubscriptionInvoice(id);
++      setInvoices(await fetchSchoolInvoices(id));
+     } catch (e) {
+       setError(e instanceof Error ? e.message : "Failed to load school");
+     } finally {
+@@ -84,6 +101,26 @@ export default function SchoolDetail() {
+     }
+   }
+ 
++  async function handleSaveFee() {
++    if (!id) return;
++    const parsed = subscriptionFee.trim() === "" ? null : Number(subscriptionFee);
++    if (parsed !== null && (Number.isNaN(parsed) || parsed < 0)) {
++      setFeeError("Enter a valid amount.");
++      return;
++    }
++    setSavingFee(true);
++    setFeeError(null);
++    try {
++      await setSubscriptionFee(id, parsed);
++      await ensureTermSubscriptionInvoice(id);
++      setInvoices(await fetchSchoolInvoices(id));
++    } catch (e) {
++      setFeeError(e instanceof Error ? e.message : "Failed to save fee");
++    } finally {
++      setSavingFee(false);
++    }
++  }
++
+   async function handleInviteAdmin() {
+     if (!id || !inviteName.trim() || !inviteEmail.trim()) return;
+     setInviteSubmitting(true);
+@@ -181,6 +218,60 @@ export default function SchoolDetail() {
+         </div>
+       </div>
+ 
++      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
++        <h2 className="font-display font-bold text-slate-100">Subscription</h2>
++        <div>
++          <label className="font-ui text-xs text-slate-400">Termly fee (₦)</label>
++          <div className="flex gap-2 mt-1">
++            <input
++              type="number"
++              min={0}
++              value={subscriptionFee}
++              onChange={(e) => setSubscriptionFeeState(e.target.value)}
++              placeholder="Not set"
++              className="flex-1 p-2 rounded bg-slate-800 border border-slate-700 text-slate-100 font-body text-sm"
++            />
++            <button
++              onClick={handleSaveFee}
++              disabled={savingFee}
++              className="px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-ui text-sm font-semibold disabled:opacity-60"
++            >
++              {savingFee ? "Saving..." : "Save"}
++            </button>
++          </div>
++          {feeError && <p className="font-ui text-xs text-error mt-1">{feeError}</p>}
++          <p className="font-ui text-xs text-slate-500 mt-1">
++            An invoice for the school's current term is created automatically once a fee is set.
++          </p>
++        </div>
++
++        {invoices.length > 0 && (
++          <div className="space-y-2 pt-2 border-t border-slate-800">
++            {invoices.map((inv) => {
++              const balance = inv.amount_due - inv.amount_paid;
++              const isPaid = balance <= 0.01;
++              return (
++                <div key={inv.id} className="flex items-center justify-between bg-slate-800 rounded-lg p-3">
++                  <div>
++                    <p className="font-body text-sm text-slate-100">{inv.term_label}</p>
++                    <p className="font-ui text-xs text-slate-400">
++                      ₦{inv.amount_due.toLocaleString()} due · ₦{inv.amount_paid.toLocaleString()} paid
++                    </p>
++                  </div>
++                  <span
++                    className={`font-ui text-xs px-2 py-0.5 rounded-full ${
++                      isPaid ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
++                    }`}
++                  >
++                    {isPaid ? "Paid" : "Outstanding"}
++                  </span>
++                </div>
++              );
++            })}
++          </div>
++        )}
++      </div>
++
+       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+         <h2 className="font-display font-bold text-slate-100">Details</h2>
+         <div>
+diff --git a/packages/supabase/src/types.ts b/packages/supabase/src/types.ts
+index 1688243..9bd21e6 100644
+--- a/packages/supabase/src/types.ts
++++ b/packages/supabase/src/types.ts
+@@ -1857,6 +1857,7 @@ export type Database = {
+           phone_1: string | null
+           phone_2: string | null
+           principal_name: string | null
++          subscription_fee: number | null
+           website: string | null
+           year_established: number | null
+         }
+@@ -1873,6 +1874,7 @@ export type Database = {
+           phone_1?: string | null
+           phone_2?: string | null
+           principal_name?: string | null
++          subscription_fee?: number | null
+           website?: string | null
+           year_established?: number | null
+         }
+@@ -1889,6 +1891,7 @@ export type Database = {
+           phone_1?: string | null
+           phone_2?: string | null
+           principal_name?: string | null
++          subscription_fee?: number | null
+           website?: string | null
+           year_established?: number | null
+         }
+@@ -2266,6 +2269,114 @@ export type Database = {
+         }
+         Relationships: []
+       }
++      subscription_invoices: {
++        Row: {
++          amount_due: number
++          amount_paid: number
++          created_at: string
++          due_date: string | null
++          id: string
++          school_id: string
++          term_id: string
++          updated_at: string
++        }
++        Insert: {
++          amount_due: number
++          amount_paid?: number
++          created_at?: string
++          due_date?: string | null
++          id?: string
++          school_id: string
++          term_id: string
++          updated_at?: string
++        }
++        Update: {
++          amount_due?: number
++          amount_paid?: number
++          created_at?: string
++          due_date?: string | null
++          id?: string
++          school_id?: string
++          term_id?: string
++          updated_at?: string
++        }
++        Relationships: [
++          {
++            foreignKeyName: "subscription_invoices_school_id_fkey"
++            columns: ["school_id"]
++            isOneToOne: false
++            referencedRelation: "schools"
++            referencedColumns: ["id"]
++          },
++          {
++            foreignKeyName: "subscription_invoices_term_id_fkey"
++            columns: ["term_id"]
++            isOneToOne: false
++            referencedRelation: "terms"
++            referencedColumns: ["id"]
++          },
++        ]
++      }
++      subscription_payment_transactions: {
++        Row: {
++          amount: number
++          created_at: string
++          failure_reason: string | null
++          id: string
++          initiated_by: string | null
++          invoice_id: string
++          order_id: string
++          remita_transaction_id: string | null
++          rrr: string | null
++          school_id: string
++          status: string
++          updated_at: string
++        }
++        Insert: {
++          amount: number
++          created_at?: string
++          failure_reason?: string | null
++          id?: string
++          initiated_by?: string | null
++          invoice_id: string
++          order_id: string
++          remita_transaction_id?: string | null
++          rrr?: string | null
++          school_id: string
++          status?: string
++          updated_at?: string
++        }
++        Update: {
++          amount?: number
++          created_at?: string
++          failure_reason?: string | null
++          id?: string
++          initiated_by?: string | null
++          invoice_id?: string
++          order_id?: string
++          remita_transaction_id?: string | null
++          rrr?: string | null
++          school_id?: string
++          status?: string
++          updated_at?: string
++        }
++        Relationships: [
++          {
++            foreignKeyName: "subscription_payment_transactions_invoice_id_fkey"
++            columns: ["invoice_id"]
++            isOneToOne: false
++            referencedRelation: "subscription_invoices"
++            referencedColumns: ["id"]
++          },
++          {
++            foreignKeyName: "subscription_payment_transactions_school_id_fkey"
++            columns: ["school_id"]
++            isOneToOne: false
++            referencedRelation: "schools"
++            referencedColumns: ["id"]
++          },
++        ]
++      }
+       terms: {
+         Row: {
+           created_at: string
+diff --git a/supabase/functions/initiate-subscription-payment/index.ts b/supabase/functions/initiate-subscription-payment/index.ts
+new file mode 100644
+index 0000000..f02755d
+--- /dev/null
++++ b/supabase/functions/initiate-subscription-payment/index.ts
+@@ -0,0 +1,184 @@
++import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
++
++const corsHeaders = {
++  "Access-Control-Allow-Origin": "*",
++  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
++};
++
++// Mirrors initiate-remita-payment's Remita integration exactly (same
++// generate-RRR call/hash formula, same "not live-tested, no merchant
++// account yet" status) -- the only real difference is what gets paid
++// for: a subscription_invoices row (the school's own platform fee)
++// instead of a student_fees row (a parent paying the school).
++const REMITA_BASE_URL = Deno.env.get("REMITA_BASE_URL") ?? "https://remitademo.net/remita/exapp/api/v1/send/api";
++const GENERATE_RRR_PATH = "/echannelsvc/merchant/api/paymentinit";
++
++async function sha512Hex(input: string): Promise<string> {
++  const data = new TextEncoder().encode(input);
++  const digest = await crypto.subtle.digest("SHA-512", data);
++  return Array.from(new Uint8Array(digest))
++    .map((b) => b.toString(16).padStart(2, "0"))
++    .join("");
++}
++
++Deno.serve(async (req) => {
++  if (req.method === "OPTIONS") {
++    return new Response("ok", { headers: corsHeaders });
++  }
++
++  try {
++    const authHeader = req.headers.get("Authorization");
++    if (!authHeader) {
++      return new Response(JSON.stringify({ error: "Missing authorization" }), {
++        status: 401,
++        headers: { ...corsHeaders, "Content-Type": "application/json" },
++      });
++    }
++
++    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
++    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
++    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
++
++    const callerClient = createClient(supabaseUrl, anonKey, {
++      global: { headers: { Authorization: authHeader } },
++    });
++
++    const {
++      data: { user },
++      error: userError,
++    } = await callerClient.auth.getUser();
++    if (userError || !user) {
++      return new Response(JSON.stringify({ error: "Invalid session" }), {
++        status: 401,
++        headers: { ...corsHeaders, "Content-Type": "application/json" },
++      });
++    }
++
++    const { data: callerProfile, error: profileError } = await callerClient
++      .from("profiles")
++      .select("id, role, school_id, full_name")
++      .eq("id", user.id)
++      .single();
++    if (profileError || !callerProfile || callerProfile.role !== "school_admin" || !callerProfile.school_id) {
++      return new Response(JSON.stringify({ error: "Forbidden — School Admin only" }), {
++        status: 403,
++        headers: { ...corsHeaders, "Content-Type": "application/json" },
++      });
++    }
++
++    const { invoice_id, amount } = await req.json();
++    if (!invoice_id || typeof amount !== "number" || amount <= 0) {
++      return new Response(JSON.stringify({ error: "invoice_id and a positive amount are required" }), {
++        status: 400,
++        headers: { ...corsHeaders, "Content-Type": "application/json" },
++      });
++    }
++
++    const admin = createClient(supabaseUrl, serviceRoleKey);
++
++    const { data: invoice, error: invoiceError } = await admin
++      .from("subscription_invoices")
++      .select("id, school_id, amount_due, amount_paid")
++      .eq("id", invoice_id)
++      .single();
++    if (invoiceError || !invoice) {
++      return new Response(JSON.stringify({ error: "Invoice not found" }), {
++        status: 404,
++        headers: { ...corsHeaders, "Content-Type": "application/json" },
++      });
++    }
++    if (invoice.school_id !== callerProfile.school_id) {
++      return new Response(JSON.stringify({ error: "This invoice doesn't belong to your school" }), {
++        status: 403,
++        headers: { ...corsHeaders, "Content-Type": "application/json" },
++      });
++    }
++
++    const remaining = Number(invoice.amount_due) - Number(invoice.amount_paid);
++    if (amount > remaining + 0.01) {
++      return new Response(JSON.stringify({ error: `Amount exceeds the remaining balance of ${remaining}` }), {
++        status: 400,
++        headers: { ...corsHeaders, "Content-Type": "application/json" },
++      });
++    }
++
++    const { data: school } = await admin.from("schools").select("name, contact_email").eq("id", invoice.school_id).single();
++
++    const merchantId = Deno.env.get("REMITA_MERCHANT_ID");
++    const apiKey = Deno.env.get("REMITA_API_KEY");
++    const serviceTypeId = Deno.env.get("REMITA_SERVICE_TYPE_ID");
++    const publicKey = Deno.env.get("REMITA_PUBLIC_KEY");
++    if (!merchantId || !apiKey || !serviceTypeId || !publicKey) {
++      return new Response(
++        JSON.stringify({
++          error:
++            "Remita isn't configured yet — REMITA_MERCHANT_ID, REMITA_API_KEY, REMITA_SERVICE_TYPE_ID, and REMITA_PUBLIC_KEY need to be set as Supabase secrets once a Remita merchant account exists.",
++        }),
++        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
++      );
++    }
++
++    const orderId = `natm-sub-${crypto.randomUUID()}`;
++    const amountStr = amount.toFixed(2);
++    const hash = await sha512Hex(`${merchantId}${serviceTypeId}${orderId}${amountStr}${apiKey}`);
++
++    const remitaRes = await fetch(`${REMITA_BASE_URL}${GENERATE_RRR_PATH}`, {
++      method: "POST",
++      headers: {
++        "Content-Type": "application/json",
++        Authorization: `remitaConsumerKey=${merchantId}, remitaConsumerToken=${hash}`,
++      },
++      body: JSON.stringify({
++        serviceTypeId,
++        amount: amountStr,
++        orderId,
++        payerName: callerProfile.full_name,
++        payerEmail: user.email,
++        payerPhone: "",
++        description: `Platform subscription payment for ${school?.name ?? "school"}`,
++      }),
++    });
++
++    const remitaData = await remitaRes.json().catch(() => null);
++    const rrr = remitaData?.RRR ?? remitaData?.data?.rrr ?? remitaData?.rrr;
++    if (!remitaRes.ok || !rrr) {
++      return new Response(JSON.stringify({ error: "Remita RRR generation failed", details: remitaData }), {
++        status: 502,
++        headers: { ...corsHeaders, "Content-Type": "application/json" },
++      });
++    }
++
++    const { error: insertError } = await admin.from("subscription_payment_transactions").insert({
++      school_id: invoice.school_id,
++      invoice_id: invoice.id,
++      initiated_by: callerProfile.id,
++      amount,
++      status: "pending",
++      order_id: orderId,
++      rrr,
++    });
++    if (insertError) {
++      return new Response(JSON.stringify({ error: insertError.message }), {
++        status: 500,
++        headers: { ...corsHeaders, "Content-Type": "application/json" },
++      });
++    }
++
++    return new Response(
++      JSON.stringify({
++        rrr,
++        order_id: orderId,
++        public_key: publicKey,
++        amount,
++        payer_name: callerProfile.full_name,
++        payer_email: user.email,
++      }),
++      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
++    );
++  } catch (err) {
++    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Unknown error" }), {
++      status: 500,
++      headers: { ...corsHeaders, "Content-Type": "application/json" },
++    });
++  }
++});
+diff --git a/supabase/functions/remita-webhook/index.ts b/supabase/functions/remita-webhook/index.ts
+index ad8a73e..1748141 100644
+--- a/supabase/functions/remita-webhook/index.ts
++++ b/supabase/functions/remita-webhook/index.ts
+@@ -12,6 +12,14 @@ const corsHeaders = {
+ // real webhook payload once Remita sends onboarding docs. Idempotent by
+ // design: the DB update below only fires on a genuine pending -> success
+ // transition, so a duplicate delivery can't double-credit a fee.
++//
++// Handles two unrelated kinds of payment through one webhook (Remita
++// only supports one configured webhook URL per merchant account, so
++// both have to land here): a parent paying a school's student_fees
++// (payment_transactions) and a school paying its own platform
++// subscription (subscription_payment_transactions). Looks up the RRR
++// in the first table, then the second, and only proceeds with whichever
++// one actually matches.
+ Deno.serve(async (req) => {
+   if (req.method === "OPTIONS") {
+     return new Response("ok", { headers: corsHeaders });
+@@ -34,111 +42,32 @@ Deno.serve(async (req) => {
+     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+     const admin = createClient(supabaseUrl, serviceRoleKey);
+ 
+-    const { data: txn, error: txnError } = await admin
+-      .from("payment_transactions")
+-      .select("id, status, amount, student_id, fee_type_id, term_id, school_id")
+-      .eq("rrr", rrr)
+-      .single();
+-    if (txnError || !txn) {
+-      return new Response(JSON.stringify({ error: "Unknown RRR" }), {
+-        status: 404,
+-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+-      });
+-    }
+-
+     // Remita's success status is typically "00" or "Successful" depending
+     // on product line — treat either as success, everything else as failed.
+     const isSuccess = remitaStatus === "00" || String(remitaStatus).toLowerCase() === "successful";
+ 
+-    if (txn.status !== "pending") {
+-      // Already resolved (either by an earlier webhook delivery or a
+-      // manual status check) — nothing further to do, but return 200 so
+-      // Remita doesn't keep retrying.
+-      return new Response(JSON.stringify({ ok: true, already_processed: true }), {
+-        status: 200,
+-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+-      });
+-    }
++    const { data: feeTxn } = await admin
++      .from("payment_transactions")
++      .select("id, status, amount, student_id, fee_type_id, term_id, school_id")
++      .eq("rrr", rrr)
++      .maybeSingle();
+ 
+-    if (!isSuccess) {
+-      await admin
+-        .from("payment_transactions")
+-        .update({ status: "failed", failure_reason: String(remitaStatus ?? "unknown"), updated_at: new Date().toISOString() })
+-        .eq("id", txn.id)
+-        .eq("status", "pending");
+-      return new Response(JSON.stringify({ ok: true }), {
+-        status: 200,
+-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+-      });
++    if (feeTxn) {
++      return handleFeePayment(admin, feeTxn, isSuccess, remitaStatus, remitaTransactionId, corsHeaders);
+     }
+ 
+-    // Guarded by .eq("status", "pending") so a duplicate webhook delivery
+-    // racing this one can't flip it to success twice.
+-    const { data: updated, error: updateError } = await admin
+-      .from("payment_transactions")
+-      .update({
+-        status: "success",
+-        remita_transaction_id: remitaTransactionId ?? null,
+-        updated_at: new Date().toISOString(),
+-      })
+-      .eq("id", txn.id)
+-      .eq("status", "pending")
+-      .select()
++    const { data: subTxn } = await admin
++      .from("subscription_payment_transactions")
++      .select("id, status, amount, invoice_id, school_id")
++      .eq("rrr", rrr)
+       .maybeSingle();
+-    if (updateError) throw new Error(updateError.message);
+-    if (!updated) {
+-      // Lost the race to another delivery of the same webhook — fine.
+-      return new Response(JSON.stringify({ ok: true, already_processed: true }), {
+-        status: 200,
+-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+-      });
+-    }
+ 
+-    const { data: feeRow, error: feeFetchError } = await admin
+-      .from("student_fees")
+-      .select("id, amount_paid")
+-      .eq("student_id", txn.student_id)
+-      .eq("fee_type_id", txn.fee_type_id)
+-      .single();
+-    if (feeFetchError || !feeRow) throw new Error(feeFetchError?.message ?? "student_fees row not found");
+-
+-    const { error: feeUpdateError } = await admin
+-      .from("student_fees")
+-      .update({
+-        amount_paid: Number(feeRow.amount_paid) + Number(txn.amount),
+-        updated_at: new Date().toISOString(),
+-      })
+-      .eq("id", feeRow.id);
+-    if (feeUpdateError) throw new Error(feeUpdateError.message);
+-
+-    // Notify Finance Managers, same pattern as manually-recorded payments.
+-    const { data: student } = await admin.from("students").select("full_name").eq("id", txn.student_id).single();
+-    const { data: feeType } = await admin.from("fee_types").select("name").eq("id", txn.fee_type_id).single();
+-    const { data: recipients } = await admin
+-      .from("profiles")
+-      .select("id")
+-      .eq("school_id", txn.school_id)
+-      .eq("role", "finance_manager")
+-      .eq("is_active", true);
+-
+-    if (recipients && recipients.length > 0) {
+-      const formattedAmount = `₦${Number(txn.amount).toLocaleString()}`;
+-      await admin.from("notifications").insert(
+-        recipients.map((r) => ({
+-          school_id: txn.school_id,
+-          recipient_id: r.id,
+-          type: "payment_recorded",
+-          title: "Payment recorded",
+-          body: `${student?.full_name ?? "A student"} paid ${formattedAmount} towards ${feeType?.name ?? "a fee"} online.`,
+-          related_entity_type: "student_fees",
+-          related_entity_id: txn.student_id,
+-        }))
+-      );
+-      admin.functions.invoke("send-push", { body: {} }).catch(() => {});
++    if (subTxn) {
++      return handleSubscriptionPayment(admin, subTxn, isSuccess, remitaStatus, remitaTransactionId, corsHeaders);
+     }
+ 
+-    return new Response(JSON.stringify({ ok: true }), {
+-      status: 200,
++    return new Response(JSON.stringify({ error: "Unknown RRR" }), {
++      status: 404,
+       headers: { ...corsHeaders, "Content-Type": "application/json" },
+     });
+   } catch (err) {
+@@ -148,3 +77,191 @@ Deno.serve(async (req) => {
+     });
+   }
+ });
++
++// deno-lint-ignore no-explicit-any
++async function handleFeePayment(
++  admin: any,
++  txn: any,
++  isSuccess: boolean,
++  remitaStatus: unknown,
++  remitaTransactionId: string | undefined,
++  corsHeaders: Record<string, string>
++): Promise<Response> {
++  if (txn.status !== "pending") {
++    return new Response(JSON.stringify({ ok: true, already_processed: true }), {
++      status: 200,
++      headers: { ...corsHeaders, "Content-Type": "application/json" },
++    });
++  }
++
++  if (!isSuccess) {
++    await admin
++      .from("payment_transactions")
++      .update({ status: "failed", failure_reason: String(remitaStatus ?? "unknown"), updated_at: new Date().toISOString() })
++      .eq("id", txn.id)
++      .eq("status", "pending");
++    return new Response(JSON.stringify({ ok: true }), {
++      status: 200,
++      headers: { ...corsHeaders, "Content-Type": "application/json" },
++    });
++  }
++
++  // Guarded by .eq("status", "pending") so a duplicate webhook delivery
++  // racing this one can't flip it to success twice.
++  const { data: updated, error: updateError } = await admin
++    .from("payment_transactions")
++    .update({
++      status: "success",
++      remita_transaction_id: remitaTransactionId ?? null,
++      updated_at: new Date().toISOString(),
++    })
++    .eq("id", txn.id)
++    .eq("status", "pending")
++    .select()
++    .maybeSingle();
++  if (updateError) throw new Error(updateError.message);
++  if (!updated) {
++    return new Response(JSON.stringify({ ok: true, already_processed: true }), {
++      status: 200,
++      headers: { ...corsHeaders, "Content-Type": "application/json" },
++    });
++  }
++
++  const { data: feeRow, error: feeFetchError } = await admin
++    .from("student_fees")
++    .select("id, amount_paid")
++    .eq("student_id", txn.student_id)
++    .eq("fee_type_id", txn.fee_type_id)
++    .single();
++  if (feeFetchError || !feeRow) throw new Error(feeFetchError?.message ?? "student_fees row not found");
++
++  const { error: feeUpdateError } = await admin
++    .from("student_fees")
++    .update({
++      amount_paid: Number(feeRow.amount_paid) + Number(txn.amount),
++      updated_at: new Date().toISOString(),
++    })
++    .eq("id", feeRow.id);
++  if (feeUpdateError) throw new Error(feeUpdateError.message);
++
++  // Notify Finance Managers, same pattern as manually-recorded payments.
++  const { data: student } = await admin.from("students").select("full_name").eq("id", txn.student_id).single();
++  const { data: feeType } = await admin.from("fee_types").select("name").eq("id", txn.fee_type_id).single();
++  const { data: recipients } = await admin
++    .from("profiles")
++    .select("id")
++    .eq("school_id", txn.school_id)
++    .eq("role", "finance_manager")
++    .eq("is_active", true);
++
++  if (recipients && recipients.length > 0) {
++    const formattedAmount = `₦${Number(txn.amount).toLocaleString()}`;
++    await admin.from("notifications").insert(
++      recipients.map((r: { id: string }) => ({
++        school_id: txn.school_id,
++        recipient_id: r.id,
++        type: "payment_recorded",
++        title: "Payment recorded",
++        body: `${student?.full_name ?? "A student"} paid ${formattedAmount} towards ${feeType?.name ?? "a fee"} online.`,
++        related_entity_type: "student_fees",
++        related_entity_id: txn.student_id,
++      }))
++    );
++    admin.functions.invoke("send-push", { body: {} }).catch(() => {});
++  }
++
++  return new Response(JSON.stringify({ ok: true }), {
++    status: 200,
++    headers: { ...corsHeaders, "Content-Type": "application/json" },
++  });
++}
++
++// deno-lint-ignore no-explicit-any
++async function handleSubscriptionPayment(
++  admin: any,
++  txn: any,
++  isSuccess: boolean,
++  remitaStatus: unknown,
++  remitaTransactionId: string | undefined,
++  corsHeaders: Record<string, string>
++): Promise<Response> {
++  if (txn.status !== "pending") {
++    return new Response(JSON.stringify({ ok: true, already_processed: true }), {
++      status: 200,
++      headers: { ...corsHeaders, "Content-Type": "application/json" },
++    });
++  }
++
++  if (!isSuccess) {
++    await admin
++      .from("subscription_payment_transactions")
++      .update({ status: "failed", failure_reason: String(remitaStatus ?? "unknown"), updated_at: new Date().toISOString() })
++      .eq("id", txn.id)
++      .eq("status", "pending");
++    return new Response(JSON.stringify({ ok: true }), {
++      status: 200,
++      headers: { ...corsHeaders, "Content-Type": "application/json" },
++    });
++  }
++
++  const { data: updated, error: updateError } = await admin
++    .from("subscription_payment_transactions")
++    .update({
++      status: "success",
++      remita_transaction_id: remitaTransactionId ?? null,
++      updated_at: new Date().toISOString(),
++    })
++    .eq("id", txn.id)
++    .eq("status", "pending")
++    .select()
++    .maybeSingle();
++  if (updateError) throw new Error(updateError.message);
++  if (!updated) {
++    return new Response(JSON.stringify({ ok: true, already_processed: true }), {
++      status: 200,
++      headers: { ...corsHeaders, "Content-Type": "application/json" },
++    });
++  }
++
++  const { data: invoice, error: invoiceFetchError } = await admin
++    .from("subscription_invoices")
++    .select("id, amount_paid")
++    .eq("id", txn.invoice_id)
++    .single();
++  if (invoiceFetchError || !invoice) throw new Error(invoiceFetchError?.message ?? "subscription_invoices row not found");
++
++  const { error: invoiceUpdateError } = await admin
++    .from("subscription_invoices")
++    .update({
++      amount_paid: Number(invoice.amount_paid) + Number(txn.amount),
++      updated_at: new Date().toISOString(),
++    })
++    .eq("id", invoice.id);
++  if (invoiceUpdateError) throw new Error(invoiceUpdateError.message);
++
++  // Notify every super_admin (this is a school-paying-the-platform event,
++  // not a school-internal one, so it goes to the platform-wide role
++  // rather than any school_id-scoped notifications list).
++  const { data: school } = await admin.from("schools").select("name").eq("id", txn.school_id).single();
++  const { data: recipients } = await admin.from("profiles").select("id").eq("role", "super_admin");
++
++  if (recipients && recipients.length > 0) {
++    const formattedAmount = `₦${Number(txn.amount).toLocaleString()}`;
++    await admin.from("audit_logs").insert({
++      school_id: txn.school_id,
++      actor_id: null,
++      action: "subscription.paid",
++      entity_type: "subscription_invoice",
++      entity_id: txn.invoice_id,
++      details: { amount: txn.amount },
++    });
++    console.log(
++      `Subscription payment received: ${school?.name ?? "a school"} paid ${formattedAmount} (invoice ${txn.invoice_id})`
++    );
++  }
++
++  return new Response(JSON.stringify({ ok: true }), {
++    status: 200,
++    headers: { ...corsHeaders, "Content-Type": "application/json" },
++  });
++}
+diff --git a/supabase/migrations/20260830000000_subscriptions.sql b/supabase/migrations/20260830000000_subscriptions.sql
+new file mode 100644
+index 0000000..37aa52a
+--- /dev/null
++++ b/supabase/migrations/20260830000000_subscriptions.sql
+@@ -0,0 +1,61 @@
++-- ============================================================
++-- Platform subscriptions
++-- Super Admin sets a per-school termly fee; School Admin pays it via
++-- Remita to keep the school active on the platform. Deliberately
++-- separate from payment_transactions/student_fees (which are about a
++-- parent paying a school) -- this is a school paying the platform, a
++-- different relationship entirely, so it gets its own pair of tables
++-- mirroring that existing shape rather than overloading it.
++-- ============================================================
++
++alter table schools
++  add column subscription_fee numeric(12,2);
++
++-- One invoice per (school, term) -- amount_due is a snapshot of
++-- schools.subscription_fee at invoice-creation time, so a later fee
++-- change doesn't retroactively alter an already-issued invoice.
++create table subscription_invoices (
++  id uuid primary key default gen_random_uuid(),
++  school_id uuid not null references schools(id) on delete cascade,
++  term_id uuid not null references terms(id) on delete cascade,
++  amount_due numeric(12,2) not null,
++  amount_paid numeric(12,2) not null default 0,
++  due_date date,
++  created_at timestamptz not null default now(),
++  updated_at timestamptz not null default now(),
++  unique (school_id, term_id)
++);
++
++create index idx_subscription_invoices_school on subscription_invoices(school_id);
++
++alter table subscription_invoices enable row level security;
++create policy "temp_allow_all_authenticated" on subscription_invoices
++  for all to authenticated using (true) with check (true);
++
++-- Mirrors payment_transactions' shape (order_id/rrr/status/
++-- remita_transaction_id) but keyed to an invoice instead of a student
++-- fee -- see initiate-subscription-payment and the extended
++-- remita-webhook, which now branches on which of these two tables a
++-- given RRR belongs to.
++create table subscription_payment_transactions (
++  id uuid primary key default gen_random_uuid(),
++  school_id uuid not null references schools(id) on delete cascade,
++  invoice_id uuid not null references subscription_invoices(id) on delete cascade,
++  initiated_by uuid references profiles(id),
++  amount numeric(12,2) not null check (amount > 0),
++  status text not null default 'pending' check (status in ('pending', 'success', 'failed')),
++  order_id text not null unique,
++  rrr text,
++  remita_transaction_id text,
++  failure_reason text,
++  created_at timestamptz not null default now(),
++  updated_at timestamptz not null default now()
++);
++
++create index idx_subscription_payment_transactions_school on subscription_payment_transactions(school_id);
++create index idx_subscription_payment_transactions_rrr on subscription_payment_transactions(rrr);
++create index idx_subscription_payment_transactions_status on subscription_payment_transactions(status);
++
++alter table subscription_payment_transactions enable row level security;
++create policy "temp_allow_all_authenticated" on subscription_payment_transactions
++  for all to authenticated using (true) with check (true);

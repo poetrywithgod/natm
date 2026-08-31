@@ -56,6 +56,7 @@ const AdminAuditLog = lazy(() => import("./pages/AdminAuditLog"));
 const AdminProfile = lazy(() => import("./pages/AdminProfile"));
 const AdminSchoolProfile = lazy(() => import("./pages/AdminSchoolProfile"));
 const AdminCurriculum = lazy(() => import("./pages/AdminCurriculum"));
+const AdminSubscription = lazy(() => import("./pages/AdminSubscription"));
 const ClassTeacherCurriculum = lazy(() => import("./pages/ClassTeacherCurriculum"));
 const ShadowTeacherCurriculum = lazy(() => import("./pages/ShadowTeacherCurriculum"));
 
@@ -93,6 +94,7 @@ function AppRoutes() {
           <Route path="profile" element={<AdminProfile />} />
           <Route path="school-profile" element={<AdminSchoolProfile />} />
           <Route path="curriculum" element={<AdminCurriculum />} />
+          <Route path="subscription" element={<AdminSubscription />} />
         </Route>
 
         <Route

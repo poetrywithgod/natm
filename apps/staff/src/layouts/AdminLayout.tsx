@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
   BookOpen,
+  CreditCard,
 } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 
@@ -35,6 +36,7 @@ const NAV_ITEMS = [
   { to: "/admin/news", label: "News", icon: Newspaper, end: false },
   { to: "/admin/intake", label: "Intake Review", icon: ClipboardList, end: false },
   { to: "/admin/audit-log", label: "Audit Log", icon: FileClock, end: false },
+  { to: "/admin/subscription", label: "Subscription", icon: CreditCard, end: false },
   { to: "/admin/profile", label: "Profile", icon: UserCircle, end: false },
   { to: "/admin/school-profile", label: "School Profile", icon: Image, end: false },
 ];

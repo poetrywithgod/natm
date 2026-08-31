@@ -1857,6 +1857,7 @@ export type Database = {
           phone_1: string | null
           phone_2: string | null
           principal_name: string | null
+          subscription_fee: number | null
           website: string | null
           year_established: number | null
         }
@@ -1873,6 +1874,7 @@ export type Database = {
           phone_1?: string | null
           phone_2?: string | null
           principal_name?: string | null
+          subscription_fee?: number | null
           website?: string | null
           year_established?: number | null
         }
@@ -1889,6 +1891,7 @@ export type Database = {
           phone_1?: string | null
           phone_2?: string | null
           principal_name?: string | null
+          subscription_fee?: number | null
           website?: string | null
           year_established?: number | null
         }
@@ -2265,6 +2268,114 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      subscription_invoices: {
+        Row: {
+          amount_due: number
+          amount_paid: number
+          created_at: string
+          due_date: string | null
+          id: string
+          school_id: string
+          term_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount_due: number
+          amount_paid?: number
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          school_id: string
+          term_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount_due?: number
+          amount_paid?: number
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          school_id?: string
+          term_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_invoices_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_invoices_term_id_fkey"
+            columns: ["term_id"]
+            isOneToOne: false
+            referencedRelation: "terms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_payment_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          failure_reason: string | null
+          id: string
+          initiated_by: string | null
+          invoice_id: string
+          order_id: string
+          remita_transaction_id: string | null
+          rrr: string | null
+          school_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          failure_reason?: string | null
+          id?: string
+          initiated_by?: string | null
+          invoice_id: string
+          order_id: string
+          remita_transaction_id?: string | null
+          rrr?: string | null
+          school_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          failure_reason?: string | null
+          id?: string
+          initiated_by?: string | null
+          invoice_id?: string
+          order_id?: string
+          remita_transaction_id?: string | null
+          rrr?: string | null
+          school_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_payment_transactions_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_payment_transactions_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       terms: {
         Row: {

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Building2, Users, GraduationCap, ScrollText } from "lucide-react";
+import { Building2, Users, GraduationCap, ScrollText, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { fetchSchools, type SchoolRow } from "../features/schools/api";
 import { fetchGlobalAuditLog, type AuditLogRow } from "../features/audit/api";
+import { fetchAllCurrentInvoiceStatuses } from "../features/subscriptions/api";
 
 function StatCard({
   label,
@@ -29,14 +30,16 @@ function StatCard({
 export default function Dashboard() {
   const [schools, setSchools] = useState<SchoolRow[]>([]);
   const [recentActivity, setRecentActivity] = useState<AuditLogRow[]>([]);
+  const [overdueCount, setOverdueCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([fetchSchools(), fetchGlobalAuditLog(8)])
-      .then(([s, a]) => {
+    Promise.all([fetchSchools(), fetchGlobalAuditLog(8), fetchAllCurrentInvoiceStatuses()])
+      .then(([s, a, invoices]) => {
         setSchools(s);
         setRecentActivity(a);
+        setOverdueCount(invoices.filter((inv) => inv.amount_due - inv.amount_paid > 0.01).length);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load dashboard"))
       .finally(() => setLoading(false));
@@ -65,6 +68,19 @@ export default function Dashboard() {
             <StatCard label="Total Students" value={totalStudents.toLocaleString()} icon={GraduationCap} />
             <StatCard label="Total Staff" value={totalStaff.toLocaleString()} icon={Users} />
           </div>
+
+          {overdueCount > 0 && (
+            <Link
+              to="/schools"
+              className="flex items-center gap-3 bg-warning/10 border border-warning/30 rounded-2xl p-4 hover:bg-warning/15 transition-colors"
+            >
+              <AlertCircle size={18} className="text-warning" />
+              <p className="font-body text-sm text-slate-100">
+                {overdueCount} school{overdueCount === 1 ? " has" : "s have"} an outstanding subscription invoice —
+                review under each school's page.
+              </p>
+            </Link>
+          )}
 
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
