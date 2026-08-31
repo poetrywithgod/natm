@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
-import { CreditCard } from "lucide-react";
+import { CreditCard, ChevronDown, ChevronRight } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import {
   fetchSubscriptionFee,
+  ensureTermSubscriptionInvoice,
   fetchSchoolInvoices,
+  fetchInvoicePayments,
   initiateSubscriptionPayment,
   type SubscriptionInvoice,
+  type SubscriptionPayment,
 } from "../features/subscription/api";
 import { openRemitaCheckout } from "../features/subscription/remitaCheckout";
 
@@ -21,12 +24,10 @@ export default function AdminSubscription() {
     if (!profile?.school_id) return;
     setLoading(true);
     try {
-      const [f, inv] = await Promise.all([
-        fetchSubscriptionFee(profile.school_id),
-        fetchSchoolInvoices(profile.school_id),
-      ]);
+      const f = await fetchSubscriptionFee(profile.school_id);
       setFee(f);
-      setInvoices(inv);
+      await ensureTermSubscriptionInvoice(profile.school_id);
+      setInvoices(await fetchSchoolInvoices(profile.school_id));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load subscription");
     } finally {
@@ -96,34 +97,102 @@ export default function AdminSubscription() {
             <p className="font-ui text-sm text-forest-300">No invoices yet for the current term.</p>
           ) : (
             <div className="space-y-2">
-              {invoices.map((inv) => {
-                const balance = inv.amount_due - inv.amount_paid;
-                const isPaid = balance <= 0.01;
-                return (
-                  <div key={inv.id} className="flex items-center justify-between bg-forest-900 rounded-lg p-4">
-                    <div>
-                      <p className="font-display text-forest-100">{inv.term_label}</p>
-                      <p className="font-ui text-xs text-forest-300">
-                        ₦{inv.amount_due.toLocaleString()} due · ₦{inv.amount_paid.toLocaleString()} paid
-                      </p>
-                    </div>
-                    {isPaid ? (
-                      <span className="font-ui text-xs px-2 py-1 rounded-full bg-success/10 text-success">Paid</span>
-                    ) : (
-                      <button
-                        onClick={() => handlePay(inv)}
-                        disabled={payingInvoiceId === inv.id}
-                        className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui text-sm font-semibold disabled:opacity-50"
-                      >
-                        {payingInvoiceId === inv.id ? "Starting..." : `Pay ₦${balance.toLocaleString()}`}
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
+              <h2 className="font-ui text-xs text-forest-300 uppercase tracking-wide">Invoice History</h2>
+              {invoices.map((inv) => (
+                <InvoiceCard
+                  key={inv.id}
+                  invoice={inv}
+                  paying={payingInvoiceId === inv.id}
+                  onPay={() => handlePay(inv)}
+                />
+              ))}
             </div>
           )}
         </>
+      )}
+    </div>
+  );
+}
+
+function InvoiceCard({
+  invoice,
+  paying,
+  onPay,
+}: {
+  invoice: SubscriptionInvoice;
+  paying: boolean;
+  onPay: () => void;
+}) {
+  const balance = invoice.amount_due - invoice.amount_paid;
+  const isPaid = balance <= 0.01;
+  const hasPayments = invoice.amount_paid > 0;
+
+  const [showPayments, setShowPayments] = useState(false);
+  const [payments, setPayments] = useState<SubscriptionPayment[] | null>(null);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+
+  async function togglePayments() {
+    if (!showPayments && payments === null) {
+      setLoadingPayments(true);
+      try {
+        setPayments(await fetchInvoicePayments(invoice.id));
+      } catch {
+        setPayments([]);
+      } finally {
+        setLoadingPayments(false);
+      }
+    }
+    setShowPayments((v) => !v);
+  }
+
+  return (
+    <div className="bg-forest-900 rounded-lg p-4 space-y-2">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="font-display text-forest-100">{invoice.term_label}</p>
+          <p className="font-ui text-xs text-forest-300">
+            ₦{invoice.amount_due.toLocaleString()} due · ₦{invoice.amount_paid.toLocaleString()} paid
+          </p>
+        </div>
+        {isPaid ? (
+          <span className="font-ui text-xs px-2 py-1 rounded-full bg-success/10 text-success">Paid</span>
+        ) : (
+          <button
+            onClick={onPay}
+            disabled={paying}
+            className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui text-sm font-semibold disabled:opacity-50"
+          >
+            {paying ? "Starting..." : `Pay ₦${balance.toLocaleString()}`}
+          </button>
+        )}
+      </div>
+      {hasPayments && (
+        <button
+          onClick={togglePayments}
+          className="flex items-center gap-1 font-ui text-xs text-forest-300 hover:text-forest-100"
+        >
+          {showPayments ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          Payment history
+        </button>
+      )}
+      {showPayments && (
+        <div className="pl-4 space-y-1 border-l border-forest-700">
+          {loadingPayments ? (
+            <p className="font-ui text-xs text-forest-400">Loading...</p>
+          ) : payments && payments.length > 0 ? (
+            payments.map((p) => (
+              <div key={p.id} className="flex items-center justify-between font-ui text-xs text-forest-400">
+                <span>
+                  ₦{p.amount.toLocaleString()} · {p.status}
+                  {p.rrr ? ` · RRR ${p.rrr}` : ""}
+                </span>
+                <span>{new Date(p.created_at).toLocaleString()}</span>
+              </div>
+            ))
+          ) : (
+            <p className="font-ui text-xs text-forest-400">No payment attempts recorded.</p>
+          )}
+        </div>
       )}
     </div>
   );

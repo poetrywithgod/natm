@@ -15,6 +15,46 @@ export async function fetchSubscriptionFee(schoolId: string): Promise<number | n
   return data.subscription_fee;
 }
 
+// Idempotent -- safe to call on every page load. Creates the current
+// term's invoice if the school's fee is set and no invoice exists for
+// it yet (e.g. the school just rolled over to a new term); never
+// touches an existing invoice, whether paid or not. Mirrors
+// apps/super-admin's version of the same function.
+export async function ensureTermSubscriptionInvoice(schoolId: string): Promise<void> {
+  const { data: school } = await supabase.from("schools").select("subscription_fee").eq("id", schoolId).single();
+  if (!school?.subscription_fee) return;
+
+  const { data: session } = await supabase
+    .from("academic_sessions")
+    .select("id")
+    .eq("school_id", schoolId)
+    .eq("is_current", true)
+    .maybeSingle();
+  if (!session) return;
+
+  const { data: term } = await supabase
+    .from("terms")
+    .select("id")
+    .eq("session_id", session.id)
+    .eq("is_current", true)
+    .maybeSingle();
+  if (!term) return;
+
+  const { data: existing } = await supabase
+    .from("subscription_invoices")
+    .select("id")
+    .eq("school_id", schoolId)
+    .eq("term_id", term.id)
+    .maybeSingle();
+  if (existing) return;
+
+  await supabase.from("subscription_invoices").insert({
+    school_id: schoolId,
+    term_id: term.id,
+    amount_due: school.subscription_fee,
+  });
+}
+
 export async function fetchSchoolInvoices(schoolId: string): Promise<SubscriptionInvoice[]> {
   const { data, error } = await supabase
     .from("subscription_invoices")
@@ -33,6 +73,27 @@ export async function fetchSchoolInvoices(schoolId: string): Promise<Subscriptio
       created_at: row.created_at,
     };
   });
+}
+
+export interface SubscriptionPayment {
+  id: string;
+  amount: number;
+  status: string;
+  rrr: string | null;
+  created_at: string;
+}
+
+// Individual Remita payment attempts against one invoice -- the
+// invoice's amount_paid is just a running total; this is the actual
+// record of each attempt (including failed ones).
+export async function fetchInvoicePayments(invoiceId: string): Promise<SubscriptionPayment[]> {
+  const { data, error } = await supabase
+    .from("subscription_payment_transactions")
+    .select("id, amount, status, rrr, created_at")
+    .eq("invoice_id", invoiceId)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }
 
 // supabase.functions.invoke()'s error.message is a generic "Edge Function
