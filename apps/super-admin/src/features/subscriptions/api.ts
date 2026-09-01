@@ -219,3 +219,41 @@ export async function fetchAllCurrentInvoiceStatuses(): Promise<SubscriptionStat
   if (error) throw new Error(error.message);
   return data ?? [];
 }
+
+export interface RevenueSummary {
+  thisTerm: number;
+  thisYear: number;
+}
+
+// "This term" / "this year" are per-school, not a single global date range
+// -- each school runs its own academic_sessions/terms with their own
+// is_current flags, so a Jan-start school and a Sept-start school can be
+// in different terms at the same calendar moment. Three flat queries
+// (all terms, all current sessions, all invoices) grouped client-side --
+// same lightweight pattern as fetchSchools -- rather than N+1 per-school
+// lookups or guessing at PostgREST embed/FK names.
+export async function fetchRevenueSummary(): Promise<RevenueSummary> {
+  const [{ data: terms, error: termsError }, { data: sessions, error: sessionsError }, { data: invoices, error: invoicesError }] =
+    await Promise.all([
+      supabase.from("terms").select("id, session_id, is_current"),
+      supabase.from("academic_sessions").select("id").eq("is_current", true),
+      supabase.from("subscription_invoices").select("term_id, amount_paid"),
+    ]);
+  if (termsError) throw new Error(termsError.message);
+  if (sessionsError) throw new Error(sessionsError.message);
+  if (invoicesError) throw new Error(invoicesError.message);
+
+  const currentSessionIds = new Set((sessions ?? []).map((s) => s.id));
+  const termToSession = new Map((terms ?? []).map((t) => [t.id, t.session_id]));
+  const currentTermIds = new Set((terms ?? []).filter((t) => t.is_current).map((t) => t.id));
+
+  let thisTerm = 0;
+  let thisYear = 0;
+  for (const inv of invoices ?? []) {
+    if (currentTermIds.has(inv.term_id)) thisTerm += inv.amount_paid;
+    const sessionId = termToSession.get(inv.term_id);
+    if (sessionId && currentSessionIds.has(sessionId)) thisYear += inv.amount_paid;
+  }
+  return { thisTerm, thisYear };
+}
+

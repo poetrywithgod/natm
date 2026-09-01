@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Building2, Users, GraduationCap, ScrollText, AlertCircle } from "lucide-react";
+import { Building2, Users, GraduationCap, ScrollText, AlertCircle, Wallet, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
   BarChart,
@@ -18,7 +18,7 @@ import {
 } from "recharts";
 import { fetchSchools, type SchoolRow } from "../features/schools/api";
 import { fetchGlobalAuditLog, type AuditLogRow } from "../features/audit/api";
-import { fetchAllCurrentInvoiceStatuses, type SubscriptionStatusRow } from "../features/subscriptions/api";
+import { fetchAllCurrentInvoiceStatuses, fetchRevenueSummary, type SubscriptionStatusRow, type RevenueSummary } from "../features/subscriptions/api";
 import { fetchAllStaff, STAFF_ROLES, ROLE_LABELS, type StaffRow } from "../features/staff/api";
 
 // "Control room" palette pulled straight from index.css's @theme block --
@@ -59,7 +59,7 @@ function StatCard({
           <Icon size={16} className="text-amber-500" />
         </div>
       </div>
-      <p className="font-display text-3xl font-extrabold text-slate-100">{value}</p>
+      <p className="font-display text-2xl lg:text-3xl font-extrabold text-slate-100 truncate">{value}</p>
     </div>
   );
 }
@@ -78,6 +78,7 @@ export default function Dashboard() {
   const [staff, setStaff] = useState<StaffRow[]>([]);
   const [allActivity, setAllActivity] = useState<AuditLogRow[]>([]);
   const [invoiceStatuses, setInvoiceStatuses] = useState<SubscriptionStatusRow[]>([]);
+  const [revenue, setRevenue] = useState<RevenueSummary>({ thisTerm: 0, thisYear: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -85,12 +86,19 @@ export default function Dashboard() {
     // 500 rows is plenty of headroom for the 14-day activity trend below
     // without needing a dedicated aggregation function -- same
     // lightweight-client-side-grouping approach as fetchSchools.
-    Promise.all([fetchSchools(), fetchAllStaff(), fetchGlobalAuditLog(500), fetchAllCurrentInvoiceStatuses()])
-      .then(([s, st, activity, invoices]) => {
+    Promise.all([
+      fetchSchools(),
+      fetchAllStaff(),
+      fetchGlobalAuditLog(500),
+      fetchAllCurrentInvoiceStatuses(),
+      fetchRevenueSummary(),
+    ])
+      .then(([s, st, activity, invoices, rev]) => {
         setSchools(s);
         setStaff(st);
         setAllActivity(activity);
         setInvoiceStatuses(invoices);
+        setRevenue(rev);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load dashboard"))
       .finally(() => setLoading(false));
@@ -172,11 +180,13 @@ export default function Dashboard() {
         <p className="font-ui text-sm text-slate-400">Loading...</p>
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             <StatCard label="Schools" value={schools.length} icon={Building2} />
             <StatCard label="Active Schools" value={activeSchools} icon={Building2} />
             <StatCard label="Total Students" value={totalStudents.toLocaleString()} icon={GraduationCap} />
             <StatCard label="Total Staff" value={totalStaff.toLocaleString()} icon={Users} />
+            <StatCard label="Revenue This Term" value={`₦${revenue.thisTerm.toLocaleString()}`} icon={Wallet} />
+            <StatCard label="Revenue This Year" value={`₦${revenue.thisYear.toLocaleString()}`} icon={TrendingUp} />
           </div>
 
           {overdueCount > 0 && (
