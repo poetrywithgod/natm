@@ -1,9 +1,46 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Building2, Users, GraduationCap, ScrollText, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 import { fetchSchools, type SchoolRow } from "../features/schools/api";
 import { fetchGlobalAuditLog, type AuditLogRow } from "../features/audit/api";
-import { fetchAllCurrentInvoiceStatuses } from "../features/subscriptions/api";
+import { fetchAllCurrentInvoiceStatuses, type SubscriptionStatusRow } from "../features/subscriptions/api";
+import { fetchAllStaff, STAFF_ROLES, ROLE_LABELS, type StaffRow } from "../features/staff/api";
+
+// "Control room" palette pulled straight from index.css's @theme block --
+// kept here rather than reading CSS vars at runtime since Recharts wants
+// literal color strings, not var(--...) references, for fills/strokes.
+const COLORS = {
+  grid: "#1B2130",
+  axis: "#64748B",
+  bar: "#D9A441",
+  paid: "#22C55E",
+  outstanding: "#EF4444",
+  tooltipBg: "#131722",
+  tooltipBorder: "#2A3244",
+  pie: ["#D9A441", "#22C55E", "#A9B4C4", "#EF4444", "#F0CB82"],
+};
+
+const TOOLTIP_STYLE = {
+  background: COLORS.tooltipBg,
+  border: `1px solid ${COLORS.tooltipBorder}`,
+  fontSize: 12,
+  fontFamily: "IBM Plex Sans, sans-serif",
+};
 
 function StatCard({
   label,
@@ -27,19 +64,33 @@ function StatCard({
   );
 }
 
+function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+      <h2 className="font-display font-bold text-slate-100 mb-4">{title}</h2>
+      {children}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const [schools, setSchools] = useState<SchoolRow[]>([]);
-  const [recentActivity, setRecentActivity] = useState<AuditLogRow[]>([]);
-  const [overdueCount, setOverdueCount] = useState(0);
+  const [staff, setStaff] = useState<StaffRow[]>([]);
+  const [allActivity, setAllActivity] = useState<AuditLogRow[]>([]);
+  const [invoiceStatuses, setInvoiceStatuses] = useState<SubscriptionStatusRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([fetchSchools(), fetchGlobalAuditLog(8), fetchAllCurrentInvoiceStatuses()])
-      .then(([s, a, invoices]) => {
+    // 500 rows is plenty of headroom for the 14-day activity trend below
+    // without needing a dedicated aggregation function -- same
+    // lightweight-client-side-grouping approach as fetchSchools.
+    Promise.all([fetchSchools(), fetchAllStaff(), fetchGlobalAuditLog(500), fetchAllCurrentInvoiceStatuses()])
+      .then(([s, st, activity, invoices]) => {
         setSchools(s);
-        setRecentActivity(a);
-        setOverdueCount(invoices.filter((inv) => inv.amount_due - inv.amount_paid > 0.01).length);
+        setStaff(st);
+        setAllActivity(activity);
+        setInvoiceStatuses(invoices);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load dashboard"))
       .finally(() => setLoading(false));
@@ -48,6 +99,65 @@ export default function Dashboard() {
   const activeSchools = schools.filter((s) => s.is_active).length;
   const totalStudents = schools.reduce((sum, s) => sum + s.student_count, 0);
   const totalStaff = schools.reduce((sum, s) => sum + s.staff_count, 0);
+  const overdueCount = invoiceStatuses.filter((inv) => inv.amount_due - inv.amount_paid > 0.01).length;
+  const recentActivity = allActivity.slice(0, 8);
+
+  const studentsBySchool = useMemo(
+    () =>
+      [...schools]
+        .sort((a, b) => b.student_count - a.student_count)
+        .map((s) => ({ name: s.name, students: s.student_count })),
+    [schools]
+  );
+
+  const staffByRole = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of staff) {
+      if (!s.is_active) continue;
+      counts.set(s.role, (counts.get(s.role) ?? 0) + 1);
+    }
+    return STAFF_ROLES.map((r) => ({ name: ROLE_LABELS[r], value: counts.get(r) ?? 0 })).filter((d) => d.value > 0);
+  }, [staff]);
+
+  const financialModelSplit = useMemo(() => {
+    const fees = schools.filter((s) => s.financial_model === "fees").length;
+    const partnership = schools.filter((s) => s.financial_model === "partnership").length;
+    return [
+      { name: "Fees", value: fees },
+      { name: "Partnership", value: partnership },
+    ].filter((d) => d.value > 0);
+  }, [schools]);
+
+  const paymentsBySchool = useMemo(() => {
+    const bySchool = new Map<string, { paid: number; outstanding: number }>();
+    for (const inv of invoiceStatuses) {
+      const cur = bySchool.get(inv.school_id) ?? { paid: 0, outstanding: 0 };
+      cur.paid += inv.amount_paid;
+      cur.outstanding += Math.max(0, inv.amount_due - inv.amount_paid);
+      bySchool.set(inv.school_id, cur);
+    }
+    const nameById = new Map(schools.map((s) => [s.id, s.name]));
+    return [...bySchool.entries()]
+      .map(([schoolId, v]) => ({ name: nameById.get(schoolId) ?? "Unknown", ...v }))
+      .filter((d) => d.paid > 0 || d.outstanding > 0);
+  }, [invoiceStatuses, schools]);
+
+  const activityTrend = useMemo(() => {
+    const days: { date: string; label: string; count: number }[] = [];
+    const today = new Date();
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      days.push({ date: key, label: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }), count: 0 });
+    }
+    const byDate = new Map(days.map((d) => [d.date, d]));
+    for (const a of allActivity) {
+      const bucket = byDate.get(a.created_at.slice(0, 10));
+      if (bucket) bucket.count += 1;
+    }
+    return days;
+  }, [allActivity]);
 
   return (
     <div className="p-6 space-y-6 max-w-6xl">
@@ -80,6 +190,135 @@ export default function Dashboard() {
                 review under each school's page.
               </p>
             </Link>
+          )}
+
+          {schools.length === 0 ? (
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center">
+              <Building2 className="mx-auto text-slate-600 mb-2" size={28} />
+              <p className="font-ui text-sm text-slate-400">
+                Charts will appear here once there's at least one school on the platform.
+              </p>
+            </div>
+          ) : (
+            <>
+              <ChartCard title="Platform Activity — last 14 days">
+                <ResponsiveContainer width="100%" height={220}>
+                  <LineChart data={activityTrend}>
+                    <CartesianGrid stroke={COLORS.grid} strokeDasharray="3 3" />
+                    <XAxis dataKey="label" tick={{ fill: COLORS.axis, fontSize: 11 }} />
+                    <YAxis allowDecimals={false} tick={{ fill: COLORS.axis, fontSize: 11 }} />
+                    <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={{ color: "#E8EAF0" }} />
+                    <Line
+                      type="monotone"
+                      dataKey="count"
+                      name="Actions logged"
+                      stroke={COLORS.bar}
+                      strokeWidth={2}
+                      dot={{ r: 3, fill: COLORS.bar }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <div className="grid lg:grid-cols-2 gap-4">
+                <ChartCard title="Students by School">
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={studentsBySchool} margin={{ bottom: 24 }}>
+                      <CartesianGrid stroke={COLORS.grid} strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fill: COLORS.axis, fontSize: 11 }}
+                        angle={-20}
+                        textAnchor="end"
+                        interval={0}
+                        height={50}
+                      />
+                      <YAxis allowDecimals={false} tick={{ fill: COLORS.axis, fontSize: 11 }} />
+                      <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={{ color: "#E8EAF0" }} />
+                      <Bar dataKey="students" fill={COLORS.bar} radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartCard>
+
+                <ChartCard title="Staff by Role">
+                  {staffByRole.length === 0 ? (
+                    <p className="font-ui text-xs text-slate-400">No active staff yet.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={260}>
+                      <PieChart>
+                        <Pie data={staffByRole} dataKey="value" nameKey="name" innerRadius={50} outerRadius={85} paddingAngle={2}>
+                          {staffByRole.map((_, i) => (
+                            <Cell key={i} fill={COLORS.pie[i % COLORS.pie.length]} />
+                          ))}
+                        </Pie>
+                        <Legend wrapperStyle={{ fontSize: 12, fontFamily: "IBM Plex Sans, sans-serif" }} />
+                        <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={{ color: "#E8EAF0" }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                </ChartCard>
+
+                <ChartCard title="Schools by Financial Model">
+                  {financialModelSplit.length === 0 ? (
+                    <p className="font-ui text-xs text-slate-400">No schools yet.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={260}>
+                      <PieChart>
+                        <Pie
+                          data={financialModelSplit}
+                          dataKey="value"
+                          nameKey="name"
+                          innerRadius={50}
+                          outerRadius={85}
+                          paddingAngle={2}
+                        >
+                          {financialModelSplit.map((_, i) => (
+                            <Cell key={i} fill={COLORS.pie[i % COLORS.pie.length]} />
+                          ))}
+                        </Pie>
+                        <Legend wrapperStyle={{ fontSize: 12, fontFamily: "IBM Plex Sans, sans-serif" }} />
+                        <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={{ color: "#E8EAF0" }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                </ChartCard>
+
+                <ChartCard title="Subscription Payments by School">
+                  {paymentsBySchool.length === 0 ? (
+                    <p className="font-ui text-xs text-slate-400">No invoices yet.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={260}>
+                      <BarChart data={paymentsBySchool} margin={{ bottom: 24 }}>
+                        <CartesianGrid stroke={COLORS.grid} strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="name"
+                          tick={{ fill: COLORS.axis, fontSize: 11 }}
+                          angle={-20}
+                          textAnchor="end"
+                          interval={0}
+                          height={50}
+                        />
+                        <YAxis tick={{ fill: COLORS.axis, fontSize: 11 }} tickFormatter={(v) => `₦${v.toLocaleString()}`} />
+                        <Tooltip
+                          contentStyle={TOOLTIP_STYLE}
+                          labelStyle={{ color: "#E8EAF0" }}
+                          formatter={(v) => `₦${Number(v).toLocaleString()}`}
+                        />
+                        <Legend wrapperStyle={{ fontSize: 12, fontFamily: "IBM Plex Sans, sans-serif" }} />
+                        <Bar dataKey="paid" name="Paid" stackId="pay" fill={COLORS.paid} radius={[0, 0, 0, 0]} />
+                        <Bar
+                          dataKey="outstanding"
+                          name="Outstanding"
+                          stackId="pay"
+                          fill={COLORS.outstanding}
+                          radius={[4, 4, 0, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </ChartCard>
+              </div>
+            </>
           )}
 
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">

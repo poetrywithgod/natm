@@ -9,17 +9,11 @@ import {
   deleteStaffMember,
   DeactivationBlockedError,
   STAFF_ROLES,
+  ROLE_LABELS,
   type StaffRow,
   type StaffRole,
 } from "../features/staff/api";
 import { fetchSchools, type SchoolRow } from "../features/schools/api";
-
-const ROLE_LABELS: Record<StaffRole, string> = {
-  school_admin: "School Admin",
-  class_teacher: "Class Teacher",
-  shadow_teacher: "Shadow Teacher",
-  finance_manager: "Finance Manager",
-};
 
 export default function Staff() {
   const [staff, setStaff] = useState<StaffRow[]>([]);

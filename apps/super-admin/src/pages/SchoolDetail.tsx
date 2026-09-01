@@ -16,6 +16,7 @@ import {
   deleteStaffMember,
   DeactivationBlockedError,
   STAFF_ROLES,
+  ROLE_LABELS,
   type StaffMember,
   type StaffRole,
 } from "../features/staff/api";
@@ -31,13 +32,6 @@ import {
   type SubscriptionInvoice,
   type SubscriptionPayment,
 } from "../features/subscriptions/api";
-
-const ROLE_LABELS: Record<StaffRole, string> = {
-  school_admin: "School Admin",
-  class_teacher: "Class Teacher",
-  shadow_teacher: "Shadow Teacher",
-  finance_manager: "Finance Manager",
-};
 
 export default function SchoolDetail() {
   const { id } = useParams<{ id: string }>();

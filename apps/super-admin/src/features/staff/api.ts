@@ -4,6 +4,13 @@ const ALL_STAFF_ROLES = ["school_admin", "class_teacher", "shadow_teacher", "fin
 export type StaffRole = (typeof ALL_STAFF_ROLES)[number];
 export const STAFF_ROLES: readonly StaffRole[] = ALL_STAFF_ROLES;
 
+export const ROLE_LABELS: Record<StaffRole, string> = {
+  school_admin: "School Admin",
+  class_teacher: "Class Teacher",
+  shadow_teacher: "Shadow Teacher",
+  finance_manager: "Finance Manager",
+};
+
 export interface StaffMember {
   id: string;
   full_name: string;
