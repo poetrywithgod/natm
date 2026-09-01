@@ -48,8 +48,9 @@ Deno.serve(async (req) => {
       .eq("id", user.id)
       .single();
 
-    if (profileError || !callerProfile || callerProfile.role !== "school_admin") {
-      return new Response(JSON.stringify({ error: "Forbidden — school_admin only" }), {
+    const isSuperAdmin = callerProfile?.role === "super_admin";
+    if (profileError || !callerProfile || (callerProfile.role !== "school_admin" && !isSuperAdmin)) {
+      return new Response(JSON.stringify({ error: "Forbidden — school_admin or super_admin only" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -80,7 +81,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (target.school_id !== callerProfile.school_id) {
+    // Super admins can act on staff at any school; school admins are still
+    // confined to their own.
+    if (!isSuperAdmin && target.school_id !== callerProfile.school_id) {
       return new Response(JSON.stringify({ error: "Forbidden — different school" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -148,7 +151,7 @@ Deno.serve(async (req) => {
       }
 
       await adminClient.from("audit_logs").insert({
-        school_id: callerProfile.school_id,
+        school_id: target.school_id,
         actor_id: user.id,
         action: "staff.deactivated",
         entity_type: "staff",
@@ -178,7 +181,7 @@ Deno.serve(async (req) => {
       }
 
       await adminClient.from("audit_logs").insert({
-        school_id: callerProfile.school_id,
+        school_id: target.school_id,
         actor_id: user.id,
         action: "staff.reactivated",
         entity_type: "staff",

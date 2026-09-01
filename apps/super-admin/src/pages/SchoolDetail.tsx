@@ -3,14 +3,22 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Building2, Users, GraduationCap, Trash2, UserPlus, Pencil, ChevronDown, ChevronRight } from "lucide-react";
 import {
   fetchSchool,
-  fetchSchoolAdmins,
   updateSchoolDetails,
   setSchoolActive,
-  inviteSchoolAdmin,
   deleteSchool,
   type SchoolRow,
-  type SchoolAdminRow,
 } from "../features/schools/api";
+import {
+  fetchStaffForSchool,
+  inviteStaff,
+  deactivateStaff,
+  reactivateStaff,
+  deleteStaffMember,
+  DeactivationBlockedError,
+  STAFF_ROLES,
+  type StaffMember,
+  type StaffRole,
+} from "../features/staff/api";
 import {
   fetchFeeSchedule,
   setTermFee,
@@ -24,11 +32,18 @@ import {
   type SubscriptionPayment,
 } from "../features/subscriptions/api";
 
+const ROLE_LABELS: Record<StaffRole, string> = {
+  school_admin: "School Admin",
+  class_teacher: "Class Teacher",
+  shadow_teacher: "Shadow Teacher",
+  finance_manager: "Finance Manager",
+};
+
 export default function SchoolDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [school, setSchool] = useState<SchoolRow | null>(null);
-  const [admins, setAdmins] = useState<SchoolAdminRow[]>([]);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,8 +56,13 @@ export default function SchoolDetail() {
   const [showInvite, setShowInvite] = useState(false);
   const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<StaffRole>("class_teacher");
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
+
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [blockedReasons, setBlockedReasons] = useState<{ id: string; reasons: string[] } | null>(null);
+  const [staffNotice, setStaffNotice] = useState<string | null>(null);
 
   const [feeSchedule, setFeeSchedule] = useState<TermFee[]>([]);
   const [invoices, setInvoices] = useState<SubscriptionInvoice[]>([]);
@@ -53,13 +73,13 @@ export default function SchoolDetail() {
     if (!id) return;
     setLoading(true);
     try {
-      const [s, a] = await Promise.all([fetchSchool(id), fetchSchoolAdmins(id)]);
+      const [s, st] = await Promise.all([fetchSchool(id), fetchStaffForSchool(id)]);
       if (!s) {
         setError("School not found.");
         return;
       }
       setSchool(s);
-      setAdmins(a);
+      setStaff(st);
       setName(s.name);
       setContactEmail(s.contact_email ?? "");
       setFeeSchedule(await fetchFeeSchedule(id));
@@ -136,20 +156,72 @@ export default function SchoolDetail() {
     }
   }
 
-  async function handleInviteAdmin() {
+  async function handleInviteStaff() {
     if (!id || !inviteName.trim() || !inviteEmail.trim()) return;
     setInviteSubmitting(true);
     setInviteError(null);
     try {
-      await inviteSchoolAdmin(id, inviteName.trim(), inviteEmail.trim());
+      await inviteStaff(id, inviteName.trim(), inviteEmail.trim(), inviteRole);
       setShowInvite(false);
       setInviteName("");
       setInviteEmail("");
+      setInviteRole("class_teacher");
       await load();
     } catch (e) {
-      setInviteError(e instanceof Error ? e.message : "Failed to invite School Admin");
+      setInviteError(e instanceof Error ? e.message : "Failed to invite staff member");
     } finally {
       setInviteSubmitting(false);
+    }
+  }
+
+  async function handleDeactivateStaff(staffId: string) {
+    setProcessingId(staffId);
+    setError(null);
+    setBlockedReasons(null);
+    setStaffNotice(null);
+    try {
+      await deactivateStaff(staffId);
+      setStaffNotice("Staff member deactivated.");
+      await load();
+    } catch (e) {
+      if (e instanceof DeactivationBlockedError) {
+        setBlockedReasons({ id: staffId, reasons: e.reasons });
+      } else {
+        setError(e instanceof Error ? e.message : "Failed to deactivate staff member");
+      }
+    } finally {
+      setProcessingId(null);
+    }
+  }
+
+  async function handleReactivateStaff(staffId: string) {
+    setProcessingId(staffId);
+    setError(null);
+    setStaffNotice(null);
+    try {
+      await reactivateStaff(staffId);
+      setStaffNotice("Staff member reactivated.");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to reactivate staff member");
+    } finally {
+      setProcessingId(null);
+    }
+  }
+
+  async function handleDeleteStaff(staffId: string, fullName: string) {
+    if (!window.confirm(`Permanently delete ${fullName}? This cannot be undone.`)) return;
+    setProcessingId(staffId);
+    setError(null);
+    setStaffNotice(null);
+    try {
+      await deleteStaffMember(staffId);
+      setStaffNotice("Staff member deleted.");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to delete staff member");
+    } finally {
+      setProcessingId(null);
     }
   }
 
@@ -289,28 +361,75 @@ export default function SchoolDetail() {
 
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="font-display font-bold text-slate-100">School Admins</h2>
+          <h2 className="font-display font-bold text-slate-100">Staff</h2>
           <button
             onClick={() => setShowInvite(true)}
             className="flex items-center gap-1 font-ui text-xs text-amber-400 hover:underline"
           >
-            <UserPlus size={14} /> Invite Admin
+            <UserPlus size={14} /> Invite Staff
           </button>
         </div>
-        {admins.length === 0 ? (
-          <p className="font-ui text-xs text-slate-400">No School Admin yet — invite one to get this school started.</p>
+
+        {staffNotice && <p className="font-ui text-xs text-success">{staffNotice}</p>}
+
+        {staff.length === 0 ? (
+          <p className="font-ui text-xs text-slate-400">
+            No staff yet — invite a School Admin or teacher to get this school started.
+          </p>
         ) : (
           <div className="space-y-2">
-            {admins.map((a) => (
-              <div key={a.id} className="flex items-center justify-between bg-slate-800 rounded-lg p-3">
-                <span className="font-body text-sm text-slate-100">{a.full_name}</span>
-                <span
-                  className={`font-ui text-xs px-2 py-0.5 rounded-full ${
-                    a.is_active ? "bg-success/10 text-success" : "bg-slate-700 text-slate-400"
-                  }`}
-                >
-                  {a.is_active ? "Active" : "Deactivated"}
-                </span>
+            {staff.map((s) => (
+              <div key={s.id} className="bg-slate-800 rounded-lg p-3 space-y-2">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-body text-sm text-slate-100">{s.full_name}</span>
+                    <span className="font-ui text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400">
+                      {ROLE_LABELS[s.role]}
+                    </span>
+                    {!s.is_active && (
+                      <span className="font-ui text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400">
+                        Deactivated
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {s.is_active ? (
+                      <button
+                        onClick={() => handleDeactivateStaff(s.id)}
+                        disabled={processingId === s.id}
+                        className="px-3 py-1.5 rounded-lg bg-error/10 text-error font-ui text-xs disabled:opacity-50"
+                      >
+                        {processingId === s.id ? "..." : "Deactivate"}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleReactivateStaff(s.id)}
+                        disabled={processingId === s.id}
+                        className="px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-ui text-xs font-semibold disabled:opacity-50"
+                      >
+                        {processingId === s.id ? "..." : "Reactivate"}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDeleteStaff(s.id, s.full_name)}
+                      disabled={processingId === s.id}
+                      className="px-3 py-1.5 rounded-lg border border-error/40 text-error font-ui text-xs disabled:opacity-50"
+                    >
+                      {processingId === s.id ? "..." : "Delete"}
+                    </button>
+                  </div>
+                </div>
+
+                {blockedReasons?.id === s.id && (
+                  <div className="bg-error/10 border border-error/30 rounded-lg p-2 space-y-1">
+                    <p className="font-ui text-xs text-error font-semibold">Can't deactivate yet:</p>
+                    {blockedReasons.reasons.map((reason, i) => (
+                      <p key={i} className="font-ui text-xs text-error">
+                        • {reason}
+                      </p>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -318,6 +437,17 @@ export default function SchoolDetail() {
 
         {showInvite && (
           <div className="pt-3 border-t border-slate-800 space-y-3">
+            <select
+              value={inviteRole}
+              onChange={(e) => setInviteRole(e.target.value as StaffRole)}
+              className="w-full p-2 rounded bg-slate-800 border border-slate-700 text-slate-100 font-body text-sm"
+            >
+              {STAFF_ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_LABELS[r]}
+                </option>
+              ))}
+            </select>
             <input
               placeholder="Full name"
               value={inviteName}
@@ -341,7 +471,7 @@ export default function SchoolDetail() {
                 Cancel
               </button>
               <button
-                onClick={handleInviteAdmin}
+                onClick={handleInviteStaff}
                 disabled={inviteSubmitting}
                 className="flex-1 px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-ui text-sm font-semibold disabled:opacity-60"
               >

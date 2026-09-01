@@ -13,6 +13,7 @@ const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Schools = lazy(() => import("./pages/Schools"));
 const SchoolDetail = lazy(() => import("./pages/SchoolDetail"));
+const Staff = lazy(() => import("./pages/Staff"));
 const AuditLog = lazy(() => import("./pages/AuditLog"));
 const Curriculum = lazy(() => import("./pages/Curriculum"));
 
@@ -34,6 +35,7 @@ function AppRoutes() {
           <Route index element={<Dashboard />} />
           <Route path="schools" element={<Schools />} />
           <Route path="schools/:id" element={<SchoolDetail />} />
+          <Route path="staff" element={<Staff />} />
           <Route path="curriculum" element={<Curriculum />} />
           <Route path="audit-log" element={<AuditLog />} />
         </Route>

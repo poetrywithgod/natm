@@ -79,24 +79,6 @@ export async function fetchSchool(schoolId: string): Promise<SchoolRow | null> {
   return { ...data, student_count: studentCount ?? 0, staff_count: staffCount ?? 0 };
 }
 
-export interface SchoolAdminRow {
-  id: string;
-  full_name: string;
-  is_active: boolean;
-  created_at: string;
-}
-
-export async function fetchSchoolAdmins(schoolId: string): Promise<SchoolAdminRow[]> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, full_name, is_active, created_at")
-    .eq("school_id", schoolId)
-    .eq("role", "school_admin")
-    .order("created_at", { ascending: false });
-  if (error) throw new Error(error.message);
-  return data ?? [];
-}
-
 export async function updateSchoolDetails(
   schoolId: string,
   updates: { name?: string; contact_email?: string | null }
@@ -133,14 +115,6 @@ export async function createSchool(
   if (error) throw await parseFunctionError(error, "Failed to create school");
   if (data?.error) throw new Error(data.error);
   return data as CreateSchoolResult;
-}
-
-export async function inviteSchoolAdmin(schoolId: string, fullName: string, email: string): Promise<void> {
-  const { data, error } = await supabase.functions.invoke("create-school-admin", {
-    body: { school_id: schoolId, full_name: fullName, email },
-  });
-  if (error) throw await parseFunctionError(error, "Failed to invite School Admin");
-  if (data?.error) throw new Error(data.error);
 }
 
 export async function deleteSchool(schoolId: string): Promise<void> {

@@ -5,6 +5,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Despite the function's name (kept as-is to avoid a redeploy/rename dance),
+// this now invites any staff role on Super Admin's behalf, not just
+// School Admins -- role defaults to "school_admin" so the existing
+// SchoolDetail "Invite Admin" call keeps working unchanged.
+const VALID_ROLES = ["school_admin", "class_teacher", "shadow_teacher", "finance_manager"] as const;
+type StaffRole = (typeof VALID_ROLES)[number];
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -51,16 +58,25 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { school_id, full_name, email } = body as {
+    const { school_id, full_name, email, role } = body as {
       school_id?: string;
       full_name?: string;
       email?: string;
+      role?: StaffRole;
     };
     if (!school_id || !full_name || !email) {
       return new Response(JSON.stringify({ error: "school_id, full_name, and email are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    const resolvedRole: StaffRole = role ?? "school_admin";
+    if (!VALID_ROLES.includes(resolvedRole)) {
+      return new Response(
+        JSON.stringify({ error: `role must be one of: ${VALID_ROLES.join(", ")}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
@@ -94,7 +110,7 @@ Deno.serve(async (req) => {
     }
 
     const { error: upsertError } = await adminClient.from("profiles").upsert(
-      { id: invited.user.id, school_id, role: "school_admin", full_name },
+      { id: invited.user.id, school_id, role: resolvedRole, full_name },
       { onConflict: "id" }
     );
     if (upsertError) {
@@ -107,10 +123,10 @@ Deno.serve(async (req) => {
     await adminClient.from("audit_logs").insert({
       school_id,
       actor_id: user.id,
-      action: "school_admin.invited",
+      action: `${resolvedRole}.invited`,
       entity_type: "staff",
       entity_id: invited.user.id,
-      details: { full_name, email },
+      details: { full_name, email, role: resolvedRole },
     });
 
     return new Response(JSON.stringify({ success: true, id: invited.user.id }), {
