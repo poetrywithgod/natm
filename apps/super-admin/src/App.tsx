@@ -17,6 +17,7 @@ const Staff = lazy(() => import("./pages/Staff"));
 const Billing = lazy(() => import("./pages/Billing"));
 const Integrations = lazy(() => import("./pages/Integrations"));
 const AcademicTerms = lazy(() => import("./pages/AcademicTerms"));
+const Settings = lazy(() => import("./pages/Settings"));
 const Profile = lazy(() => import("./pages/Profile"));
 const AuditLog = lazy(() => import("./pages/AuditLog"));
 const Curriculum = lazy(() => import("./pages/Curriculum"));
@@ -43,6 +44,7 @@ function AppRoutes() {
           <Route path="billing" element={<Billing />} />
           <Route path="integrations" element={<Integrations />} />
           <Route path="academic-terms" element={<AcademicTerms />} />
+          <Route path="settings" element={<Settings />} />
           <Route path="curriculum" element={<Curriculum />} />
           <Route path="audit-log" element={<AuditLog />} />
           <Route path="profile" element={<Profile />} />

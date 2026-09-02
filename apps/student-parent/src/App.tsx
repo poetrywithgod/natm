@@ -9,6 +9,7 @@ import { ParentOnboardingGate } from "./guards/ParentOnboardingGate";
 import StudentLayout from "./layouts/StudentLayout";
 import ParentLayout from "./layouts/ParentLayout";
 import PageSkeleton from "./components/PageSkeleton";
+import MaintenanceBanner from "./components/MaintenanceBanner";
 
 const Login = lazy(() => import("./pages/Login"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
@@ -34,6 +35,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <ToastProvider>
+          <MaintenanceBanner />
           <Suspense fallback={<PageSkeleton />}>
             <Routes>
               <Route

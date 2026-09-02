@@ -95,6 +95,29 @@ Deno.serve(async (req) => {
       details: { name: school.name },
     });
 
+    // Pre-fill the new school's Term 1/2/3 rate card from Platform
+    // Settings, if a default has been set -- saves Super Admin from
+    // manually re-entering the same numbers in SchoolDetail right after.
+    // Any term left null in platform_settings is simply skipped, not
+    // defaulted to 0 -- a missing default isn't the same thing as a free
+    // term.
+    const { data: settings } = await adminClient
+      .from("platform_settings")
+      .select("default_term_1_fee, default_term_2_fee, default_term_3_fee")
+      .eq("id", "default")
+      .maybeSingle();
+    if (settings) {
+      const defaults: { term_number: number; amount: number }[] = [];
+      if (settings.default_term_1_fee != null) defaults.push({ term_number: 1, amount: settings.default_term_1_fee });
+      if (settings.default_term_2_fee != null) defaults.push({ term_number: 2, amount: settings.default_term_2_fee });
+      if (settings.default_term_3_fee != null) defaults.push({ term_number: 3, amount: settings.default_term_3_fee });
+      if (defaults.length > 0) {
+        await adminClient
+          .from("subscription_fee_schedule")
+          .insert(defaults.map((d) => ({ school_id: school.id, term_number: d.term_number, amount: d.amount })));
+      }
+    }
+
     let adminInvite: { id: string; email: string } | null = null;
     let adminInviteError: string | null = null;
 

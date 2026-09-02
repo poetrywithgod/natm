@@ -1407,6 +1407,36 @@ export type Database = {
           },
         ]
       }
+      platform_settings: {
+        Row: {
+          id: string
+          default_term_1_fee: number | null
+          default_term_2_fee: number | null
+          default_term_3_fee: number | null
+          maintenance_mode: boolean
+          maintenance_message: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          default_term_1_fee?: number | null
+          default_term_2_fee?: number | null
+          default_term_3_fee?: number | null
+          maintenance_mode?: boolean
+          maintenance_message?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          default_term_1_fee?: number | null
+          default_term_2_fee?: number | null
+          default_term_3_fee?: number | null
+          maintenance_mode?: boolean
+          maintenance_message?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string | null

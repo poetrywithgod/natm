@@ -9,6 +9,7 @@ import ClassTeacherLayout from "./layouts/ClassTeacherLayout";
 import ShadowTeacherLayout from "./layouts/ShadowTeacherLayout";
 import FinanceManagerLayout from "./layouts/FinanceManagerLayout";
 import PageSkeleton from "./components/PageSkeleton";
+import MaintenanceBanner from "./components/MaintenanceBanner";
 
 // Every page is lazy-loaded so a heavy dependency in one page (e.g.
 // pdfjs-dist in Lessons) never bloats the bundle every other page has to
@@ -160,6 +161,7 @@ export default function App() {
     <AuthProvider>
       <ToastProvider>
         <BrowserRouter>
+          <MaintenanceBanner />
           <AppRoutes />
         </BrowserRouter>
       </ToastProvider>
