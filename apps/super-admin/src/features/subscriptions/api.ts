@@ -144,6 +144,30 @@ export async function deleteInvoice(invoiceId: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+function mapInvoiceRow(row: {
+  id: string;
+  school_id: string;
+  term_id: string;
+  amount_due: number;
+  amount_paid: number;
+  due_date: string | null;
+  created_at: string;
+  terms: unknown;
+}): SubscriptionInvoice {
+  const term = row.terms as unknown as { term_number: number } | null;
+  return {
+    id: row.id,
+    school_id: row.school_id,
+    term_id: row.term_id,
+    term_number: term?.term_number ?? 0,
+    term_label: term ? `Term ${term.term_number}` : "Unknown term",
+    amount_due: row.amount_due,
+    amount_paid: row.amount_paid,
+    due_date: row.due_date,
+    created_at: row.created_at,
+  };
+}
+
 export async function fetchSchoolInvoices(schoolId: string): Promise<SubscriptionInvoice[]> {
   const { data, error } = await supabase
     .from("subscription_invoices")
@@ -151,20 +175,17 @@ export async function fetchSchoolInvoices(schoolId: string): Promise<Subscriptio
     .eq("school_id", schoolId)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return (data ?? []).map((row) => {
-    const term = row.terms as unknown as { term_number: number } | null;
-    return {
-      id: row.id,
-      school_id: row.school_id,
-      term_id: row.term_id,
-      term_number: term?.term_number ?? 0,
-      term_label: term ? `Term ${term.term_number}` : "Unknown term",
-      amount_due: row.amount_due,
-      amount_paid: row.amount_paid,
-      due_date: row.due_date,
-      created_at: row.created_at,
-    };
-  });
+  return (data ?? []).map(mapInvoiceRow);
+}
+
+// Every invoice across every school -- used by the global Billing page.
+export async function fetchAllInvoices(): Promise<SubscriptionInvoice[]> {
+  const { data, error } = await supabase
+    .from("subscription_invoices")
+    .select("id, school_id, term_id, amount_due, amount_paid, due_date, created_at, terms(term_number)")
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(mapInvoiceRow);
 }
 
 export async function fetchInvoicePayments(invoiceId: string): Promise<SubscriptionPayment[]> {
