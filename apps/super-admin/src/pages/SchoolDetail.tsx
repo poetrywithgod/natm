@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Building2, Users, GraduationCap, Trash2, UserPlus, Pencil } from "lucide-react";
+import { ArrowLeft, Building2, Users, GraduationCap, Trash2, UserPlus, Pencil, ExternalLink } from "lucide-react";
 import {
   fetchSchool,
   updateSchoolDetails,
@@ -14,6 +14,7 @@ import {
   deactivateStaff,
   reactivateStaff,
   deleteStaffMember,
+  impersonateStaff,
   DeactivationBlockedError,
   STAFF_ROLES,
   ROLE_LABELS,
@@ -216,6 +217,20 @@ export default function SchoolDetail() {
     }
   }
 
+  async function handleImpersonateStaff(staffId: string) {
+    setProcessingId(staffId);
+    setError(null);
+    setStaffNotice(null);
+    try {
+      const link = await impersonateStaff(staffId);
+      window.open(link, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to generate a sign-in link");
+    } finally {
+      setProcessingId(null);
+    }
+  }
+
   async function handleDelete() {
     if (!id || !school) return;
     if (!window.confirm(`Permanently delete "${school.name}"? This cannot be undone.`)) return;
@@ -384,6 +399,17 @@ export default function SchoolDetail() {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
+                    {s.is_active && (
+                      <button
+                        onClick={() => handleImpersonateStaff(s.id)}
+                        disabled={processingId === s.id}
+                        title="Opens a new tab signed in as this staff member"
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-700 text-slate-200 font-ui text-xs disabled:opacity-50 hover:bg-slate-600"
+                      >
+                        <ExternalLink size={12} />
+                        {processingId === s.id ? "..." : "View as"}
+                      </button>
+                    )}
                     {s.is_active ? (
                       <button
                         onClick={() => handleDeactivateStaff(s.id)}

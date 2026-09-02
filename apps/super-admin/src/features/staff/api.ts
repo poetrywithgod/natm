@@ -136,3 +136,18 @@ export async function deleteStaffMember(staffId: string): Promise<void> {
   if (error) throw await parseFunctionError(error, "Failed to delete staff member");
   if (data?.error) throw new Error(data.error);
 }
+
+// Generates a real, single-use Supabase magic-link sign-in as the target
+// staff member, via a super_admin-only Edge Function. Returns the link to
+// open (in a new tab, left to the caller) rather than doing the redirect
+// itself, so the Super Admin's own session/tab is never touched. Never
+// stored or displayed as text -- open it and let it consume itself.
+export async function impersonateStaff(staffId: string): Promise<string> {
+  const { data, error } = await supabase.functions.invoke("impersonate-staff", {
+    body: { staff_id: staffId },
+  });
+  if (error) throw await parseFunctionError(error, "Failed to generate a sign-in link");
+  if (data?.error) throw new Error(data.error);
+  if (!data?.action_link) throw new Error("No sign-in link was returned");
+  return data.action_link as string;
+}

@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Users, Search, UserPlus } from "lucide-react";
+import { Users, Search, UserPlus, ExternalLink } from "lucide-react";
 import {
   fetchAllStaff,
   inviteStaff,
   deactivateStaff,
   reactivateStaff,
   deleteStaffMember,
+  impersonateStaff,
   DeactivationBlockedError,
   STAFF_ROLES,
   ROLE_LABELS,
@@ -110,6 +111,20 @@ export default function Staff() {
     }
   }
 
+  async function handleImpersonate(staffId: string) {
+    setProcessingId(staffId);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const link = await impersonateStaff(staffId);
+      window.open(link, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to generate a sign-in link");
+    } finally {
+      setProcessingId(null);
+    }
+  }
+
   return (
     <div className="p-6 space-y-6 max-w-6xl">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -201,6 +216,17 @@ export default function Staff() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {member.is_active && (
+                    <button
+                      onClick={() => handleImpersonate(member.id)}
+                      disabled={processingId === member.id}
+                      title="Opens a new tab signed in as this staff member"
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 text-slate-200 font-ui text-xs disabled:opacity-50 hover:bg-slate-700"
+                    >
+                      <ExternalLink size={12} />
+                      {processingId === member.id ? "..." : "View as"}
+                    </button>
+                  )}
                   {member.is_active ? (
                     <button
                       onClick={() => handleDeactivate(member.id)}
