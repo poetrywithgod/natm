@@ -16,6 +16,7 @@ const SchoolDetail = lazy(() => import("./pages/SchoolDetail"));
 const Staff = lazy(() => import("./pages/Staff"));
 const Billing = lazy(() => import("./pages/Billing"));
 const Integrations = lazy(() => import("./pages/Integrations"));
+const AcademicTerms = lazy(() => import("./pages/AcademicTerms"));
 const Profile = lazy(() => import("./pages/Profile"));
 const AuditLog = lazy(() => import("./pages/AuditLog"));
 const Curriculum = lazy(() => import("./pages/Curriculum"));
@@ -41,6 +42,7 @@ function AppRoutes() {
           <Route path="staff" element={<Staff />} />
           <Route path="billing" element={<Billing />} />
           <Route path="integrations" element={<Integrations />} />
+          <Route path="academic-terms" element={<AcademicTerms />} />
           <Route path="curriculum" element={<Curriculum />} />
           <Route path="audit-log" element={<AuditLog />} />
           <Route path="profile" element={<Profile />} />
