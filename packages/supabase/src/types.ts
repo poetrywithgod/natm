@@ -2412,6 +2412,33 @@ export type Database = {
           },
         ]
       }
+      system_integrations: {
+        Row: {
+          id: string
+          label: string
+          status: string
+          notes: string | null
+          last_checked_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          label: string
+          status?: string
+          notes?: string | null
+          last_checked_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          label?: string
+          status?: string
+          notes?: string | null
+          last_checked_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       terms: {
         Row: {
           created_at: string

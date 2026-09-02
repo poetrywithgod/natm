@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import { LayoutDashboard, Building2, ScrollText, ShieldCheck, ChevronLeft, ChevronRight, LogOut, BookOpen, Users, UserCircle, Receipt } from "lucide-react";
+import { LayoutDashboard, Building2, ScrollText, ShieldCheck, ChevronLeft, ChevronRight, LogOut, BookOpen, Users, UserCircle, Receipt, Plug } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 
 const NAV_ITEMS = [
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { to: "/billing", label: "Billing", icon: Receipt, end: false },
   { to: "/curriculum", label: "Curriculum", icon: BookOpen, end: false },
   { to: "/audit-log", label: "Audit Log", icon: ScrollText, end: false },
+  { to: "/integrations", label: "Integrations", icon: Plug, end: false },
 ];
 
 export default function AdminLayout() {

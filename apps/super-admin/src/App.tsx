@@ -15,6 +15,7 @@ const Schools = lazy(() => import("./pages/Schools"));
 const SchoolDetail = lazy(() => import("./pages/SchoolDetail"));
 const Staff = lazy(() => import("./pages/Staff"));
 const Billing = lazy(() => import("./pages/Billing"));
+const Integrations = lazy(() => import("./pages/Integrations"));
 const Profile = lazy(() => import("./pages/Profile"));
 const AuditLog = lazy(() => import("./pages/AuditLog"));
 const Curriculum = lazy(() => import("./pages/Curriculum"));
@@ -39,6 +40,7 @@ function AppRoutes() {
           <Route path="schools/:id" element={<SchoolDetail />} />
           <Route path="staff" element={<Staff />} />
           <Route path="billing" element={<Billing />} />
+          <Route path="integrations" element={<Integrations />} />
           <Route path="curriculum" element={<Curriculum />} />
           <Route path="audit-log" element={<AuditLog />} />
           <Route path="profile" element={<Profile />} />
