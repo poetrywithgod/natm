@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import { LayoutDashboard, Building2, ScrollText, ShieldCheck, ChevronLeft, ChevronRight, LogOut, BookOpen, Users } from "lucide-react";
+import { LayoutDashboard, Building2, ScrollText, ShieldCheck, ChevronLeft, ChevronRight, LogOut, BookOpen, Users, UserCircle } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 
 const NAV_ITEMS = [
@@ -61,9 +61,19 @@ export default function AdminLayout() {
         </nav>
 
         <div className="p-3 border-t border-slate-800 sticky bottom-0 bg-slate-900">
-          {!collapsed && (
-            <p className="font-ui text-xs text-slate-400 truncate px-1 mb-2">{profile?.full_name}</p>
-          )}
+          <NavLink
+            to="/profile"
+            className={({ isActive }) =>
+              `flex items-center gap-2 px-3 py-2 rounded-lg font-ui text-xs mb-1 transition-colors ${
+                isActive
+                  ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                  : "text-slate-400 hover:bg-slate-800 hover:text-slate-100 border border-transparent"
+              }`
+            }
+          >
+            <UserCircle size={16} />
+            {!collapsed && <span className="truncate">{profile?.full_name ?? "Profile"}</span>}
+          </NavLink>
           <button
             onClick={signOut}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg font-ui text-xs text-slate-400 hover:bg-slate-800 hover:text-error transition-colors"

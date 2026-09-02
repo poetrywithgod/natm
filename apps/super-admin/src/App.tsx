@@ -14,6 +14,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Schools = lazy(() => import("./pages/Schools"));
 const SchoolDetail = lazy(() => import("./pages/SchoolDetail"));
 const Staff = lazy(() => import("./pages/Staff"));
+const Profile = lazy(() => import("./pages/Profile"));
 const AuditLog = lazy(() => import("./pages/AuditLog"));
 const Curriculum = lazy(() => import("./pages/Curriculum"));
 
@@ -38,6 +39,7 @@ function AppRoutes() {
           <Route path="staff" element={<Staff />} />
           <Route path="curriculum" element={<Curriculum />} />
           <Route path="audit-log" element={<AuditLog />} />
+          <Route path="profile" element={<Profile />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

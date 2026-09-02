@@ -19,6 +19,7 @@ interface AuthContextValue {
   notAuthorized: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -72,9 +73,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signOut() {
     await supabase.auth.signOut();
   }
+  async function refreshProfile() {
+    if (session?.user) await loadProfile(session.user.id);
+  }
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading, notAuthorized, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, profile, loading, notAuthorized, signIn, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
