@@ -1601,6 +1601,53 @@ export type Database = {
           },
         ]
       }
+      prospects: {
+        Row: {
+          id: string
+          school_name: string
+          contact_name: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          stage: string
+          notes: string | null
+          converted_school_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          school_name: string
+          contact_name?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          stage?: string
+          notes?: string | null
+          converted_school_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          school_name?: string
+          contact_name?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          stage?: string
+          notes?: string | null
+          converted_school_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospects_converted_school_id_fkey"
+            columns: ["converted_school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       push_subscriptions: {
         Row: {
           auth: string
