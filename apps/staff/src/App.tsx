@@ -151,6 +151,7 @@ function AppRoutes() {
           <Route path="notifications" element={<FinanceManagerNotifications />} />
           <Route path="profile" element={<FinanceManagerProfile />} />
         </Route>
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Suspense>
   );
