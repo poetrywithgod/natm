@@ -17,6 +17,8 @@ import {
 import { useAuth } from "../features/auth/AuthContext";
 import { supabase } from "../lib/supabase";
 import { getCurrentQuarter, finalizeCurrentQuarter } from "../features/grading/api";
+import { fetchRecentPlatformAnnouncements, type PlatformAnnouncement } from "../features/platform-announcements/api";
+import { Megaphone } from "lucide-react";
 import {
   fetchDashboardSummary,
   fetchAttendanceTrend,
@@ -65,6 +67,7 @@ export default function SchoolAdminDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [finalizing, setFinalizing] = useState(false);
   const [finalizeMessage, setFinalizeMessage] = useState<string | null>(null);
+  const [platformAnnouncements, setPlatformAnnouncements] = useState<PlatformAnnouncement[]>([]);
 
   const schoolId = profile?.school_id;
   const quarter = getCurrentQuarter();
@@ -96,6 +99,19 @@ export default function SchoolAdminDashboard() {
     loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schoolId]);
+
+  // Non-critical widget, loaded independently of the main dashboard data
+  // -- a failure here shouldn't block or error out the rest of the page.
+  useEffect(() => {
+    async function loadAnnouncements() {
+      try {
+        setPlatformAnnouncements(await fetchRecentPlatformAnnouncements());
+      } catch {
+        // Silently show nothing if this fails.
+      }
+    }
+    loadAnnouncements();
+  }, []);
 
   // Fee data can change from the Fees page or, later, an automated
   // payment webhook — keep the dashboard live rather than stale.
@@ -150,6 +166,21 @@ export default function SchoolAdminDashboard() {
       <h1 className="font-display text-2xl text-forest-100">Dashboard</h1>
 
       {error && <p className="text-error font-ui text-sm">{error}</p>}
+
+      {platformAnnouncements.length > 0 && (
+        <div className="space-y-2">
+          {platformAnnouncements.map((a) => (
+            <div key={a.id} className="bg-forest-900 border border-forest-700 rounded-lg p-4 flex gap-3">
+              <Megaphone size={18} className="text-forest-300 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-display text-sm text-forest-100">{a.title}</p>
+                <p className="font-body text-sm text-forest-300 mt-0.5 whitespace-pre-wrap">{a.body}</p>
+                <p className="font-ui text-xs text-forest-400 mt-1">{new Date(a.created_at).toLocaleDateString()}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <SummaryCard label="Classes" value={summary?.classCount ?? 0} />
