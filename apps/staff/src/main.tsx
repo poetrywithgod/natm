@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
+import { initSentry } from './lib/sentry'
+
+initSentry();
 
 // See student-parent/src/main.tsx for the full explanation -- this
 // recovers automatically from a stale-cached index.html referencing a JS
