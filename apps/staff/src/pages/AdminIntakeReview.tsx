@@ -20,12 +20,17 @@ import type { Database } from "@natm/supabase";
 type ClassLevel = Database["public"]["Enums"]["class_level"];
 
 const CLASS_LEVELS = [
+  "creche", "pre_nursery", "nursery_1", "nursery_2", "kg_1", "kg_2",
   "primary_1", "primary_2", "primary_3", "primary_4", "primary_5", "primary_6",
   "jss_1", "jss_2", "jss_3",
   "ss_1", "ss_2", "ss_3",
 ];
 
 function levelLabel(level: string): string {
+  if (level === "creche") return "Creche";
+  if (level === "pre_nursery") return "Pre-Nursery";
+  if (level.startsWith("nursery_")) return `Nursery ${level.split("_")[1]}`;
+  if (level.startsWith("kg_")) return `KG ${level.split("_")[1]}`;
   if (level.startsWith("primary_")) return `Primary ${level.split("_")[1]}`;
   if (level.startsWith("jss_")) return `JSS ${level.split("_")[1]}`;
   if (level.startsWith("ss_")) return `SS ${level.split("_")[1]}`;

@@ -2670,6 +2670,12 @@ export type Database = {
         | "completed"
       attendance_status: "present" | "absent" | "late"
       class_level:
+        | "creche"
+        | "pre_nursery"
+        | "nursery_1"
+        | "nursery_2"
+        | "kg_1"
+        | "kg_2"
         | "primary_1"
         | "primary_2"
         | "primary_3"
@@ -2841,6 +2847,12 @@ export const Constants = {
       ],
       attendance_status: ["present", "absent", "late"],
       class_level: [
+        "creche",
+        "pre_nursery",
+        "nursery_1",
+        "nursery_2",
+        "kg_1",
+        "kg_2",
         "primary_1",
         "primary_2",
         "primary_3",

@@ -4,6 +4,12 @@ import type { Database } from "@natm/supabase";
 export type ClassLevel = Database["public"]["Enums"]["class_level"];
 
 export const CLASS_LEVEL_LABELS: Record<string, string> = {
+  creche: "Creche",
+  pre_nursery: "Pre-Nursery",
+  nursery_1: "Nursery 1",
+  nursery_2: "Nursery 2",
+  kg_1: "KG 1",
+  kg_2: "KG 2",
   primary_1: "Primary 1",
   primary_2: "Primary 2",
   primary_3: "Primary 3",
