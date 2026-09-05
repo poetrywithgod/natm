@@ -65,7 +65,14 @@ function AppRoutes() {
   return (
     <Suspense fallback={<PageSkeleton />}>
       <Routes>
-        <Route path="/login" element={<RedirectIfAuthed><Login /></RedirectIfAuthed>} />
+        <Route
+          path="/login"
+          element={
+            <RedirectIfAuthed>
+              <Login />
+            </RedirectIfAuthed>
+          }
+        />
         <Route path="/" element={<Navigate to="/admin" replace />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
