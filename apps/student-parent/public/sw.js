@@ -1,8 +1,11 @@
-// NATM Staff service worker.
+// NATM (Student/Parent) service worker.
 //
 // Scope: (1) makes the app installable as a PWA, (2) serves a basic
 // offline fallback page for navigations when the network is unreachable,
-// and (3) handles push notifications for the staff app.
+// and (3) handles push notifications for student and parent accounts.
+// This file previously didn't exist even though subscribe.ts already
+// called navigator.serviceWorker.register('/sw.js') -- push setup was
+// silently failing on registration for this app until now.
 //
 // Deliberately NOT precaching hashed build assets (the /assets/*.js and
 // *.css files Vite emits) -- those filenames change on every deploy, and
@@ -10,7 +13,7 @@
 // screen after redeploy" bug already fixed once in main.tsx via the
 // vite:preloadError listener. This worker only ever caches the tiny,
 // rarely-changing shell below and always prefers a live network response.
-const CACHE_NAME = 'natm-staff-shell-v1';
+const CACHE_NAME = 'natm-student-parent-shell-v1';
 const OFFLINE_URL = '/offline.html';
 const SHELL_ASSETS = [OFFLINE_URL, '/icons/icon-192.png'];
 

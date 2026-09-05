@@ -4,8 +4,10 @@ import './index.css'
 import App from './App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import { initSentry } from './lib/sentry'
+import { registerServiceWorker } from './registerServiceWorker'
 
 initSentry();
+registerServiceWorker();
 
 // See apps/staff and apps/student-parent's main.tsx for the full
 // rationale -- recovers automatically from a stale-cached index.html

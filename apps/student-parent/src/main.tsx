@@ -4,8 +4,10 @@ import './index.css'
 import App from './App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import { initSentry } from './lib/sentry'
+import { registerServiceWorker } from './registerServiceWorker'
 
 initSentry();
+registerServiceWorker();
 
 // Vite's dynamic import()s (all our lazy-loaded routes) fail if the
 // browser has an old cached copy of index.html referencing a hashed JS
