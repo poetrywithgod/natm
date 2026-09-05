@@ -67,7 +67,7 @@ export default function ClassTeacherLayout() {
             {schoolInfo?.logo_url ? (
               <img src={schoolInfo.logo_url} alt="" className="w-full h-full object-contain" />
             ) : (
-              <span className="font-display text-forest-100 text-[10px]">N</span>
+              <img src="/icons/icon-192.png" alt="" className="w-full h-full object-contain" />
             )}
           </div>
           <div>

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { supabase } from "../lib/supabase";
 
@@ -42,9 +42,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="flex flex-col items-center text-center space-y-3">
-          <div className="h-14 w-14 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center">
-            <ShieldCheck className="text-amber-500" size={28} />
-          </div>
+          <img src="/icons/icon-192.png" alt="" className="h-14 w-14 object-contain" />
           <div>
             <h1 className="font-display text-2xl font-extrabold text-slate-100">NATM Super Admin</h1>
             <p className="font-body text-sm text-slate-300 mt-1">Platform-wide school management</p>

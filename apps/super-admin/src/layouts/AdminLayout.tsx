@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import { LayoutDashboard, Building2, ScrollText, ShieldCheck, ChevronLeft, ChevronRight, LogOut, BookOpen, Users, UserCircle, Receipt, Plug, CalendarClock, Settings as SettingsIcon, FileSpreadsheet, Megaphone, Target } from "lucide-react";
+import { LayoutDashboard, Building2, ScrollText, ChevronLeft, ChevronRight, LogOut, BookOpen, Users, UserCircle, Receipt, Plug, CalendarClock, Settings as SettingsIcon, FileSpreadsheet, Megaphone, Target } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 
 const NAV_ITEMS = [
@@ -32,8 +32,8 @@ export default function AdminLayout() {
         <div className="flex items-center justify-between p-4 sticky top-0 bg-slate-900">
           {!collapsed && (
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center">
-                <ShieldCheck className="text-amber-500" size={16} />
+              <div className="h-8 w-8 rounded-lg bg-slate-800 border border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
+                <img src="/icons/icon-192.png" alt="" className="w-full h-full object-contain" />
               </div>
               <span className="font-display font-bold text-slate-100 text-sm">Super Admin</span>
             </div>

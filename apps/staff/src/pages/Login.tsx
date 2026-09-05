@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { supabase } from "../lib/supabase";
+import { fetchSchoolInfo, type SchoolInfo } from "../features/schools/api";
 
 export default function Login() {
   const { signIn } = useAuth();
@@ -13,6 +14,12 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [schoolInfo, setSchoolInfo] = useState<SchoolInfo | null>(null);
+
+  useEffect(() => {
+    const schoolId = import.meta.env.VITE_SCHOOL_ID as string | undefined;
+    if (schoolId) fetchSchoolInfo(schoolId).then(setSchoolInfo);
+  }, []);
 
   async function handleSignIn(e: FormEvent) {
     e.preventDefault();
@@ -42,16 +49,15 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-forest-950 px-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="flex flex-col items-center text-center space-y-3">
-          <img
-            src="/logo.svg"
-            alt="School logo"
-            className="h-16 w-16 object-contain"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-            }}
-          />
+          {schoolInfo?.logo_url ? (
+            <img src={schoolInfo.logo_url} alt="" className="h-16 w-16 rounded-full object-cover" />
+          ) : (
+            <img src="/icons/icon-192.png" alt="" className="h-16 w-16 object-contain" />
+          )}
           <div>
-            <h1 className="font-display text-2xl text-forest-100">NATM Staff Portal</h1>
+            <h1 className="font-display text-2xl text-forest-100">
+              {schoolInfo?.name ? `${schoolInfo.name} Staff Portal` : "NATM Staff Portal"}
+            </h1>
             <p className="font-body text-sm text-forest-300 mt-1">
               Every student's progress starts with the work you do today. Welcome back.
             </p>

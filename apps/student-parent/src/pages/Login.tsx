@@ -67,14 +67,7 @@ export default function Login() {
           {schoolInfo?.logo_url ? (
             <img src={schoolInfo.logo_url} alt="" className="h-16 w-16 rounded-full object-cover" />
           ) : (
-            <img
-              src="/logo.svg"
-              alt=""
-              className="h-16 w-16 object-contain"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
-            />
+            <img src="/icons/icon-192.png" alt="" className="h-16 w-16 object-contain" />
           )}
           <div>
             <h1 className="font-display text-2xl text-abyssal-100">
