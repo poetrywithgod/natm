@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, PlayCircle } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchOwnStudentRecord } from "../features/profile/api";
 import {
@@ -8,6 +8,9 @@ import {
   startOrResumeAttempt,
   fetchExistingAnswers,
   submitQuizAttempt,
+  getSignedLessonPdfUrl,
+  getStreamThumbnailUrl,
+  getStreamPlayerUrl,
   type QuizWithQuestions,
 } from "../features/quiz/api";
 import { checkAndAwardBadges, type BadgeDefinition } from "../features/gamification/api";
@@ -26,6 +29,8 @@ export default function StudentQuiz() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ score: number; newBadges: BadgeDefinition[] } | null>(null);
+  const [showVideo, setShowVideo] = useState(false);
+  const [openingPdf, setOpeningPdf] = useState(false);
 
   useEffect(() => {
     if (!quizId || !profile?.id) return;
@@ -83,6 +88,18 @@ export default function StudentQuiz() {
       setError(err instanceof Error ? err.message : "Failed to submit quiz");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleViewLessonPdf() {
+    if (!quiz?.lessonPdfStoragePath) return;
+    setOpeningPdf(true);
+    try {
+      const url = await getSignedLessonPdfUrl(quiz.lessonPdfStoragePath);
+      if (url) window.open(url, "_blank");
+      else setError("Couldn't open that PDF right now.");
+    } finally {
+      setOpeningPdf(false);
     }
   }
 
@@ -149,6 +166,51 @@ export default function StudentQuiz() {
           <p className="font-ui text-xs text-abyssal-300">{quiz.subjectName ?? "General"}</p>
         </div>
       </div>
+
+      {quiz.lessonContentType === "video" && quiz.lessonVideoId && (
+        <div className="bg-abyssal-900 rounded-lg p-4 space-y-2">
+          <p className="font-ui text-sm text-abyssal-100 font-semibold">Lesson video</p>
+          {!showVideo ? (
+            <button
+              onClick={() => setShowVideo(true)}
+              className="relative w-full max-w-sm rounded-lg overflow-hidden aspect-video"
+            >
+              <img
+                src={getStreamThumbnailUrl(quiz.lessonVideoId)}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+              <span className="absolute inset-0 flex items-center justify-center bg-abyssal-950/40">
+                <PlayCircle className="text-abyssal-100" size={40} />
+              </span>
+            </button>
+          ) : (
+            <div className="aspect-video w-full max-w-sm rounded-lg overflow-hidden">
+              <iframe
+                src={getStreamPlayerUrl(quiz.lessonVideoId)}
+                className="w-full h-full"
+                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                allowFullScreen
+                title={quiz.lessonTitle}
+              />
+            </div>
+          )}
+          <p className="font-ui text-xs text-abyssal-300">Watch before answering if you need a refresher.</p>
+        </div>
+      )}
+
+      {quiz.lessonContentType === "pdf" && quiz.lessonPdfStoragePath && (
+        <div className="bg-abyssal-900 rounded-lg p-4 flex items-center justify-between">
+          <p className="font-ui text-sm text-abyssal-100 font-semibold">Lesson material</p>
+          <button
+            onClick={handleViewLessonPdf}
+            disabled={openingPdf}
+            className="font-ui text-xs text-lime underline disabled:opacity-50"
+          >
+            {openingPdf ? "Opening..." : "View lesson PDF"}
+          </button>
+        </div>
+      )}
 
       <div className="space-y-4">
         {quiz.questions.map((q, idx) => (

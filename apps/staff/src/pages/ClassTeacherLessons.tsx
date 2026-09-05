@@ -7,6 +7,10 @@ import {
   createPdfLesson,
   createVideoLesson,
   getSignedPdfUrl,
+  requestVideoUploadUrl,
+  uploadVideoFile,
+  getStreamThumbnailUrl,
+  getStreamPlayerUrl,
   type Lesson,
   type LessonContentType,
 } from "../features/lessons/api";
@@ -41,8 +45,12 @@ export default function ClassTeacherLessons() {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfExtracting, setPdfExtracting] = useState(false);
   const [extractedText, setExtractedText] = useState("");
-  const [videoId, setVideoId] = useState("");
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoUid, setVideoUid] = useState<string | null>(null);
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoUploadProgress, setVideoUploadProgress] = useState(0);
   const [videoSummary, setVideoSummary] = useState("");
+  const [previewingLessonId, setPreviewingLessonId] = useState<string | null>(null);
 
   async function loadAll() {
     if (!profile) return;
@@ -98,8 +106,37 @@ export default function ClassTeacherLessons() {
     setSubjectId("");
     setPdfFile(null);
     setExtractedText("");
-    setVideoId("");
+    setVideoFile(null);
+    setVideoUid(null);
+    setVideoUploadProgress(0);
     setVideoSummary("");
+  }
+
+  async function handleVideoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setVideoFile(file);
+    setVideoUid(null);
+    setError(null);
+
+    if (file.size > 200 * 1024 * 1024) {
+      setError("That video is over 200MB -- trim it down or split it into shorter clips for now.");
+      setVideoFile(null);
+      return;
+    }
+
+    setVideoUploading(true);
+    setVideoUploadProgress(0);
+    try {
+      const { uploadURL, uid } = await requestVideoUploadUrl();
+      await uploadVideoFile(uploadURL, file, setVideoUploadProgress);
+      setVideoUid(uid);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to upload video");
+      setVideoFile(null);
+    } finally {
+      setVideoUploading(false);
+    }
   }
 
   async function handleCreateLesson() {
@@ -109,8 +146,8 @@ export default function ClassTeacherLessons() {
       setError("Select a PDF and wait for text extraction to finish before saving.");
       return;
     }
-    if (contentType === "video" && (!videoId.trim() || !videoSummary.trim())) {
-      setError("Enter a video ID and a summary before saving.");
+    if (contentType === "video" && (!videoUid || !videoSummary.trim())) {
+      setError("Upload a video and add a summary before saving.");
       return;
     }
 
@@ -134,7 +171,7 @@ export default function ClassTeacherLessons() {
           myClass.id,
           subjectId,
           title.trim(),
-          videoId.trim(),
+          videoUid!,
           videoSummary.trim(),
           profile.id
         );
@@ -269,20 +306,34 @@ export default function ClassTeacherLessons() {
             </div>
           ) : (
             <div className="space-y-2">
-              <p className="font-ui text-xs text-forest-300 bg-forest-800 rounded p-2">
-                No Cloudflare account yet -- upload the video there directly and paste its video ID
-                below once that's set up. For now, type a summary of the lesson so quiz generation has
-                something to work from.
-              </p>
               <input
-                type="text"
-                placeholder="Cloudflare Stream video ID"
-                value={videoId}
-                onChange={(e) => setVideoId(e.target.value)}
-                className="w-full p-2 rounded bg-forest-700 text-forest-100 font-ui text-sm placeholder:text-forest-300/60"
+                type="file"
+                accept="video/*"
+                onChange={handleVideoSelect}
+                disabled={videoUploading}
+                className="w-full text-forest-100 font-ui text-sm"
               />
+              {videoFile && (
+                <p className="font-ui text-xs text-forest-300 truncate">{videoFile.name}</p>
+              )}
+              {videoUploading && (
+                <div className="space-y-1">
+                  <div className="h-1.5 rounded-full bg-forest-800 overflow-hidden">
+                    <div
+                      className="h-full bg-forest-500 transition-all"
+                      style={{ width: `${videoUploadProgress}%` }}
+                    />
+                  </div>
+                  <p className="font-ui text-xs text-forest-300">Uploading to Cloudflare... {videoUploadProgress}%</p>
+                </div>
+              )}
+              {videoUid && !videoUploading && (
+                <p className="font-ui text-xs text-forest-300">
+                  Video uploaded. It may take a few minutes to finish processing before it's watchable.
+                </p>
+              )}
               <textarea
-                placeholder="Lesson summary (used for quiz generation until captions are wired up)"
+                placeholder="Lesson summary (used for quiz generation until automatic captions are wired up)"
                 value={videoSummary}
                 onChange={(e) => setVideoSummary(e.target.value)}
                 rows={4}
@@ -293,7 +344,7 @@ export default function ClassTeacherLessons() {
 
           <button
             onClick={handleCreateLesson}
-            disabled={saving || pdfExtracting || !subjectId || !title.trim()}
+            disabled={saving || pdfExtracting || videoUploading || !subjectId || !title.trim()}
             className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui text-sm font-semibold disabled:opacity-50"
           >
             {saving ? "Saving..." : "Save Lesson"}
@@ -324,6 +375,34 @@ export default function ClassTeacherLessons() {
                 >
                   View PDF
                 </button>
+              )}
+              {l.content_type === "video" && l.video_id && (
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setPreviewingLessonId(previewingLessonId === l.id ? null : l.id)}
+                    className="flex items-center gap-2"
+                  >
+                    <img
+                      src={getStreamThumbnailUrl(l.video_id)}
+                      alt=""
+                      className="w-20 h-12 object-cover rounded bg-forest-800"
+                    />
+                    <span className="font-ui text-xs text-forest-300 underline">
+                      {previewingLessonId === l.id ? "Hide preview" : "Preview video"}
+                    </span>
+                  </button>
+                  {previewingLessonId === l.id && (
+                    <div className="aspect-video w-full max-w-sm rounded-lg overflow-hidden">
+                      <iframe
+                        src={getStreamPlayerUrl(l.video_id)}
+                        className="w-full h-full"
+                        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                        allowFullScreen
+                        title={l.title}
+                      />
+                    </div>
+                  )}
+                </div>
               )}
 
               <div className="border-t border-forest-700 pt-2 space-y-2">

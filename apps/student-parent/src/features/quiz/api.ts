@@ -1,5 +1,32 @@
 import { supabase } from "../../lib/supabase";
 
+const LESSON_PDF_BUCKET = "lesson-pdfs";
+const SIGNED_URL_TTL_SECONDS = 3600;
+
+// Same private bucket the Class Teacher app uploads lesson PDFs to --
+// the "temp_allow_authenticated_read_lesson_pdfs" storage policy already
+// permits any authenticated user to sign a read URL, so no schema change
+// was needed to let students view a lesson's PDF too.
+export async function getSignedLessonPdfUrl(path: string): Promise<string | null> {
+  const { data, error } = await supabase.storage
+    .from(LESSON_PDF_BUCKET)
+    .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
+  if (error) return null;
+  return data.signedUrl;
+}
+
+// Videos live entirely in Cloudflare Stream -- the app only ever stores
+// and reads the video UID, then builds these URLs to fetch playback
+// straight from Cloudflare's CDN. See apps/staff/src/features/lessons/api.ts
+// for the matching upload-side helpers.
+export function getStreamThumbnailUrl(videoId: string): string {
+  return `https://videodelivery.net/${videoId}/thumbnails/thumbnail.jpg`;
+}
+
+export function getStreamPlayerUrl(videoId: string): string {
+  return `https://iframe.videodelivery.net/${videoId}`;
+}
+
 export interface QuizQuestion {
   id: string;
   question_type: "multiple_choice" | "fill_in_blank";
@@ -15,6 +42,9 @@ export interface QuizWithQuestions {
   difficulty: "easy" | "normal" | "hard";
   lessonTitle: string;
   subjectName: string | null;
+  lessonContentType: "pdf" | "video" | null;
+  lessonVideoId: string | null;
+  lessonPdfStoragePath: string | null;
   questions: QuizQuestion[];
 }
 
@@ -26,7 +56,7 @@ export interface ExistingAnswer {
 export async function fetchQuizWithQuestions(quizId: string): Promise<QuizWithQuestions | null> {
   const { data: quiz, error: quizError } = await supabase
     .from("quizzes")
-    .select("id, difficulty, lessons(title, subjects(name))")
+    .select("id, difficulty, lessons(title, content_type, video_id, pdf_storage_path, subjects(name))")
     .eq("id", quizId)
     .single();
   if (quizError || !quiz) return null;
@@ -38,13 +68,22 @@ export async function fetchQuizWithQuestions(quizId: string): Promise<QuizWithQu
     .order("order_index", { ascending: true });
   if (qError) throw new Error(qError.message);
 
-  const lessons = quiz.lessons as unknown as { title: string; subjects: { name: string } | null } | null;
+  const lessons = quiz.lessons as unknown as {
+    title: string;
+    content_type: "pdf" | "video" | null;
+    video_id: string | null;
+    pdf_storage_path: string | null;
+    subjects: { name: string } | null;
+  } | null;
 
   return {
     id: quiz.id,
     difficulty: quiz.difficulty,
     lessonTitle: lessons?.title ?? "Untitled Lesson",
     subjectName: lessons?.subjects?.name ?? null,
+    lessonContentType: lessons?.content_type ?? null,
+    lessonVideoId: lessons?.video_id ?? null,
+    lessonPdfStoragePath: lessons?.pdf_storage_path ?? null,
     questions: (questions ?? []) as QuizQuestion[],
   };
 }
