@@ -67,9 +67,10 @@ async function generateWithAnthropic(prompt: string, maxTokens: number): Promise
 async function generateWithGemini(prompt: string, maxTokens: number, _jsonMode: boolean): Promise<AIGenerateResult> {
   const apiKey = Deno.env.get("GEMINI_API_KEY");
   if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
-  // Overridable in case a specific Gemini model needs to be pinned later
-  // (free-tier model availability shifts fairly often).
-  const model = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
+  // Overridable in case free-tier model availability shifts again --
+  // gemini-2.5-flash was deprecated for new API keys in favor of
+  // gemini-3.6-flash shortly after this integration was first built.
+  const model = Deno.env.get("GEMINI_MODEL") ?? "gemini-3.6-flash";
 
   // Google is migrating Google AI Studio keys from the classic "standard"
   // format (AIzaSy...) to a Bearer-token "authorization key" format
