@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchMyStudents, type MyStudent } from "../features/shadowteacher/api";
 import { fetchCurrentTermNumber } from "../features/observations/api";
@@ -47,6 +48,7 @@ const inputCls =
 
 export default function ShadowTeacherDailyRecord() {
   const { profile } = useAuth();
+  const [searchParams] = useSearchParams();
   const [students, setStudents] = useState<MyStudent[]>([]);
   const [studentId, setStudentId] = useState("");
   const [date, setDate] = useState(todayISO());
@@ -80,7 +82,10 @@ export default function ShadowTeacherDailyRecord() {
       .then(([studs, term]) => {
         setStudents(studs);
         setTermNumber(term);
-        if (studs.length > 0) setStudentId(studs[0].id);
+        if (studs.length > 0) {
+          const preselected = searchParams.get("student");
+          setStudentId(preselected && studs.some((s) => s.id === preselected) ? preselected : studs[0].id);
+        }
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load students"))
       .finally(() => setLoadingStudents(false));

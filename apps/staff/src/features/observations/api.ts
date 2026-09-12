@@ -23,7 +23,22 @@ export async function fetchCurrentTermNumber(schoolId: string): Promise<number |
   return term?.term_number ?? null;
 }
 
-// Informational "Shadow Teacher" field on the Class Teacher's form header.
+// A student's full observation history for one term -- the basis for the
+// Promotion review's Term Progress card, so admins see the daily-log
+// score and weak subjects (for carryover decisions) alongside attendance
+// and fees, without pulling in irrelevant terms.
+export async function fetchObservationsForTerm(
+  studentId: string,
+  termNumber: number
+): Promise<DailyTeacherObservation[]> {
+  const { data, error } = await supabase
+    .from("daily_teacher_observations")
+    .select("*")
+    .eq("student_id", studentId)
+    .eq("term_number", termNumber);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as DailyTeacherObservation[];
+}
 export async function fetchShadowTeacherNameForStudent(studentId: string): Promise<string | null> {
   const { data, error } = await supabase
     .from("shadow_teacher_assignments")
@@ -33,6 +48,21 @@ export async function fetchShadowTeacherNameForStudent(studentId: string): Promi
     .maybeSingle();
   if (error) return null;
   return (data as any)?.shadow_teacher?.full_name ?? null;
+}
+
+// Raw rows for the roster "who needs attention" widget on the Class
+// Teacher Dashboard -- 14 days covers this-week-vs-last-week deltas.
+export async function fetchClassObservationsSince(
+  classId: string,
+  sinceDateISO: string
+): Promise<{ student_id: string; date: string; sections: SectionsData }[]> {
+  const { data, error } = await supabase
+    .from("daily_teacher_observations")
+    .select("student_id, date, sections")
+    .eq("class_id", classId)
+    .gte("date", sinceDateISO);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as { student_id: string; date: string; sections: SectionsData }[];
 }
 
 export interface DailyTeacherObservation {

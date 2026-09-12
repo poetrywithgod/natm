@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   LineChart,
   Line,
@@ -18,7 +19,7 @@ import { useAuth } from "../features/auth/AuthContext";
 import { supabase } from "../lib/supabase";
 import { getCurrentQuarter, finalizeCurrentQuarter } from "../features/grading/api";
 import { fetchRecentPlatformAnnouncements, type PlatformAnnouncement } from "../features/platform-announcements/api";
-import { Megaphone } from "lucide-react";
+import { Megaphone, TrendingUp, TrendingDown } from "lucide-react";
 import {
   fetchDashboardSummary,
   fetchAttendanceTrend,
@@ -31,6 +32,9 @@ import {
   type FeeSummary,
   type ClassFeeStat,
 } from "../features/dashboard/api";
+import { fetchStudents, type Student } from "../features/students/api";
+import { fetchSchoolObservationsSince } from "../features/schoolProgress/api";
+import { CLASS_TEACHER_OBSERVATION_SECTIONS, computeRosterProgress, type StudentRosterScore, type SectionsData } from "@natm/shared-types";
 
 const COLORS = {
   present: "#3D8A4E", // forest-500
@@ -68,6 +72,8 @@ export default function SchoolAdminDashboard() {
   const [finalizing, setFinalizing] = useState(false);
   const [finalizeMessage, setFinalizeMessage] = useState<string | null>(null);
   const [platformAnnouncements, setPlatformAnnouncements] = useState<PlatformAnnouncement[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [roster, setRoster] = useState<StudentRosterScore[]>([]);
 
   const schoolId = profile?.school_id;
   const quarter = getCurrentQuarter();
@@ -93,6 +99,31 @@ export default function SchoolAdminDashboard() {
       setLoading(false);
     }
   }
+
+  // Non-critical widget, loaded independently of the main dashboard data
+  // -- a failure here shouldn't block or error out the rest of the page.
+  useEffect(() => {
+    if (!schoolId) return;
+    const since = new Date();
+    since.setDate(since.getDate() - 13);
+    Promise.all([fetchStudents(schoolId), fetchSchoolObservationsSince(schoolId, since.toISOString().slice(0, 10))])
+      .then(([studentList, observations]) => {
+        setStudents(studentList);
+        setRoster(
+          computeRosterProgress(
+            CLASS_TEACHER_OBSERVATION_SECTIONS,
+            observations.map((o: { student_id: string; date: string; sections: SectionsData }) => ({
+              studentId: o.student_id,
+              date: o.date,
+              sections: o.sections,
+            }))
+          )
+        );
+      })
+      .catch(() => {
+        // Silently show nothing if this fails.
+      });
+  }, [schoolId]);
 
   useEffect(() => {
     setLoading(true);
@@ -308,6 +339,49 @@ export default function SchoolAdminDashboard() {
           )}
         </div>
       </div>
+
+      {(() => {
+        const scored = roster.filter((r) => r.thisWeekAvg !== null);
+        if (scored.length === 0) return null;
+        const mostImproved = [...scored].sort((a, b) => (b.deltaPoints ?? -999) - (a.deltaPoints ?? -999)).slice(0, 3);
+        const needsAttention = [...scored].sort((a, b) => (a.thisWeekAvg ?? 0) - (b.thisWeekAvg ?? 0)).slice(0, 3);
+        const nameFor = (id: string) => students.find((s) => s.id === id)?.full_name ?? "Unknown student";
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-forest-900 rounded-lg p-4 space-y-2">
+              <h2 className="font-display text-lg text-forest-100 mb-2">Most Improved This Week</h2>
+              {mostImproved.map((r) => (
+                <Link
+                  key={r.studentId}
+                  to={`/admin/students/${r.studentId}`}
+                  className="flex items-center justify-between p-2 rounded hover:bg-forest-800"
+                >
+                  <span className="font-ui text-sm text-forest-100">{nameFor(r.studentId)}</span>
+                  <span className="flex items-center gap-1 text-success font-ui text-sm font-semibold">
+                    <TrendingUp size={14} /> +{r.deltaPoints}
+                  </span>
+                </Link>
+              ))}
+            </div>
+            <div className="bg-forest-900 rounded-lg p-4 space-y-2">
+              <h2 className="font-display text-lg text-forest-100 mb-2">Needs Attention This Week</h2>
+              {needsAttention.map((r) => (
+                <Link
+                  key={r.studentId}
+                  to={`/admin/students/${r.studentId}`}
+                  className="flex items-center justify-between p-2 rounded hover:bg-forest-800"
+                >
+                  <span className="font-ui text-sm text-forest-100">{nameFor(r.studentId)}</span>
+                  <span className="flex items-center gap-1 text-warning font-ui text-sm font-semibold">
+                    {r.direction === "declining" && <TrendingDown size={14} />}
+                    {r.thisWeekAvg}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

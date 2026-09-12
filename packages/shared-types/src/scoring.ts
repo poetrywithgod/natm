@@ -204,6 +204,65 @@ export function countBehaviourIncidents(records: DailyRecordLike[], behaviourSec
 // A single 0-100 term score per student, meant to sit alongside
 // attendance/fees as another factor on the Promotion review -- not a
 // stored column, just computed on demand from that term's records.
+export interface RosterRecordLike extends DailyRecordLike {
+  studentId: string;
+}
+
+export interface StudentRosterScore {
+  studentId: string;
+  thisWeekAvg: number | null;
+  lastWeekAvg: number | null;
+  deltaPoints: number | null;
+  direction: "improving" | "declining" | "steady" | "unknown";
+}
+
+// Groups a class/caseload/school's raw daily records by student and scores
+// each one's trailing week against the week before -- the shared basis for
+// every "who needs attention" roster view (Class Teacher, Shadow Teacher,
+// School Admin all use this the same way, just with different source rows).
+export function computeRosterProgress(
+  configs: SectionConfig[],
+  rows: RosterRecordLike[],
+  today: Date = new Date()
+): StudentRosterScore[] {
+  const oneDay = 86400000;
+  const startOfThisWeek = new Date(today);
+  startOfThisWeek.setDate(today.getDate() - 6);
+  const startOfLastWeek = new Date(today);
+  startOfLastWeek.setDate(today.getDate() - 13);
+  const endOfLastWeek = new Date(startOfThisWeek.getTime() - oneDay);
+
+  const isInRange = (dateStr: string, start: Date, end: Date) => {
+    const d = new Date(dateStr + "T00:00:00").getTime();
+    return d >= start.getTime() && d <= end.getTime();
+  };
+
+  const byStudent = new Map<string, RosterRecordLike[]>();
+  for (const r of rows) {
+    if (!byStudent.has(r.studentId)) byStudent.set(r.studentId, []);
+    byStudent.get(r.studentId)!.push(r);
+  }
+
+  const avgComposite = (recs: RosterRecordLike[]) => {
+    const scores = recs.map((r) => overallCompositeScore(configs, r.sections)).filter((s): s is number => s !== null);
+    return scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+  };
+
+  const results: StudentRosterScore[] = [];
+  for (const [studentId, recs] of byStudent) {
+    const thisWeekAvg = avgComposite(recs.filter((r) => isInRange(r.date, startOfThisWeek, today)));
+    const lastWeekAvg = avgComposite(recs.filter((r) => isInRange(r.date, startOfLastWeek, endOfLastWeek)));
+    let direction: StudentRosterScore["direction"] = "unknown";
+    let deltaPoints: number | null = null;
+    if (thisWeekAvg !== null && lastWeekAvg !== null) {
+      deltaPoints = thisWeekAvg - lastWeekAvg;
+      direction = deltaPoints > 3 ? "improving" : deltaPoints < -3 ? "declining" : "steady";
+    }
+    results.push({ studentId, thisWeekAvg, lastWeekAvg, deltaPoints, direction });
+  }
+  return results;
+}
+
 export function termCompositeScore(configs: SectionConfig[], records: DailyRecordLike[]): number | null {
   const dailyComposites = records
     .map((r) => overallCompositeScore(configs, r.sections))

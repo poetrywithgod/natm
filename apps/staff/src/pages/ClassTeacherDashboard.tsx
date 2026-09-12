@@ -1,12 +1,26 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Users, ClipboardCheck, BookOpen, FileText } from "lucide-react";
+import { Users, ClipboardCheck, BookOpen, FileText, TrendingUp, TrendingDown } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
-import { fetchMyClass, fetchClassStudents, fetchAttendanceForDate, type MyClass } from "../features/attendance/api";
+import {
+  fetchMyClass,
+  fetchClassStudents,
+  fetchAttendanceForDate,
+  type MyClass,
+  type ClassStudent,
+} from "../features/attendance/api";
 import { fetchClassActivities } from "../features/activities/api";
+import { fetchClassObservationsSince } from "../features/observations/api";
+import { CLASS_TEACHER_OBSERVATION_SECTIONS, computeRosterProgress, type StudentRosterScore } from "@natm/shared-types";
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function scoreBadgeColor(score: number): string {
+  if (score >= 70) return "text-success";
+  if (score >= 50) return "text-warning";
+  return "text-error";
 }
 
 export default function ClassTeacherDashboard() {
@@ -15,6 +29,8 @@ export default function ClassTeacherDashboard() {
   const [studentCount, setStudentCount] = useState(0);
   const [attendanceMarked, setAttendanceMarked] = useState(false);
   const [recentActivityCount, setRecentActivityCount] = useState(0);
+  const [students, setStudents] = useState<ClassStudent[]>([]);
+  const [roster, setRoster] = useState<StudentRosterScore[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,14 +39,24 @@ export default function ClassTeacherDashboard() {
       const cls = await fetchMyClass(profile.id);
       setMyClass(cls);
       if (cls) {
-        const [students, attendance, activities] = await Promise.all([
+        const since = new Date();
+        since.setDate(since.getDate() - 13);
+        const [studentList, attendance, activities, observations] = await Promise.all([
           fetchClassStudents(cls.id),
           fetchAttendanceForDate(cls.id, todayISO()),
           fetchClassActivities(cls.id, 5),
+          fetchClassObservationsSince(cls.id, since.toISOString().slice(0, 10)),
         ]);
-        setStudentCount(students.length);
+        setStudents(studentList);
+        setStudentCount(studentList.length);
         setAttendanceMarked(attendance.length > 0);
         setRecentActivityCount(activities.length);
+        setRoster(
+          computeRosterProgress(
+            CLASS_TEACHER_OBSERVATION_SECTIONS,
+            observations.map((o) => ({ studentId: o.student_id, date: o.date, sections: o.sections }))
+          )
+        );
       }
       setLoading(false);
     }
@@ -106,6 +132,38 @@ export default function ClassTeacherDashboard() {
           </div>
         </Link>
       </div>
+
+      {roster.filter((r) => r.thisWeekAvg !== null).length > 0 && (
+        <div className="space-y-2">
+          <h2 className="font-display text-base text-forest-100">Who needs attention this week</h2>
+          <div className="space-y-2">
+            {roster
+              .filter((r) => r.thisWeekAvg !== null)
+              .sort((a, b) => (a.thisWeekAvg ?? 0) - (b.thisWeekAvg ?? 0))
+              .slice(0, 5)
+              .map((r) => {
+                const student = students.find((s) => s.id === r.studentId);
+                if (!student) return null;
+                return (
+                  <Link
+                    key={r.studentId}
+                    to={`/class-teacher/activities?student=${r.studentId}`}
+                    className="flex items-center justify-between bg-forest-900 rounded-lg p-3 hover:bg-forest-800"
+                  >
+                    <span className="font-ui text-sm text-forest-100">{student.full_name}</span>
+                    <span className="flex items-center gap-2">
+                      {r.direction === "improving" && <TrendingUp size={14} className="text-success" />}
+                      {r.direction === "declining" && <TrendingDown size={14} className="text-error" />}
+                      <span className={`font-ui text-sm font-semibold ${scoreBadgeColor(r.thisWeekAvg!)}`}>
+                        {r.thisWeekAvg}
+                      </span>
+                    </span>
+                  </Link>
+                );
+              })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronDown, ChevronUp, X } from "lucide-react";
+import { ChevronDown, ChevronUp, X, TrendingUp, TrendingDown } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchClasses, type SchoolClass } from "../features/classes/api";
 import { fetchStudents, type Student } from "../features/students/api";
@@ -18,6 +18,21 @@ import {
   type AttendanceRecord,
   type FeeRecord,
 } from "../features/promotion/api";
+import { fetchCurrentTermNumber, fetchObservationsForTerm } from "../features/observations/api";
+import {
+  CLASS_TEACHER_OBSERVATION_SECTIONS,
+  SUBJECT_PERFORMANCE_SECTION_KEY,
+  SUBJECT_PERFORMANCE_OPTIONS,
+  termCompositeScore,
+  termSubjectAverages,
+  type SubjectScore,
+} from "@natm/shared-types";
+
+function scoreColor(score: number): string {
+  if (score >= 70) return "text-success";
+  if (score >= 50) return "text-warning";
+  return "text-error";
+}
 
 export default function AdminPromotion() {
   const { profile } = useAuth();
@@ -44,6 +59,9 @@ export default function AdminPromotion() {
   const [saving, setSaving] = useState(false);
   const [rowError, setRowError] = useState<string | null>(null);
   const [rowSuccess, setRowSuccess] = useState(false);
+  const [termNumber, setTermNumber] = useState<number | null>(null);
+  const [termScore, setTermScore] = useState<number | null>(null);
+  const [subjectScores, setSubjectScores] = useState<SubjectScore[]>([]);
 
   useEffect(() => {
     if (!schoolId) return;
@@ -59,6 +77,7 @@ export default function AdminPromotion() {
         setClasses(cls);
         setSessionId(sess);
         setSubjects(subs);
+        fetchCurrentTermNumber(schoolId).then(setTermNumber);
         if (sess) {
           const actionedIds = await fetchPromotionsForSession(schoolId, sess);
           setActioned(actionedIds);
@@ -90,6 +109,8 @@ export default function AdminPromotion() {
     setAttendance([]);
     setFees([]);
     setExistingCarryovers([]);
+    setTermScore(null);
+    setSubjectScores([]);
   }
 
   async function handleExpand(student: Student) {
@@ -101,17 +122,25 @@ export default function AdminPromotion() {
     resetRowState();
     setRowLoading(true);
     try {
-      const [sugg, att, fee, carry] = await Promise.all([
+      const [sugg, att, fee, carry, observations] = await Promise.all([
         schoolId ? suggestNextClasses(schoolId, selectedClass?.level ?? null) : Promise.resolve([]),
         fetchStudentAttendance(student.id),
         fetchStudentFees(student.id),
         sessionId ? fetchCarryovers(student.id, sessionId) : Promise.resolve([]),
+        termNumber ? fetchObservationsForTerm(student.id, termNumber) : Promise.resolve([]),
       ]);
       setSuggestions(sugg);
       setToClassId(sugg[0]?.id ?? selectedClassId);
       setAttendance(att);
       setFees(fee);
       setExistingCarryovers(carry);
+      if (observations.length > 0) {
+        const subjectNames = Object.fromEntries(subjects.map((s) => [s.id, s.name]));
+        setTermScore(termCompositeScore(CLASS_TEACHER_OBSERVATION_SECTIONS, observations));
+        setSubjectScores(
+          termSubjectAverages(observations, SUBJECT_PERFORMANCE_SECTION_KEY, SUBJECT_PERFORMANCE_OPTIONS, subjectNames)
+        );
+      }
     } catch (e) {
       setRowError(e instanceof Error ? e.message : "Failed to load student details");
     } finally {
@@ -282,6 +311,32 @@ export default function AdminPromotion() {
                           <p className={`font-ui text-sm ${outstanding > 0 ? "text-warning" : "text-forest-100"}`}>
                             {outstanding > 0 ? `\u20a6${outstanding.toLocaleString()} outstanding` : "Fully paid"}
                           </p>
+                        </div>
+                        <div className="bg-forest-950 rounded p-3 col-span-2">
+                          <p className="font-ui text-xs text-forest-300 mb-1">Term Progress (from daily logs)</p>
+                          {termScore === null ? (
+                            <p className="font-ui text-sm text-forest-300">No daily observations logged this term yet.</p>
+                          ) : (
+                            <>
+                              <p className={`font-ui text-lg font-semibold ${scoreColor(termScore)}`}>{termScore}/100</p>
+                              {subjectScores.length > 0 && (
+                                <div className="mt-2 space-y-1">
+                                  {subjectScores
+                                    .sort((a, b) => a.score - b.score)
+                                    .map((s) => (
+                                      <div key={s.subjectId} className="flex items-center justify-between">
+                                        <span className="font-ui text-xs text-forest-300">{s.subjectName}</span>
+                                        <span className={`font-ui text-xs font-semibold ${scoreColor(s.score)}`}>
+                                          {s.score}
+                                          {s.score < 50 && <TrendingDown size={10} className="inline ml-1" />}
+                                          {s.score >= 70 && <TrendingUp size={10} className="inline ml-1" />}
+                                        </span>
+                                      </div>
+                                    ))}
+                                </div>
+                              )}
+                            </>
+                          )}
                         </div>
                       </div>
 

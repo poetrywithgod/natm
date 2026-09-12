@@ -116,3 +116,18 @@ export async function fetchClassTeacherName(classId: string): Promise<string | n
   if (error) return null;
   return (data as any)?.teacher?.full_name ?? null;
 }
+
+// Raw rows for the roster "who needs attention" widget on the Shadow
+// Teacher Dashboard, across their whole caseload.
+export async function fetchShadowRecordsSince(
+  shadowTeacherId: string,
+  sinceDateISO: string
+): Promise<{ student_id: string; date: string; sections: SectionsData }[]> {
+  const { data, error } = await supabase
+    .from("shadow_teacher_daily_records")
+    .select("student_id, date, sections")
+    .eq("shadow_teacher_id", shadowTeacherId)
+    .gte("date", sinceDateISO);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as { student_id: string; date: string; sections: SectionsData }[];
+}
