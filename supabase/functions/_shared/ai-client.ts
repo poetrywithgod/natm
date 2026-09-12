@@ -16,12 +16,11 @@ export interface AIGenerateResult {
 
 export interface AIGenerateOptions {
   maxTokens?: number;
-  // When true, asks the provider to constrain output to valid JSON where
-  // the provider supports it (Gemini). Anthropic has no equivalent flag
-  // at this simple call shape, so callers must keep instructing "respond
-  // with ONLY JSON" in the prompt either way, and keep parsing
-  // defensively (strip code fences) since neither provider guarantees
-  // clean output on every call.
+  // Currently unused by both providers -- kept for future use. Neither
+  // Anthropic nor Gemini's OpenAI-compatible path is used with a strict
+  // JSON-schema mode here (see generateWithGemini for why); callers must
+  // keep instructing "respond with ONLY JSON" in the prompt and parsing
+  // defensively (stripping code fences) either way.
   jsonMode?: boolean;
 }
 
@@ -65,27 +64,38 @@ async function generateWithAnthropic(prompt: string, maxTokens: number): Promise
   return { text: data.content?.[0]?.text ?? "" };
 }
 
-async function generateWithGemini(prompt: string, maxTokens: number, jsonMode: boolean): Promise<AIGenerateResult> {
+async function generateWithGemini(prompt: string, maxTokens: number, _jsonMode: boolean): Promise<AIGenerateResult> {
   const apiKey = Deno.env.get("GEMINI_API_KEY");
   if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
   // Overridable in case a specific Gemini model needs to be pinned later
   // (free-tier model availability shifts fairly often).
   const model = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          maxOutputTokens: maxTokens,
-          ...(jsonMode ? { responseMimeType: "application/json" } : {}),
-        },
-      }),
-    }
-  );
+  // Google is migrating Google AI Studio keys from the classic "standard"
+  // format (AIzaSy...) to a Bearer-token "authorization key" format
+  // (AQ....). The old generateContent REST path (?key=...) rejects AQ.
+  // keys on most accounts as of mid-2026. Google's OpenAI-compatible
+  // endpoint accepts a Bearer token for BOTH key formats, so we call that
+  // instead -- this works regardless of which format a given account was
+  // issued.
+  const res = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: maxTokens,
+      messages: [{ role: "user", content: prompt }],
+      // Deliberately no response_format override: the quiz-generation
+      // prompt expects a raw JSON array at the top level, which OpenAI-
+      // style "json_object" mode is not guaranteed to preserve. Both
+      // callers already instruct "respond with ONLY JSON" in the prompt
+      // and parse defensively (stripping code fences), matching the
+      // Anthropic path's behavior exactly.
+    }),
+  });
 
   if (!res.ok) {
     const errText = await res.text();
@@ -93,10 +103,6 @@ async function generateWithGemini(prompt: string, maxTokens: number, jsonMode: b
   }
 
   const data = await res.json();
-  const candidate = data.candidates?.[0];
-  if (candidate?.finishReason === "MAX_TOKENS") {
-    throw new Error("Gemini response was cut off at the token limit -- try a shorter input or raise maxTokens.");
-  }
-  const text = candidate?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? "";
+  const text = data.choices?.[0]?.message?.content ?? "";
   return { text };
 }
