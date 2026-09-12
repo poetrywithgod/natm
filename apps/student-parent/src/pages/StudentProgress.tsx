@@ -11,7 +11,13 @@ import {
   type GamificationStats,
 } from "../features/gamification/api";
 import { getBadgeIcon } from "../features/gamification/icons";
-import { fetchStudentObservations, fetchSubjectNameMap, type DailyRecordRow } from "../features/dailyProgress/api";
+import {
+  fetchStudentObservations,
+  fetchStudentShadowRecords,
+  fetchSubjectNameMap,
+  DEFAULT_PROGRESS_RANGE_DAYS,
+  type DailyRecordRow,
+} from "../features/dailyProgress/api";
 import DailyProgressSection from "../features/dailyProgress/components/DailyProgressSection";
 
 const DIFFICULTY_LABEL: Record<string, string> = {
@@ -31,9 +37,13 @@ export default function StudentProgress() {
   const [history, setHistory] = useState<QuizHistoryEntry[]>([]);
   const [stats, setStats] = useState<GamificationStats | null>(null);
   const [earnedKeys, setEarnedKeys] = useState<Set<string>>(new Set());
-  const [observations, setObservations] = useState<DailyRecordRow[]>([]);
+  const [classObservations, setClassObservations] = useState<DailyRecordRow[]>([]);
+  const [shadowObservations, setShadowObservations] = useState<DailyRecordRow[]>([]);
   const [subjectNames, setSubjectNames] = useState<Record<string, string>>({});
+  const [studentRecordId, setStudentRecordId] = useState<string | null>(null);
+  const [rangeDays, setRangeDays] = useState<number | null>(DEFAULT_PROGRESS_RANGE_DAYS);
   const [loading, setLoading] = useState(true);
+  const [rangeLoading, setRangeLoading] = useState(false);
 
   useEffect(() => {
     if (!profile?.id || !profile.school_id) return;
@@ -49,19 +59,22 @@ export default function StudentProgress() {
         // submission in StudentQuiz.tsx -- this is just a safety net.
         await checkAndAwardBadges(record.id, profile.school_id!);
 
-        const [data, gamificationStats, earned, dailyObservations, subjects] = await Promise.all([
+        const [data, gamificationStats, earned, dailyObs, shadowObs, subjects] = await Promise.all([
           fetchQuizHistory(record.id),
           fetchGamificationStats(record.id),
           fetchEarnedBadgeKeys(record.id),
-          fetchStudentObservations(record.id),
+          fetchStudentObservations(record.id, rangeDays),
+          fetchStudentShadowRecords(record.id, rangeDays),
           fetchSubjectNameMap(),
         ]);
         if (!cancelled) {
           setHistory(data);
           setStats(gamificationStats);
           setEarnedKeys(earned);
-          setObservations(dailyObservations);
+          setClassObservations(dailyObs);
+          setShadowObservations(shadowObs);
           setSubjectNames(subjects);
+          setStudentRecordId(record.id);
         }
       } catch (err) {
         console.error("Failed to load quiz history:", err);
@@ -73,7 +86,29 @@ export default function StudentProgress() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id, profile?.school_id]);
+
+  const handleRangeChange = async (days: number | null) => {
+    if (!studentRecordId || days === rangeDays) {
+      setRangeDays(days);
+      return;
+    }
+    setRangeDays(days);
+    setRangeLoading(true);
+    try {
+      const [dailyObs, shadowObs] = await Promise.all([
+        fetchStudentObservations(studentRecordId, days),
+        fetchStudentShadowRecords(studentRecordId, days),
+      ]);
+      setClassObservations(dailyObs);
+      setShadowObservations(shadowObs);
+    } catch (err) {
+      console.error("Failed to load progress for range:", err);
+    } finally {
+      setRangeLoading(false);
+    }
+  };
 
   const average = useMemo(() => {
     if (history.length === 0) return null;
@@ -94,7 +129,14 @@ export default function StudentProgress() {
       ) : (
         <>
           <h2 className="font-display text-base text-abyssal-100">Daily Progress</h2>
-          <DailyProgressSection observations={observations} subjectNames={subjectNames} />
+          <DailyProgressSection
+            classObservations={classObservations}
+            shadowObservations={shadowObservations}
+            subjectNames={subjectNames}
+            selectedRangeDays={rangeDays}
+            onRangeChange={handleRangeChange}
+            rangeLoading={rangeLoading}
+          />
         </>
       )}
 
