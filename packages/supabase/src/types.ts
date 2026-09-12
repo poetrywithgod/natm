@@ -805,6 +805,102 @@ export type Database = {
           },
         ]
       }
+      daily_teacher_observations: {
+        Row: {
+          class_id: string
+          created_at: string
+          created_by: string
+          date: string
+          day_label: string | null
+          id: string
+          parent_signature: string | null
+          school_id: string
+          sections: Json
+          signed_date: string | null
+          status: string
+          student_id: string
+          teacher_id: string
+          teacher_signature: string | null
+          term_number: number | null
+          updated_at: string
+          week: number | null
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          created_by: string
+          date: string
+          day_label?: string | null
+          id?: string
+          parent_signature?: string | null
+          school_id: string
+          sections?: Json
+          signed_date?: string | null
+          status?: string
+          student_id: string
+          teacher_id: string
+          teacher_signature?: string | null
+          term_number?: number | null
+          updated_at?: string
+          week?: number | null
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          created_by?: string
+          date?: string
+          day_label?: string | null
+          id?: string
+          parent_signature?: string | null
+          school_id?: string
+          sections?: Json
+          signed_date?: string | null
+          status?: string
+          student_id?: string
+          teacher_id?: string
+          teacher_signature?: string | null
+          term_number?: number | null
+          updated_at?: string
+          week?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_teacher_observations_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_teacher_observations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_teacher_observations_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_teacher_observations_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_teacher_observations_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fee_types: {
         Row: {
           amount: number
@@ -2044,6 +2140,105 @@ export type Database = {
           },
           {
             foreignKeyName: "shadow_teacher_assignments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shadow_teacher_daily_records: {
+        Row: {
+          class_id: string
+          class_teacher_signature: string | null
+          created_at: string
+          created_by: string
+          date: string
+          day_label: string | null
+          id: string
+          school_id: string
+          sections: Json
+          shadow_signature: string | null
+          shadow_teacher_id: string
+          signed_date: string | null
+          status: string
+          student_id: string
+          term_number: number | null
+          therapist_involved: string | null
+          updated_at: string
+          week: number | null
+        }
+        Insert: {
+          class_id: string
+          class_teacher_signature?: string | null
+          created_at?: string
+          created_by: string
+          date: string
+          day_label?: string | null
+          id?: string
+          school_id: string
+          sections?: Json
+          shadow_signature?: string | null
+          shadow_teacher_id: string
+          signed_date?: string | null
+          status?: string
+          student_id: string
+          term_number?: number | null
+          therapist_involved?: string | null
+          updated_at?: string
+          week?: number | null
+        }
+        Update: {
+          class_id?: string
+          class_teacher_signature?: string | null
+          created_at?: string
+          created_by?: string
+          date?: string
+          day_label?: string | null
+          id?: string
+          school_id?: string
+          sections?: Json
+          shadow_signature?: string | null
+          shadow_teacher_id?: string
+          signed_date?: string | null
+          status?: string
+          student_id?: string
+          term_number?: number | null
+          therapist_involved?: string | null
+          updated_at?: string
+          week?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shadow_teacher_daily_records_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shadow_teacher_daily_records_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shadow_teacher_daily_records_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shadow_teacher_daily_records_shadow_teacher_id_fkey"
+            columns: ["shadow_teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shadow_teacher_daily_records_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"

@@ -34,6 +34,7 @@ const ShadowTeacherNotifications = lazy(() => import("./pages/ShadowTeacherNotif
 const ShadowTeacherMessages = lazy(() => import("./pages/ShadowTeacherMessages"));
 const ShadowTeacherChat = lazy(() => import("./pages/ShadowTeacherChat"));
 const ShadowTeacherMore = lazy(() => import("./pages/ShadowTeacherMore"));
+const ShadowTeacherDailyRecord = lazy(() => import("./pages/ShadowTeacherDailyRecord"));
 const FinanceManagerDashboard = lazy(() => import("./pages/FinanceManagerDashboard"));
 const FinanceManagerFees = lazy(() => import("./pages/FinanceManagerFees"));
 const FinanceManagerAnnouncements = lazy(() => import("./pages/FinanceManagerAnnouncements"));
@@ -142,6 +143,7 @@ function AppRoutes() {
           <Route path="messages" element={<ShadowTeacherMessages />} />
           <Route path="messages/:conversationId" element={<ShadowTeacherChat />} />
           <Route path="curriculum" element={<ShadowTeacherCurriculum />} />
+          <Route path="daily-record" element={<ShadowTeacherDailyRecord />} />
           <Route path="more" element={<ShadowTeacherMore />} />
         </Route>
         <Route

@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../features/auth/AuthContext";
-import { fetchMyClass, fetchClassStudents, type MyClass, type ClassStudent } from "../features/attendance/api";
+import { fetchMyStudents, type MyStudent } from "../features/shadowteacher/api";
+import { fetchCurrentTermNumber } from "../features/observations/api";
 import {
-  fetchObservation,
-  fetchObservationHistory,
-  saveObservation,
-  fetchCurrentTermNumber,
-  fetchShadowTeacherNameForStudent,
-  type DailyTeacherObservation,
-} from "../features/observations/api";
-import { CLASS_TEACHER_OBSERVATION_SECTIONS } from "../features/observations/classTeacherFormConfig";
+  fetchShadowRecord,
+  fetchShadowRecordHistory,
+  saveShadowRecord,
+  fetchClassTeacherName,
+  type ShadowTeacherDailyRecord,
+} from "../features/shadowRecords/api";
+import { SHADOW_TEACHER_RECORD_SECTIONS } from "../features/shadowRecords/formConfig";
 import { initSections, type SectionsData, type SectionValue } from "../features/observations/sectionTypes";
 import SectionRenderer from "../features/observations/components/SectionRenderer";
 
@@ -27,131 +27,119 @@ function dayLabelFor(dateStr: string): string {
 const inputCls =
   "w-full p-2 rounded bg-forest-700 text-forest-100 font-ui text-sm placeholder:text-forest-300/60 border border-transparent focus:border-forest-400 focus:outline-none";
 
-export default function ClassTeacherActivities() {
+export default function ShadowTeacherDailyRecord() {
   const { profile } = useAuth();
-  const [myClass, setMyClass] = useState<MyClass | null>(null);
-  const [students, setStudents] = useState<ClassStudent[]>([]);
+  const [students, setStudents] = useState<MyStudent[]>([]);
   const [studentId, setStudentId] = useState("");
   const [date, setDate] = useState(todayISO());
-  const [shadowTeacherName, setShadowTeacherName] = useState<string | null>(null);
+  const [classTeacherName, setClassTeacherName] = useState<string | null>(null);
   const [termNumber, setTermNumber] = useState<number | null>(null);
   const [week, setWeek] = useState<string>("");
+  const [therapistInvolved, setTherapistInvolved] = useState("");
 
-  const [record, setRecord] = useState<DailyTeacherObservation | null>(null);
+  const [record, setRecord] = useState<ShadowTeacherDailyRecord | null>(null);
   const [sections, setSections] = useState<SectionsData>({});
-  const [teacherSignature, setTeacherSignature] = useState("");
-  const [parentSignature, setParentSignature] = useState("");
+  const [shadowSignature, setShadowSignature] = useState("");
+  const [classTeacherSignature, setClassTeacherSignature] = useState("");
 
-  const [history, setHistory] = useState<DailyTeacherObservation[]>([]);
+  const [history, setHistory] = useState<ShadowTeacherDailyRecord[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
-  const [loadingClass, setLoadingClass] = useState(true);
+  const [loadingStudents, setLoadingStudents] = useState(true);
   const [loadingForm, setLoadingForm] = useState(true);
   const [saving, setSaving] = useState<"draft" | "submitted" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!profile) return;
-    setLoadingClass(true);
-    fetchMyClass(profile.id)
-      .then(async (cls) => {
-        setMyClass(cls);
-        if (cls) {
-          const [studs, term] = await Promise.all([
-            fetchClassStudents(cls.id),
-            profile.school_id ? fetchCurrentTermNumber(profile.school_id) : Promise.resolve(null),
-          ]);
-          setStudents(studs);
-          setTermNumber(term);
-          if (studs.length > 0) setStudentId(studs[0].id);
-        }
+    if (!profile?.id) return;
+    setLoadingStudents(true);
+    Promise.all([
+      fetchMyStudents(profile.id),
+      profile.school_id ? fetchCurrentTermNumber(profile.school_id) : Promise.resolve(null),
+    ])
+      .then(([studs, term]) => {
+        setStudents(studs);
+        setTermNumber(term);
+        if (studs.length > 0) setStudentId(studs[0].id);
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load class"))
-      .finally(() => setLoadingClass(false));
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load students"))
+      .finally(() => setLoadingStudents(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id]);
 
+  const selectedStudent = students.find((s) => s.id === studentId);
+
   useEffect(() => {
-    if (!studentId || !date) return;
+    if (!studentId || !date || !selectedStudent?.class_id) return;
     setLoadingForm(true);
     setError(null);
     setSuccessMessage(null);
     Promise.all([
-      fetchObservation(studentId, date),
-      fetchObservationHistory(studentId),
-      fetchShadowTeacherNameForStudent(studentId),
+      fetchShadowRecord(studentId, date),
+      fetchShadowRecordHistory(studentId),
+      fetchClassTeacherName(selectedStudent.class_id),
     ])
-      .then(([existing, hist, shadowName]) => {
+      .then(([existing, hist, teacherName]) => {
         setRecord(existing);
         setHistory(hist);
-        setShadowTeacherName(shadowName);
-        setSections(initSections(CLASS_TEACHER_OBSERVATION_SECTIONS, existing?.sections));
-        setTeacherSignature(existing?.teacher_signature ?? "");
-        setParentSignature(existing?.parent_signature ?? "");
+        setClassTeacherName(teacherName);
+        setSections(initSections(SHADOW_TEACHER_RECORD_SECTIONS, existing?.sections));
+        setShadowSignature(existing?.shadow_signature ?? "");
+        setClassTeacherSignature(existing?.class_teacher_signature ?? "");
         setWeek(existing?.week != null ? String(existing.week) : "");
+        setTherapistInvolved(existing?.therapist_involved ?? "");
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load observation form"))
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load record"))
       .finally(() => setLoadingForm(false));
-  }, [studentId, date]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentId, date, selectedStudent?.class_id]);
 
   function updateSection(key: string, value: SectionValue) {
     setSections((prev) => ({ ...prev, [key]: value }));
   }
 
   async function handleSave(status: "draft" | "submitted") {
-    if (!myClass || !profile?.school_id || !profile?.id || !studentId) return;
+    if (!profile?.school_id || !profile?.id || !studentId || !selectedStudent?.class_id) return;
     setSaving(status);
     setError(null);
     setSuccessMessage(null);
     try {
-      const saved = await saveObservation({
+      const saved = await saveShadowRecord({
         id: record?.id,
         schoolId: profile.school_id,
-        classId: myClass.id,
+        classId: selectedStudent.class_id,
         studentId,
-        teacherId: profile.id,
+        shadowTeacherId: profile.id,
+        therapistInvolved: therapistInvolved.trim() || null,
         date,
         termNumber,
         week: week.trim() ? Number(week) : null,
         dayLabel: dayLabelFor(date),
         sections,
         status,
-        teacherSignature: teacherSignature.trim() || null,
-        parentSignature: parentSignature.trim() || null,
+        shadowSignature: shadowSignature.trim() || null,
+        classTeacherSignature: classTeacherSignature.trim() || null,
         signedDate: status === "submitted" ? date : record?.signed_date ?? null,
       });
       setRecord(saved);
-      setSuccessMessage(status === "submitted" ? "Form submitted." : "Draft saved.");
-      const hist = await fetchObservationHistory(studentId);
+      setSuccessMessage(status === "submitted" ? "Record submitted." : "Draft saved.");
+      const hist = await fetchShadowRecordHistory(studentId);
       setHistory(hist);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save form");
+      setError(e instanceof Error ? e.message : "Failed to save record");
     } finally {
       setSaving(null);
     }
   }
 
-  if (loadingClass) return <div className="p-6 font-ui text-forest-100">Loading...</div>;
-
-  if (!myClass) {
-    return (
-      <div className="p-6">
-        <h1 className="font-display text-2xl text-forest-100">Daily Activities</h1>
-        <p className="font-ui text-sm text-forest-300 mt-2">
-          You're not currently assigned to a class. Contact your School Admin.
-        </p>
-      </div>
-    );
-  }
-
-  const selectedStudent = students.find((s) => s.id === studentId);
+  if (loadingStudents) return <div className="p-6 font-ui text-forest-100">Loading...</div>;
 
   return (
     <div className="p-4 space-y-4 pb-8">
       <div>
-        <h1 className="font-display text-2xl text-forest-100">Daily Teacher Observation Form</h1>
-        <p className="font-ui text-xs text-forest-300">{myClass.name} · 8:00 AM – 3:00 PM</p>
+        <h1 className="font-display text-2xl text-forest-100">Daily Support & Intervention Record</h1>
+        <p className="font-ui text-xs text-forest-300">8:00 AM – 3:00 PM</p>
       </div>
 
       {error && <p className="text-error font-ui text-sm">{error}</p>}
@@ -159,20 +147,20 @@ export default function ClassTeacherActivities() {
 
       {students.length === 0 ? (
         <p className="font-ui text-xs text-forest-300 bg-forest-900 rounded-lg p-3">
-          No students are in your class yet.
+          You have no assigned students yet. Contact your School Admin.
         </p>
       ) : (
         <>
-          {/* Learner Information */}
+          {/* Section A: Learner Information */}
           <section className="bg-forest-900 rounded-lg p-4 space-y-3">
-            <h2 className="font-ui text-sm font-semibold text-forest-100">Learner Information</h2>
+            <h2 className="font-ui text-sm font-semibold text-forest-100">Section A: Learner Information</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div>
-                <label htmlFor="obs-student" className="font-ui text-[11px] text-forest-300">
+                <label htmlFor="rec-student" className="font-ui text-[11px] text-forest-300">
                   Learner Name
                 </label>
                 <select
-                  id="obs-student"
+                  id="rec-student"
                   value={studentId}
                   onChange={(e) => setStudentId(e.target.value)}
                   className={inputCls}
@@ -185,11 +173,11 @@ export default function ClassTeacherActivities() {
                 </select>
               </div>
               <div>
-                <label htmlFor="obs-date" className="font-ui text-[11px] text-forest-300">
+                <label htmlFor="rec-date" className="font-ui text-[11px] text-forest-300">
                   Date
                 </label>
                 <input
-                  id="obs-date"
+                  id="rec-date"
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
@@ -198,15 +186,7 @@ export default function ClassTeacherActivities() {
               </div>
               <div>
                 <span className="font-ui text-[11px] text-forest-300">Class</span>
-                <p className="font-ui text-sm text-forest-100 p-2">{myClass.name}</p>
-              </div>
-              <div>
-                <span className="font-ui text-[11px] text-forest-300">Teacher</span>
-                <p className="font-ui text-sm text-forest-100 p-2">{profile?.full_name}</p>
-              </div>
-              <div>
-                <span className="font-ui text-[11px] text-forest-300">Shadow Teacher</span>
-                <p className="font-ui text-sm text-forest-100 p-2">{shadowTeacherName ?? "Not assigned"}</p>
+                <p className="font-ui text-sm text-forest-100 p-2">{selectedStudent?.class_name ?? "—"}</p>
               </div>
               <div>
                 <span className="font-ui text-[11px] text-forest-300">Term</span>
@@ -215,11 +195,11 @@ export default function ClassTeacherActivities() {
                 </p>
               </div>
               <div>
-                <label htmlFor="obs-week" className="font-ui text-[11px] text-forest-300">
+                <label htmlFor="rec-week" className="font-ui text-[11px] text-forest-300">
                   Week
                 </label>
                 <input
-                  id="obs-week"
+                  id="rec-week"
                   type="number"
                   min={1}
                   value={week}
@@ -231,6 +211,27 @@ export default function ClassTeacherActivities() {
                 <span className="font-ui text-[11px] text-forest-300">Day</span>
                 <p className="font-ui text-sm text-forest-100 p-2">{dayLabelFor(date)}</p>
               </div>
+              <div>
+                <span className="font-ui text-[11px] text-forest-300">Shadow Teacher Name</span>
+                <p className="font-ui text-sm text-forest-100 p-2">{profile?.full_name}</p>
+              </div>
+              <div>
+                <span className="font-ui text-[11px] text-forest-300">Class Teacher</span>
+                <p className="font-ui text-sm text-forest-100 p-2">{classTeacherName ?? "Not assigned"}</p>
+              </div>
+              <div>
+                <label htmlFor="rec-therapist" className="font-ui text-[11px] text-forest-300">
+                  Therapist Involved
+                </label>
+                <input
+                  id="rec-therapist"
+                  type="text"
+                  value={therapistInvolved}
+                  onChange={(e) => setTherapistInvolved(e.target.value)}
+                  placeholder="Optional"
+                  className={inputCls}
+                />
+              </div>
             </div>
           </section>
 
@@ -240,11 +241,11 @@ export default function ClassTeacherActivities() {
             <>
               {record?.status === "submitted" && (
                 <p className="font-ui text-xs text-forest-300 bg-forest-900 rounded-lg p-3">
-                  This form was submitted for {selectedStudent?.full_name} on {date}. You can still update it below.
+                  This record was submitted for {selectedStudent?.full_name} on {date}. You can still update it below.
                 </p>
               )}
 
-              {CLASS_TEACHER_OBSERVATION_SECTIONS.map((config) => (
+              {SHADOW_TEACHER_RECORD_SECTIONS.map((config) => (
                 <SectionRenderer
                   key={config.key}
                   config={config}
@@ -257,26 +258,26 @@ export default function ClassTeacherActivities() {
                 <h2 className="font-ui text-sm font-semibold text-forest-100">Signatures</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
-                    <label htmlFor="obs-teacher-sig" className="font-ui text-[11px] text-forest-300">
-                      Teacher Signature (type full name)
+                    <label htmlFor="rec-shadow-sig" className="font-ui text-[11px] text-forest-300">
+                      Shadow Teacher Signature (type full name)
                     </label>
                     <input
-                      id="obs-teacher-sig"
+                      id="rec-shadow-sig"
                       type="text"
-                      value={teacherSignature}
-                      onChange={(e) => setTeacherSignature(e.target.value)}
+                      value={shadowSignature}
+                      onChange={(e) => setShadowSignature(e.target.value)}
                       className={inputCls}
                     />
                   </div>
                   <div>
-                    <label htmlFor="obs-parent-sig" className="font-ui text-[11px] text-forest-300">
-                      Parent Signature (type full name)
+                    <label htmlFor="rec-teacher-sig" className="font-ui text-[11px] text-forest-300">
+                      Class Teacher Signature (type full name)
                     </label>
                     <input
-                      id="obs-parent-sig"
+                      id="rec-teacher-sig"
                       type="text"
-                      value={parentSignature}
-                      onChange={(e) => setParentSignature(e.target.value)}
+                      value={classTeacherSignature}
+                      onChange={(e) => setClassTeacherSignature(e.target.value)}
                       className={inputCls}
                     />
                   </div>
@@ -296,7 +297,7 @@ export default function ClassTeacherActivities() {
                   disabled={saving !== null}
                   className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui text-sm font-semibold disabled:opacity-50"
                 >
-                  {saving === "submitted" ? "Submitting..." : "Submit Form"}
+                  {saving === "submitted" ? "Submitting..." : "Submit Record"}
                 </button>
               </div>
 
@@ -305,12 +306,12 @@ export default function ClassTeacherActivities() {
                   onClick={() => setShowHistory((s) => !s)}
                   className="font-ui text-xs text-forest-300 hover:text-forest-100 underline"
                 >
-                  {showHistory ? "Hide" : "Show"} past forms for {selectedStudent?.full_name}
+                  {showHistory ? "Hide" : "Show"} past records for {selectedStudent?.full_name}
                 </button>
                 {showHistory && (
                   <div className="space-y-2 mt-2">
                     {history.length === 0 && (
-                      <p className="font-ui text-sm text-forest-300">No past forms yet.</p>
+                      <p className="font-ui text-sm text-forest-300">No past records yet.</p>
                     )}
                     {history.map((h) => (
                       <button

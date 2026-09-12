@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, MessageCircle, MoreHorizontal, Bell } from "lucide-react";
+import { LayoutDashboard, Users, MessageCircle, MoreHorizontal, Bell, ClipboardList } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchUnreadCount } from "../features/notifications/api";
 import { fetchConversationsForShadowTeacher } from "../features/messaging/api";
@@ -10,6 +10,7 @@ import { getSignedPhotoUrl } from "../features/profile/api";
 const NAV_ITEMS = [
   { to: "/shadow-teacher", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/shadow-teacher/students", label: "Students", icon: Users, end: false },
+  { to: "/shadow-teacher/daily-record", label: "Daily Record", icon: ClipboardList, end: false },
   { to: "/shadow-teacher/messages", label: "Messages", icon: MessageCircle, end: false },
   { to: "/shadow-teacher/more", label: "More", icon: MoreHorizontal, end: false },
 ];
