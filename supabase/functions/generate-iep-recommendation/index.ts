@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { generateAIText } from "../_shared/ai-client.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,7 +31,6 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY")!;
 
     const callerClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
@@ -140,36 +140,23 @@ Respond with ONLY a JSON object (no markdown, no prose, no code fences) in exact
   "summary": "<2-3 sentence overall rationale for the level and the subject set as a whole>"
 }`;
 
-    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": anthropicKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-5",
-        max_tokens: 4000,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-
-    if (!anthropicRes.ok) {
-      const errText = await anthropicRes.text();
+    let rawText: string;
+    try {
+      const result = await generateAIText(prompt, { maxTokens: 4000, jsonMode: true });
+      rawText = result.text;
+    } catch (aiErr) {
       let friendlyMessage = "The AI recommendation service is temporarily unavailable. Please try again shortly.";
+      const errText = aiErr instanceof Error ? aiErr.message : String(aiErr);
       try {
-        const parsed = JSON.parse(errText);
-        if (typeof parsed?.error?.message === "string") {
-          friendlyMessage = parsed.error.message;
+        const parsedErr = JSON.parse(errText);
+        if (typeof parsedErr?.error?.message === "string") {
+          friendlyMessage = parsedErr.error.message;
         }
       } catch {
         // errText wasn't JSON -- keep the generic fallback above
       }
       return jsonResponse({ error: friendlyMessage }, 502);
     }
-
-    const anthropicData = await anthropicRes.json();
-    const rawText = anthropicData.content?.[0]?.text ?? "";
 
     let parsed: {
       suggested_level: string;

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { generateAIText } from "../_shared/ai-client.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,7 +27,6 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY")!;
 
     // Client scoped to the caller's own JWT -- verifies who they are and
     // that they're a class_teacher, never used to write privileged data.
@@ -122,31 +122,20 @@ Respond with ONLY a JSON array (no markdown, no prose, no code fences) where eac
   "marks": number                // 1 for easy, 2 for normal, 3 for hard
 }`;
 
-    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": anthropicKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-5",
-        max_tokens: 4000,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-
-    if (!anthropicRes.ok) {
-      const errText = await anthropicRes.text();
+    let rawText: string;
+    try {
+      const result = await generateAIText(prompt, { maxTokens: 4000, jsonMode: true });
+      rawText = result.text;
+    } catch (aiErr) {
       await adminClient
         .from("quizzes")
-        .update({ status: "failed", error_message: `AI request failed: ${errText.slice(0, 500)}` })
+        .update({
+          status: "failed",
+          error_message: `AI request failed: ${(aiErr instanceof Error ? aiErr.message : String(aiErr)).slice(0, 500)}`,
+        })
         .eq("id", quiz.id);
       return jsonResponse({ error: "Quiz generation failed", quiz_id: quiz.id }, 502);
     }
-
-    const anthropicData = await anthropicRes.json();
-    const rawText = anthropicData.content?.[0]?.text ?? "";
 
     let questions: {
       question_type: string;
