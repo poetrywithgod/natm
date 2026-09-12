@@ -66,6 +66,9 @@ importers:
 
   apps/staff:
     dependencies:
+      '@natm/shared-types':
+        specifier: workspace:^
+        version: link:../../packages/shared-types
       '@natm/supabase':
         specifier: workspace:^
         version: link:../../packages/supabase
@@ -136,6 +139,9 @@ importers:
 
   apps/student-parent:
     dependencies:
+      '@natm/shared-types':
+        specifier: workspace:^
+        version: link:../../packages/shared-types
       '@natm/supabase':
         specifier: workspace:^
         version: link:../../packages/supabase

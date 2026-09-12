@@ -11,6 +11,8 @@ import {
   type GamificationStats,
 } from "../features/gamification/api";
 import { getBadgeIcon } from "../features/gamification/icons";
+import { fetchStudentObservations, fetchSubjectNameMap, type DailyRecordRow } from "../features/dailyProgress/api";
+import DailyProgressSection from "../features/dailyProgress/components/DailyProgressSection";
 
 const DIFFICULTY_LABEL: Record<string, string> = {
   easy: "Easy",
@@ -29,6 +31,8 @@ export default function StudentProgress() {
   const [history, setHistory] = useState<QuizHistoryEntry[]>([]);
   const [stats, setStats] = useState<GamificationStats | null>(null);
   const [earnedKeys, setEarnedKeys] = useState<Set<string>>(new Set());
+  const [observations, setObservations] = useState<DailyRecordRow[]>([]);
+  const [subjectNames, setSubjectNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,15 +49,19 @@ export default function StudentProgress() {
         // submission in StudentQuiz.tsx -- this is just a safety net.
         await checkAndAwardBadges(record.id, profile.school_id!);
 
-        const [data, gamificationStats, earned] = await Promise.all([
+        const [data, gamificationStats, earned, dailyObservations, subjects] = await Promise.all([
           fetchQuizHistory(record.id),
           fetchGamificationStats(record.id),
           fetchEarnedBadgeKeys(record.id),
+          fetchStudentObservations(record.id),
+          fetchSubjectNameMap(),
         ]);
         if (!cancelled) {
           setHistory(data);
           setStats(gamificationStats);
           setEarnedKeys(earned);
+          setObservations(dailyObservations);
+          setSubjectNames(subjects);
         }
       } catch (err) {
         console.error("Failed to load quiz history:", err);
@@ -83,7 +91,14 @@ export default function StudentProgress() {
           <div className="h-16 rounded-lg bg-abyssal-900" />
           <div className="h-16 rounded-lg bg-abyssal-900" />
         </div>
-      ) : history.length === 0 ? (
+      ) : (
+        <>
+          <h2 className="font-display text-base text-abyssal-100">Daily Progress</h2>
+          <DailyProgressSection observations={observations} subjectNames={subjectNames} />
+        </>
+      )}
+
+      {loading ? null : history.length === 0 ? (
         <div className="bg-abyssal-900 rounded-lg p-6 text-center">
           <TrendingUp className="mx-auto text-abyssal-300 mb-2" size={24} />
           <p className="font-body text-sm text-abyssal-300">
@@ -92,6 +107,7 @@ export default function StudentProgress() {
         </div>
       ) : (
         <>
+          <h2 className="font-display text-base text-abyssal-100">Quiz Scores</h2>
           {stats && stats.currentStreak > 0 && (
             <div className="bg-abyssal-900 rounded-lg p-4 flex items-center gap-3">
               <Flame className="text-lime shrink-0" size={28} />

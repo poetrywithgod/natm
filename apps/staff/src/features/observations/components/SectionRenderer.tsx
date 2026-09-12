@@ -9,7 +9,7 @@ import type {
   LogTableValue,
   BehaviourRecordValue,
   RadioWithNoteValue,
-} from "../sectionTypes";
+} from "@natm/shared-types";
 
 const inputCls =
   "w-full p-2 rounded bg-forest-700 text-forest-100 font-ui text-sm placeholder:text-forest-300/60 border border-transparent focus:border-forest-400 focus:outline-none";

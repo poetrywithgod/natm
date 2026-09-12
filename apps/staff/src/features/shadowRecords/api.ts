@@ -1,6 +1,6 @@
 import { supabase } from "../../lib/supabase";
 import { logAuditEvent } from "../audit/api";
-import type { SectionsData } from "../observations/sectionTypes";
+import type { SectionsData } from "@natm/shared-types";
 
 export interface ShadowTeacherDailyRecord {
   id: string;

@@ -106,6 +106,29 @@ export async function fetchTimetableEntries(classId: string): Promise<TimetableE
   return (data as unknown as TimetableEntry[]) ?? [];
 }
 
+// Drives the dynamic "Subject Performance" section on both daily forms:
+// only the subjects actually timetabled for this class on this day of the
+// week are offered for rating, instead of a static list of every subject
+// the school teaches. day_of_week is 1=Mon..5=Fri, matching Date#getDay()
+// directly (Sun=0/Sat=6 simply return no rows, same as no school that day).
+export async function fetchSubjectsForClassDay(
+  classId: string,
+  dayOfWeek: number
+): Promise<{ id: string; name: string }[]> {
+  if (dayOfWeek < 1 || dayOfWeek > 5) return [];
+  const { data, error } = await supabase
+    .from("timetable_entries")
+    .select("subject:subjects(id, name)")
+    .eq("class_id", classId)
+    .eq("day_of_week", dayOfWeek);
+  if (error) throw error;
+  const seen = new Map<string, string>();
+  for (const row of (data as unknown as { subject: { id: string; name: string } | null }[]) ?? []) {
+    if (row.subject) seen.set(row.subject.id, row.subject.name);
+  }
+  return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
+}
+
 export async function upsertTimetableEntry(
   input: {
     school_id: string;

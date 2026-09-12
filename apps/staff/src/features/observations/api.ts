@@ -1,6 +1,6 @@
 import { supabase } from "../../lib/supabase";
 import { logAuditEvent } from "../audit/api";
-import type { SectionsData } from "./sectionTypes";
+import type { SectionsData } from "@natm/shared-types";
 
 // Same pattern used by the School Admin dashboard summary: find the
 // current session for the school, then the current term within it.

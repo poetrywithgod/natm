@@ -1,4 +1,4 @@
-import type { SectionConfig } from "../observations/sectionTypes";
+import type { SectionConfig } from "./sectionTypes";
 
 // Mirrors "FORM 2: Shadow Teacher Daily Support & Intervention Record"
 // section-for-section. Applies identically to every class/level --
@@ -51,14 +51,6 @@ export const SHADOW_TEACHER_RECORD_SECTIONS: SectionConfig[] = [
     key: "morning_arrival_observation",
     title: "Morning Arrival Observation",
     fields: [{ key: "observation", label: "Observation" }],
-  },
-  {
-    type: "checkboxList",
-    key: "academic_support_subjects",
-    title: "Academic Support Record — Subject(s)",
-    timeLabel: "9:00 AM – 10:00 AM",
-    options: ["Language & Literacy", "Mathematics", "Science Discovery", "Social Awareness"],
-    otherOption: true,
   },
   {
     type: "ratingTable",

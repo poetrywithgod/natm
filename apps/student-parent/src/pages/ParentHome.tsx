@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { User, ChevronRight } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchLinkedChildren, getSignedChildPhotoUrl, type LinkedChild } from "../features/parent/api";
@@ -14,6 +15,7 @@ interface ChildSummary {
 
 export default function ParentHome() {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const [summaries, setSummaries] = useState<ChildSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -73,7 +75,11 @@ export default function ParentHome() {
       ) : (
         <div className="space-y-3">
           {summaries.map(({ child, photoUrl, pendingCount, averageScore }) => (
-            <div key={child.id} className="bg-abyssal-900 rounded-lg p-4">
+            <div
+              key={child.id}
+              onClick={() => navigate(`/parent/progress/${child.id}`)}
+              className="bg-abyssal-900 rounded-lg p-4 cursor-pointer hover:bg-abyssal-800"
+            >
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-abyssal-800 flex items-center justify-center overflow-hidden shrink-0">
                   {photoUrl ? (

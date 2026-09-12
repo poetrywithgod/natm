@@ -9,11 +9,31 @@ import {
   fetchShadowTeacherNameForStudent,
   type DailyTeacherObservation,
 } from "../features/observations/api";
-import { CLASS_TEACHER_OBSERVATION_SECTIONS } from "../features/observations/classTeacherFormConfig";
-import { initSections, type SectionsData, type SectionValue } from "../features/observations/sectionTypes";
+import { CLASS_TEACHER_OBSERVATION_SECTIONS, initSections, type SectionsData, type SectionValue } from "@natm/shared-types";
+import {
+  SUBJECT_PERFORMANCE_SECTION_KEY,
+  SUBJECT_PERFORMANCE_TITLE,
+  SUBJECT_PERFORMANCE_OPTIONS,
+  type RatingTableSection,
+} from "@natm/shared-types";
+import { fetchSubjectsForClassDay } from "../features/timetable/api";
 import SectionRenderer from "../features/observations/components/SectionRenderer";
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function dayOfWeekNumber(dateStr: string): number {
+  return new Date(dateStr + "T00:00:00").getDay(); // 1=Mon..5=Fri matches timetable_entries.day_of_week
+}
+
+// Everything up to and including "Academic Learning Observation" renders
+// first, then the timetable-driven Subject Performance section, then the
+// rest -- so subject ratings sit right after the general academic section
+// they complement.
+const ACADEMIC_SECTION_INDEX = CLASS_TEACHER_OBSERVATION_SECTIONS.findIndex(
+  (s) => s.key === "academic_learning"
+);
+const SECTIONS_BEFORE_SUBJECTS = CLASS_TEACHER_OBSERVATION_SECTIONS.slice(0, ACADEMIC_SECTION_INDEX + 1);
+const SECTIONS_AFTER_SUBJECTS = CLASS_TEACHER_OBSERVATION_SECTIONS.slice(ACADEMIC_SECTION_INDEX + 1);
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -39,6 +59,7 @@ export default function ClassTeacherActivities() {
 
   const [record, setRecord] = useState<DailyTeacherObservation | null>(null);
   const [sections, setSections] = useState<SectionsData>({});
+  const [scheduledSubjects, setScheduledSubjects] = useState<{ id: string; name: string }[]>([]);
   const [teacherSignature, setTeacherSignature] = useState("");
   const [parentSignature, setParentSignature] = useState("");
 
@@ -81,19 +102,27 @@ export default function ClassTeacherActivities() {
       fetchObservation(studentId, date),
       fetchObservationHistory(studentId),
       fetchShadowTeacherNameForStudent(studentId),
+      myClass ? fetchSubjectsForClassDay(myClass.id, dayOfWeekNumber(date)) : Promise.resolve([]),
     ])
-      .then(([existing, hist, shadowName]) => {
+      .then(([existing, hist, shadowName, subjects]) => {
         setRecord(existing);
         setHistory(hist);
         setShadowTeacherName(shadowName);
-        setSections(initSections(CLASS_TEACHER_OBSERVATION_SECTIONS, existing?.sections));
+        setScheduledSubjects(subjects);
+        const initial = initSections(CLASS_TEACHER_OBSERVATION_SECTIONS, existing?.sections);
+        initial[SUBJECT_PERFORMANCE_SECTION_KEY] = existing?.sections?.[SUBJECT_PERFORMANCE_SECTION_KEY] ?? {
+          ratings: {},
+          notes: {},
+        };
+        setSections(initial);
         setTeacherSignature(existing?.teacher_signature ?? "");
         setParentSignature(existing?.parent_signature ?? "");
         setWeek(existing?.week != null ? String(existing.week) : "");
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load observation form"))
       .finally(() => setLoadingForm(false));
-  }, [studentId, date]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentId, date, myClass?.id]);
 
   function updateSection(key: string, value: SectionValue) {
     setSections((prev) => ({ ...prev, [key]: value }));
@@ -244,7 +273,34 @@ export default function ClassTeacherActivities() {
                 </p>
               )}
 
-              {CLASS_TEACHER_OBSERVATION_SECTIONS.map((config) => (
+              {SECTIONS_BEFORE_SUBJECTS.map((config) => (
+                <SectionRenderer
+                  key={config.key}
+                  config={config}
+                  value={sections[config.key]}
+                  onChange={(v) => updateSection(config.key, v)}
+                />
+              ))}
+
+              <SectionRenderer
+                config={
+                  {
+                    type: "ratingTable",
+                    key: SUBJECT_PERFORMANCE_SECTION_KEY,
+                    title: SUBJECT_PERFORMANCE_TITLE,
+                    timeLabel:
+                      scheduledSubjects.length > 0
+                        ? "Based on today's timetable"
+                        : "No subjects timetabled for this class today",
+                    options: SUBJECT_PERFORMANCE_OPTIONS,
+                    rows: scheduledSubjects.map((s) => ({ key: s.id, label: s.name })),
+                  } satisfies RatingTableSection
+                }
+                value={sections[SUBJECT_PERFORMANCE_SECTION_KEY] ?? { ratings: {}, notes: {} }}
+                onChange={(v) => updateSection(SUBJECT_PERFORMANCE_SECTION_KEY, v)}
+              />
+
+              {SECTIONS_AFTER_SUBJECTS.map((config) => (
                 <SectionRenderer
                   key={config.key}
                   config={config}

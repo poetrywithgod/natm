@@ -9,11 +9,29 @@ import {
   fetchClassTeacherName,
   type ShadowTeacherDailyRecord,
 } from "../features/shadowRecords/api";
-import { SHADOW_TEACHER_RECORD_SECTIONS } from "../features/shadowRecords/formConfig";
-import { initSections, type SectionsData, type SectionValue } from "../features/observations/sectionTypes";
+import { SHADOW_TEACHER_RECORD_SECTIONS, initSections, type SectionsData, type SectionValue } from "@natm/shared-types";
+import {
+  SUBJECT_PERFORMANCE_SECTION_KEY,
+  SUBJECT_PERFORMANCE_TITLE,
+  SUBJECT_PERFORMANCE_OPTIONS,
+  type RatingTableSection,
+} from "@natm/shared-types";
+import { fetchSubjectsForClassDay } from "../features/timetable/api";
 import SectionRenderer from "../features/observations/components/SectionRenderer";
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function dayOfWeekNumber(dateStr: string): number {
+  return new Date(dateStr + "T00:00:00").getDay(); // 1=Mon..5=Fri matches timetable_entries.day_of_week
+}
+
+// Subject Performance slots in right where the Academic Support section
+// starts, ahead of the general learning-skills rating.
+const ACADEMIC_SECTION_INDEX = SHADOW_TEACHER_RECORD_SECTIONS.findIndex(
+  (s) => s.key === "academic_support_skills"
+);
+const SECTIONS_BEFORE_SUBJECTS = SHADOW_TEACHER_RECORD_SECTIONS.slice(0, ACADEMIC_SECTION_INDEX);
+const SECTIONS_AFTER_SUBJECTS = SHADOW_TEACHER_RECORD_SECTIONS.slice(ACADEMIC_SECTION_INDEX);
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -39,6 +57,7 @@ export default function ShadowTeacherDailyRecord() {
 
   const [record, setRecord] = useState<ShadowTeacherDailyRecord | null>(null);
   const [sections, setSections] = useState<SectionsData>({});
+  const [scheduledSubjects, setScheduledSubjects] = useState<{ id: string; name: string }[]>([]);
   const [shadowSignature, setShadowSignature] = useState("");
   const [classTeacherSignature, setClassTeacherSignature] = useState("");
 
@@ -79,12 +98,19 @@ export default function ShadowTeacherDailyRecord() {
       fetchShadowRecord(studentId, date),
       fetchShadowRecordHistory(studentId),
       fetchClassTeacherName(selectedStudent.class_id),
+      fetchSubjectsForClassDay(selectedStudent.class_id, dayOfWeekNumber(date)),
     ])
-      .then(([existing, hist, teacherName]) => {
+      .then(([existing, hist, teacherName, subjects]) => {
         setRecord(existing);
         setHistory(hist);
         setClassTeacherName(teacherName);
-        setSections(initSections(SHADOW_TEACHER_RECORD_SECTIONS, existing?.sections));
+        setScheduledSubjects(subjects);
+        const initial = initSections(SHADOW_TEACHER_RECORD_SECTIONS, existing?.sections);
+        initial[SUBJECT_PERFORMANCE_SECTION_KEY] = existing?.sections?.[SUBJECT_PERFORMANCE_SECTION_KEY] ?? {
+          ratings: {},
+          notes: {},
+        };
+        setSections(initial);
         setShadowSignature(existing?.shadow_signature ?? "");
         setClassTeacherSignature(existing?.class_teacher_signature ?? "");
         setWeek(existing?.week != null ? String(existing.week) : "");
@@ -245,7 +271,34 @@ export default function ShadowTeacherDailyRecord() {
                 </p>
               )}
 
-              {SHADOW_TEACHER_RECORD_SECTIONS.map((config) => (
+              {SECTIONS_BEFORE_SUBJECTS.map((config) => (
+                <SectionRenderer
+                  key={config.key}
+                  config={config}
+                  value={sections[config.key]}
+                  onChange={(v) => updateSection(config.key, v)}
+                />
+              ))}
+
+              <SectionRenderer
+                config={
+                  {
+                    type: "ratingTable",
+                    key: SUBJECT_PERFORMANCE_SECTION_KEY,
+                    title: SUBJECT_PERFORMANCE_TITLE,
+                    timeLabel:
+                      scheduledSubjects.length > 0
+                        ? "Based on today's timetable"
+                        : "No subjects timetabled for this class today",
+                    options: SUBJECT_PERFORMANCE_OPTIONS,
+                    rows: scheduledSubjects.map((s) => ({ key: s.id, label: s.name })),
+                  } satisfies RatingTableSection
+                }
+                value={sections[SUBJECT_PERFORMANCE_SECTION_KEY] ?? { ratings: {}, notes: {} }}
+                onChange={(v) => updateSection(SUBJECT_PERFORMANCE_SECTION_KEY, v)}
+              />
+
+              {SECTIONS_AFTER_SUBJECTS.map((config) => (
                 <SectionRenderer
                   key={config.key}
                   config={config}
