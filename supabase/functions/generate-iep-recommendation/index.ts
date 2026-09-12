@@ -147,6 +147,12 @@ Respond with ONLY a JSON object (no markdown, no prose, no code fences) in exact
     } catch (aiErr) {
       let friendlyMessage = "The AI recommendation service is temporarily unavailable. Please try again shortly.";
       const errText = aiErr instanceof Error ? aiErr.message : String(aiErr);
+      // Without this, the Dashboard's Logs tab only ever shows generic
+      // "shutdown"/"boot" lifecycle noise for a failed call -- there was
+      // nowhere the actual provider error (bad key, wrong model name,
+      // quota, etc.) got written down before being swapped for the
+      // friendly message below.
+      console.error(`[generate-iep-recommendation] AI request failed: ${errText}`);
       try {
         const parsedErr = JSON.parse(errText);
         if (typeof parsedErr?.error?.message === "string") {

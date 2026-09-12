@@ -127,12 +127,11 @@ Respond with ONLY a JSON array (no markdown, no prose, no code fences) where eac
       const result = await generateAIText(prompt, { maxTokens: 4000, jsonMode: true });
       rawText = result.text;
     } catch (aiErr) {
+      const errText = aiErr instanceof Error ? aiErr.message : String(aiErr);
+      console.error(`[generate-quiz] AI request failed: ${errText}`);
       await adminClient
         .from("quizzes")
-        .update({
-          status: "failed",
-          error_message: `AI request failed: ${(aiErr instanceof Error ? aiErr.message : String(aiErr)).slice(0, 500)}`,
-        })
+        .update({ status: "failed", error_message: `AI request failed: ${errText.slice(0, 500)}` })
         .eq("id", quiz.id);
       return jsonResponse({ error: "Quiz generation failed", quiz_id: quiz.id }, 502);
     }
