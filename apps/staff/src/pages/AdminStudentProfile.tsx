@@ -25,6 +25,7 @@ import {
   type LinkedParent,
   type CreateParentAccountResult,
 } from "../features/parents/api";
+import DailyLogTab from "../features/dailyLog/components/DailyLogTab";
 
 const STATUS_LABELS: Record<string, string> = { present: "Present", absent: "Absent", late: "Late" };
 
@@ -58,6 +59,7 @@ export default function AdminStudentProfile() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"overview" | "daily-log">("overview");
 
   async function loadAll() {
     if (!id || !schoolId) return;
@@ -226,6 +228,31 @@ export default function AdminStudentProfile() {
       {error && <p className="text-error font-ui text-sm">{error}</p>}
       {success && <p className="text-forest-500 font-ui text-sm">{success}</p>}
 
+      <div className="flex gap-2 border-b border-forest-700">
+        <button
+          onClick={() => setActiveTab("overview")}
+          className={`px-3 py-2 font-ui text-sm font-semibold border-b-2 -mb-px ${
+            activeTab === "overview" ? "border-forest-500 text-forest-100" : "border-transparent text-forest-300"
+          }`}
+        >
+          Overview
+        </button>
+        <button
+          onClick={() => setActiveTab("daily-log")}
+          className={`px-3 py-2 font-ui text-sm font-semibold border-b-2 -mb-px ${
+            activeTab === "daily-log" ? "border-forest-500 text-forest-100" : "border-transparent text-forest-300"
+          }`}
+        >
+          Daily Log
+        </button>
+      </div>
+
+      {activeTab === "daily-log" && (
+        <DailyLogTab studentId={student.id} studentFirstName={student.full_name.split(" ")[0]} />
+      )}
+
+      {activeTab === "overview" && (
+        <>
       {/* About — student-editable, from Student Settings > Profile */}
       {(student.phone || student.address || student.bio) && (
         <div className="bg-forest-900 rounded-lg p-4 space-y-3">
@@ -546,6 +573,8 @@ export default function AdminStudentProfile() {
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }

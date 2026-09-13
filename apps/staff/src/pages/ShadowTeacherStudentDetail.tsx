@@ -17,6 +17,7 @@ import {
   type ActivityFeedItem,
 } from "../features/shadowteacher/api";
 import { getSignedPhotoUrl } from "../features/students/api";
+import DailyLogTab from "../features/dailyLog/components/DailyLogTab";
 
 export default function ShadowTeacherStudentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -35,6 +36,7 @@ export default function ShadowTeacherStudentDetail() {
 
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"overview" | "daily-log">("overview");
 
   useEffect(() => {
     if (!id) return;
@@ -150,6 +152,31 @@ export default function ShadowTeacherStudentDetail() {
         </button>
       </div>
 
+      <div className="flex gap-2 border-b border-forest-700">
+        <button
+          onClick={() => setActiveTab("overview")}
+          className={`px-3 py-2 font-ui text-sm font-semibold border-b-2 -mb-px ${
+            activeTab === "overview" ? "border-forest-500 text-forest-100" : "border-transparent text-forest-300"
+          }`}
+        >
+          Overview
+        </button>
+        <button
+          onClick={() => setActiveTab("daily-log")}
+          className={`px-3 py-2 font-ui text-sm font-semibold border-b-2 -mb-px ${
+            activeTab === "daily-log" ? "border-forest-500 text-forest-100" : "border-transparent text-forest-300"
+          }`}
+        >
+          Daily Log
+        </button>
+      </div>
+
+      {activeTab === "daily-log" && (
+        <DailyLogTab studentId={id ?? ""} studentFirstName={student.full_name.split(" ")[0]} />
+      )}
+
+      {activeTab === "overview" && (
+        <>
       {/* Attendance */}
       {attendance && (
         <section className="space-y-2">
@@ -260,6 +287,8 @@ export default function ShadowTeacherStudentDetail() {
           ))}
         </div>
       </section>
+        </>
+      )}
     </div>
   );
 }
