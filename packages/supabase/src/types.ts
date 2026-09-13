@@ -503,6 +503,52 @@ export type Database = {
           },
         ]
       }
+      school_enabled_levels: {
+        Row: {
+          school_id: string
+          level: Database["public"]["Enums"]["class_level"]
+        }
+        Insert: {
+          school_id: string
+          level: Database["public"]["Enums"]["class_level"]
+        }
+        Update: {
+          school_id?: string
+          level?: Database["public"]["Enums"]["class_level"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_enabled_levels_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subject_levels: {
+        Row: {
+          subject_id: string
+          level: Database["public"]["Enums"]["class_level"]
+        }
+        Insert: {
+          subject_id: string
+          level: Database["public"]["Enums"]["class_level"]
+        }
+        Update: {
+          subject_id?: string
+          level?: Database["public"]["Enums"]["class_level"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subject_levels_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_work: {
         Row: {
           assigned_by: string
@@ -2916,6 +2962,7 @@ export type Database = {
         | "pre_nursery"
         | "nursery_1"
         | "nursery_2"
+        | "nursery_3"
         | "kg_1"
         | "kg_2"
         | "primary_1"
@@ -3093,6 +3140,7 @@ export const Constants = {
         "pre_nursery",
         "nursery_1",
         "nursery_2",
+        "nursery_3",
         "kg_1",
         "kg_2",
         "primary_1",

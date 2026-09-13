@@ -15,16 +15,9 @@ import {
   type ClassOption,
   type ShadowTeacherOption,
 } from "../features/assessments/api";
-import type { Database } from "@natm/supabase";
+import { ALL_CLASS_LEVELS, type ClassLevel } from "@natm/shared-types";
 
-type ClassLevel = Database["public"]["Enums"]["class_level"];
-
-const CLASS_LEVELS = [
-  "creche", "pre_nursery", "nursery_1", "nursery_2", "kg_1", "kg_2",
-  "primary_1", "primary_2", "primary_3", "primary_4", "primary_5", "primary_6",
-  "jss_1", "jss_2", "jss_3",
-  "ss_1", "ss_2", "ss_3",
-];
+const CLASS_LEVELS = ALL_CLASS_LEVELS.map((l) => l.value);
 
 function levelLabel(level: string): string {
   if (level === "creche") return "Creche";

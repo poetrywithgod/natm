@@ -1,28 +1,8 @@
 import { supabase } from "../../lib/supabase";
-import type { Database } from "@natm/supabase";
+import { CLASS_LEVEL_LABELS, type ClassLevel } from "@natm/shared-types";
 
-export type ClassLevel = Database["public"]["Enums"]["class_level"];
-
-export const CLASS_LEVEL_LABELS: Record<string, string> = {
-  creche: "Creche",
-  pre_nursery: "Pre-Nursery",
-  nursery_1: "Nursery 1",
-  nursery_2: "Nursery 2",
-  kg_1: "KG 1",
-  kg_2: "KG 2",
-  primary_1: "Primary 1",
-  primary_2: "Primary 2",
-  primary_3: "Primary 3",
-  primary_4: "Primary 4",
-  primary_5: "Primary 5",
-  primary_6: "Primary 6",
-  jss_1: "JSS 1",
-  jss_2: "JSS 2",
-  jss_3: "JSS 3",
-  ss_1: "SS 1",
-  ss_2: "SS 2",
-  ss_3: "SS 3",
-};
+export type { ClassLevel };
+export { CLASS_LEVEL_LABELS };
 
 export interface CurriculumDocView {
   id: string;

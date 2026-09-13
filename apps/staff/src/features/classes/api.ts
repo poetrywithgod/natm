@@ -1,29 +1,9 @@
 import { supabase } from "../../lib/supabase";
 import { logAuditEvent } from "../audit/api";
-import type { Database } from "@natm/supabase";
+import { ALL_CLASS_LEVELS as CLASS_LEVELS, type ClassLevel } from "@natm/shared-types";
 
-type ClassLevel = Database["public"]["Enums"]["class_level"];
-
-export const CLASS_LEVELS = [
-  { value: "creche", label: "Creche" },
-  { value: "pre_nursery", label: "Pre-Nursery" },
-  { value: "nursery_1", label: "Nursery 1" },
-  { value: "nursery_2", label: "Nursery 2" },
-  { value: "kg_1", label: "KG 1" },
-  { value: "kg_2", label: "KG 2" },
-  { value: "primary_1", label: "Primary 1" },
-  { value: "primary_2", label: "Primary 2" },
-  { value: "primary_3", label: "Primary 3" },
-  { value: "primary_4", label: "Primary 4" },
-  { value: "primary_5", label: "Primary 5" },
-  { value: "primary_6", label: "Primary 6" },
-  { value: "jss_1", label: "JSS 1" },
-  { value: "jss_2", label: "JSS 2" },
-  { value: "jss_3", label: "JSS 3" },
-  { value: "ss_1", label: "SS 1" },
-  { value: "ss_2", label: "SS 2" },
-  { value: "ss_3", label: "SS 3" },
-] as const;
+export { CLASS_LEVELS };
+export type { ClassLevel };
 
 export interface SchoolClass {
   id: string;

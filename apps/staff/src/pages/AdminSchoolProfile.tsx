@@ -10,6 +10,8 @@ import {
   type SchoolDetailsInput,
   type FinancialModel,
 } from "../features/schools/api";
+import CollapsibleSection from "../components/CollapsibleSection";
+import ClassLevelsSettings from "../features/schoolLevels/components/ClassLevelsSettings";
 
 const EMPTY_DETAILS: SchoolDetailsInput = {
   contact_email: "",
@@ -155,8 +157,7 @@ export default function AdminSchoolProfile() {
       </div>
 
       {/* Logo */}
-      <section className="space-y-3">
-        <h2 className="font-ui text-sm font-semibold text-forest-100">Logo</h2>
+      <CollapsibleSection title="Logo" defaultOpen>
         <div className="flex items-center gap-4">
           <div className="w-20 h-20 rounded-lg bg-forest-800 overflow-hidden flex items-center justify-center text-forest-300 font-ui text-xs">
             {school?.logo_url ? (
@@ -177,11 +178,10 @@ export default function AdminSchoolProfile() {
           </label>
         </div>
         {logoError && <p className="font-ui text-xs text-red-400">{logoError}</p>}
-      </section>
+      </CollapsibleSection>
 
       {/* Name */}
-      <section className="space-y-2">
-        <h2 className="font-ui text-sm font-semibold text-forest-100">School name</h2>
+      <CollapsibleSection title="School name" defaultOpen>
         <div className="flex gap-2">
           <input
             type="text"
@@ -202,11 +202,20 @@ export default function AdminSchoolProfile() {
         </div>
         {nameError && <p className="font-ui text-xs text-red-400">{nameError}</p>}
         {nameSaved && <p className="font-ui text-xs text-forest-400">Name updated.</p>}
-      </section>
+      </CollapsibleSection>
+
+      {/* Class levels */}
+      <CollapsibleSection
+        title="Class Levels"
+        subtitle="Which levels your school uses -- Creche through SS 3."
+      >
+        {profile?.school_id && profile?.id && (
+          <ClassLevelsSettings schoolId={profile.school_id} actorId={profile.id} />
+        )}
+      </CollapsibleSection>
 
       {/* Financial model */}
-      <section className="space-y-3">
-        <h2 className="font-ui text-sm font-semibold text-forest-100">Financial model</h2>
+      <CollapsibleSection title="Financial model">
         <p className="font-ui text-xs text-forest-300">
           Choose how billing is framed across the app for this school. This doesn't change the
           underlying fee terms/amounts your Finance Manager sets up -- it only changes labels and,
@@ -250,12 +259,10 @@ export default function AdminSchoolProfile() {
           </label>
         </div>
         {modelError && <p className="font-ui text-xs text-red-400">{modelError}</p>}
-      </section>
+      </CollapsibleSection>
 
       {/* Details */}
-      <section className="space-y-3">
-        <h2 className="font-ui text-sm font-semibold text-forest-100">School details</h2>
-
+      <CollapsibleSection title="School details">
         <div>
           <label className={labelClass}>Email</label>
           <input
@@ -350,7 +357,7 @@ export default function AdminSchoolProfile() {
         </button>
         {detailsError && <p className="font-ui text-xs text-red-400">{detailsError}</p>}
         {detailsSaved && <p className="font-ui text-xs text-forest-400">Details updated.</p>}
-      </section>
+      </CollapsibleSection>
     </div>
   );
 }

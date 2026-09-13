@@ -26,6 +26,7 @@ import {
   type CreateParentAccountResult,
 } from "../features/parents/api";
 import DailyLogTab from "../features/dailyLog/components/DailyLogTab";
+import CollapsibleSection from "../components/CollapsibleSection";
 
 const STATUS_LABELS: Record<string, string> = { present: "Present", absent: "Absent", late: "Late" };
 
@@ -255,10 +256,7 @@ export default function AdminStudentProfile() {
         <>
       {/* About — student-editable, from Student Settings > Profile */}
       {(student.phone || student.address || student.bio) && (
-        <div className="bg-forest-900 rounded-lg p-4 space-y-3">
-          <h2 className="font-display text-lg text-forest-100">About</h2>
-          <p className="font-ui text-xs text-forest-300">Updated by the student from their own portal.</p>
-
+        <CollapsibleSection title="About" subtitle="Updated by the student from their own portal.">
           {student.phone && (
             <div>
               <p className="font-ui text-xs text-forest-300">Phone</p>
@@ -277,15 +275,12 @@ export default function AdminStudentProfile() {
               <p className="font-ui text-sm text-forest-100 whitespace-pre-wrap">{student.bio}</p>
             </div>
           )}
-        </div>
+        </CollapsibleSection>
       )}
 
       {/* Emergency Contact — student-editable, from Student Settings > Profile */}
       {(student.emergency_contact_name || student.emergency_contact_phone || student.emergency_contact_phone_alt) && (
-        <div className="bg-error/10 border border-error/30 rounded-lg p-4 space-y-3">
-          <h2 className="font-display text-lg text-forest-100">Emergency Contact</h2>
-          <p className="font-ui text-xs text-forest-300">Updated by the student from their own portal.</p>
-
+        <CollapsibleSection title="Emergency Contact" subtitle="Updated by the student from their own portal." defaultOpen>
           {student.emergency_contact_name && (
             <div>
               <p className="font-ui text-xs text-forest-300">Contact name</p>
@@ -304,12 +299,11 @@ export default function AdminStudentProfile() {
               <p className="font-ui text-sm text-forest-100">{student.emergency_contact_phone_alt}</p>
             </div>
           )}
-        </div>
+        </CollapsibleSection>
       )}
 
       {/* Linked Parents */}
-      <div className="bg-forest-900 rounded-lg p-4 space-y-4">
-        <h2 className="font-display text-lg text-forest-100">Linked Parents</h2>
+      <CollapsibleSection title="Linked Parents" defaultOpen>
 
         {linkedParents.length === 0 ? (
           <p className="font-ui text-xs text-forest-300">No parent account linked yet.</p>
@@ -381,11 +375,10 @@ export default function AdminStudentProfile() {
             {creatingParent ? "Adding..." : "Add Parent"}
           </button>
         </div>
-      </div>
+      </CollapsibleSection>
 
       {/* Promotion */}
-      <div className="bg-forest-900 rounded-lg p-4 space-y-4">
-        <h2 className="font-display text-lg text-forest-100">Promotion</h2>
+      <CollapsibleSection title="Promotion">
 
         {!sessionId && (
           <p className="font-ui text-xs text-forest-300">
@@ -489,11 +482,10 @@ export default function AdminStudentProfile() {
             ))}
           </div>
         )}
-      </div>
+      </CollapsibleSection>
 
       {/* Subject Progress */}
-      <div className="bg-forest-900 rounded-lg p-4 space-y-3">
-        <h2 className="font-display text-lg text-forest-100">Subject Progress</h2>
+      <CollapsibleSection title="Subject Progress">
         {subjectProgress.length === 0 ? (
           <p className="font-ui text-xs text-forest-300">
             No subjects assigned to this student's class yet.
@@ -526,11 +518,10 @@ export default function AdminStudentProfile() {
             ))}
           </div>
         )}
-      </div>
+      </CollapsibleSection>
 
       {/* Attendance history */}
-      <div className="bg-forest-900 rounded-lg p-4 space-y-2">
-        <h2 className="font-display text-lg text-forest-100">Attendance History</h2>
+      <CollapsibleSection title="Attendance History">
         {attendance.length === 0 ? (
           <p className="font-ui text-xs text-forest-300">No attendance records yet.</p>
         ) : (
@@ -553,11 +544,10 @@ export default function AdminStudentProfile() {
             ))}
           </div>
         )}
-      </div>
+      </CollapsibleSection>
 
       {/* Fees */}
-      <div className="bg-forest-900 rounded-lg p-4 space-y-2">
-        <h2 className="font-display text-lg text-forest-100">Fee Status</h2>
+      <CollapsibleSection title="Fee Status">
         {fees.length === 0 ? (
           <p className="font-ui text-xs text-forest-300">No fees recorded yet.</p>
         ) : (
@@ -572,7 +562,7 @@ export default function AdminStudentProfile() {
             ))}
           </div>
         )}
-      </div>
+      </CollapsibleSection>
         </>
       )}
     </div>

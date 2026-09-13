@@ -18,6 +18,7 @@ import {
 } from "../features/shadowteacher/api";
 import { getSignedPhotoUrl } from "../features/students/api";
 import DailyLogTab from "../features/dailyLog/components/DailyLogTab";
+import CollapsibleSection from "../components/CollapsibleSection";
 
 export default function ShadowTeacherStudentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -179,8 +180,7 @@ export default function ShadowTeacherStudentDetail() {
         <>
       {/* Attendance */}
       {attendance && (
-        <section className="space-y-2">
-          <h2 className="font-ui text-sm font-semibold text-forest-100">Attendance (last 30)</h2>
+        <CollapsibleSection title="Attendance (last 30)" defaultOpen>
           <div className="grid grid-cols-3 gap-2">
             <div className="bg-forest-900 rounded-lg p-3 text-center">
               <p className="font-display text-lg text-forest-100">{attendance.present}</p>
@@ -195,13 +195,12 @@ export default function ShadowTeacherStudentDetail() {
               <p className="font-ui text-[11px] text-forest-300">Late</p>
             </div>
           </div>
-        </section>
+        </CollapsibleSection>
       )}
 
       {/* Subjects offered */}
       {subjects.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="font-ui text-sm font-semibold text-forest-100">Subjects offered</h2>
+        <CollapsibleSection title="Subjects offered">
           <div className="flex flex-wrap gap-2">
             {subjects.map((s) => (
               <span
@@ -212,13 +211,12 @@ export default function ShadowTeacherStudentDetail() {
               </span>
             ))}
           </div>
-        </section>
+        </CollapsibleSection>
       )}
 
       {/* Subject progress */}
       {progress.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="font-ui text-sm font-semibold text-forest-100">Subject progress</h2>
+        <CollapsibleSection title="Subject progress">
           <div className="space-y-2">
             {progress.map((p) => (
               <div key={p.subject_id}>
@@ -235,12 +233,11 @@ export default function ShadowTeacherStudentDetail() {
               </div>
             ))}
           </div>
-        </section>
+        </CollapsibleSection>
       )}
 
       {/* Activity feed + reinforcement notes */}
-      <section className="space-y-3">
-        <h2 className="font-ui text-sm font-semibold text-forest-100">Activity feed</h2>
+      <CollapsibleSection title="Activity feed" defaultOpen>
         {feed.length === 0 && (
           <p className="font-ui text-sm text-forest-300">No activities logged yet.</p>
         )}
@@ -286,7 +283,7 @@ export default function ShadowTeacherStudentDetail() {
             </div>
           ))}
         </div>
-      </section>
+      </CollapsibleSection>
         </>
       )}
     </div>

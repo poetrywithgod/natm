@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { Upload, Trash2, ExternalLink, Plus, ChevronDown, ChevronRight } from "lucide-react";
+import { Upload, Trash2, ExternalLink, Plus, ChevronDown, ChevronRight, X } from "lucide-react";
 import {
   fetchSubjects,
   createSubject,
   fetchAllCurriculumDocs,
   uploadCurriculumPdf,
   deleteCurriculumPdf,
+  fetchSubjectLevelMap,
+  addSubjectToLevel,
+  removeSubjectFromLevel,
   CLASS_LEVELS,
   type Subject,
   type CurriculumDoc,
@@ -17,9 +20,11 @@ const TERMS = [1, 2, 3];
 export default function Curriculum() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [docs, setDocs] = useState<CurriculumDoc[]>([]);
+  const [subjectLevelMap, setSubjectLevelMap] = useState<Record<string, ClassLevel[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedLevel, setExpandedLevel] = useState<ClassLevel | null>(null);
+  const [levelMapBusy, setLevelMapBusy] = useState<string | null>(null);
 
   const [newSubject, setNewSubject] = useState("");
   const [addingSubject, setAddingSubject] = useState(false);
@@ -27,9 +32,10 @@ export default function Curriculum() {
   async function load() {
     setLoading(true);
     try {
-      const [s, d] = await Promise.all([fetchSubjects(), fetchAllCurriculumDocs()]);
+      const [s, d, m] = await Promise.all([fetchSubjects(), fetchAllCurriculumDocs(), fetchSubjectLevelMap()]);
       setSubjects(s);
       setDocs(d);
+      setSubjectLevelMap(m);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load curriculum");
     } finally {
@@ -53,6 +59,24 @@ export default function Curriculum() {
       setError(e instanceof Error ? e.message : "Failed to add subject");
     } finally {
       setAddingSubject(false);
+    }
+  }
+
+  async function handleToggleSubjectLevel(subjectId: string, level: ClassLevel, currentlyIncluded: boolean) {
+    setLevelMapBusy(`${subjectId}:${level}`);
+    setError(null);
+    try {
+      if (currentlyIncluded) {
+        await removeSubjectFromLevel(subjectId, level);
+      } else {
+        await addSubjectToLevel(subjectId, level);
+      }
+      const m = await fetchSubjectLevelMap();
+      setSubjectLevelMap(m);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update subject");
+    } finally {
+      setLevelMapBusy(null);
     }
   }
 
@@ -123,31 +147,65 @@ export default function Curriculum() {
 
               {expandedLevel === level.value && (
                 <div className="border-t border-slate-800 divide-y divide-slate-800">
-                  {subjects.length === 0 ? (
-                    <p className="p-4 font-ui text-xs text-slate-500">Add a subject above first.</p>
+                  <div className="p-4 space-y-2 bg-slate-950/40">
+                    <p className="font-ui text-xs text-slate-400">
+                      Subjects for {level.label} -- toggle which ones apply here.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {subjects.map((subject) => {
+                        const included = (subjectLevelMap[subject.id] ?? []).includes(level.value);
+                        const busy = levelMapBusy === `${subject.id}:${level.value}`;
+                        return (
+                          <button
+                            key={subject.id}
+                            onClick={() => handleToggleSubjectLevel(subject.id, level.value, included)}
+                            disabled={busy}
+                            className={`flex items-center gap-1 font-ui text-xs px-2.5 py-1 rounded-full disabled:opacity-50 transition-colors ${
+                              included
+                                ? "bg-amber-500 text-slate-950"
+                                : "bg-slate-800 text-slate-400 hover:text-slate-200"
+                            }`}
+                          >
+                            {subject.name}
+                            {included && <X size={12} />}
+                          </button>
+                        );
+                      })}
+                      {subjects.length === 0 && (
+                        <p className="font-ui text-xs text-slate-500">Add a subject above first.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {subjects.filter((s) => (subjectLevelMap[s.id] ?? []).includes(level.value)).length === 0 ? (
+                    <p className="p-4 font-ui text-xs text-slate-500">
+                      No subjects apply to {level.label} yet -- toggle some on above.
+                    </p>
                   ) : (
-                    subjects.map((subject) => (
-                      <div key={subject.id} className="p-4">
-                        <p className="font-body text-sm text-slate-100 mb-2">{subject.name}</p>
-                        <div className="grid grid-cols-3 gap-2">
-                          {TERMS.map((term) => (
-                            <TermSlot
-                              key={term}
-                              term={term}
-                              doc={docFor(subject.id, level.value, term)}
-                              onUpload={async (file) => {
-                                await uploadCurriculumPdf(subject.id, level.value, term, file);
-                                await load();
-                              }}
-                              onDelete={async (docId) => {
-                                await deleteCurriculumPdf(docId);
-                                await load();
-                              }}
-                            />
-                          ))}
+                    subjects
+                      .filter((s) => (subjectLevelMap[s.id] ?? []).includes(level.value))
+                      .map((subject) => (
+                        <div key={subject.id} className="p-4">
+                          <p className="font-body text-sm text-slate-100 mb-2">{subject.name}</p>
+                          <div className="grid grid-cols-3 gap-2">
+                            {TERMS.map((term) => (
+                              <TermSlot
+                                key={term}
+                                term={term}
+                                doc={docFor(subject.id, level.value, term)}
+                                onUpload={async (file) => {
+                                  await uploadCurriculumPdf(subject.id, level.value, term, file);
+                                  await load();
+                                }}
+                                onDelete={async (docId) => {
+                                  await deleteCurriculumPdf(docId);
+                                  await load();
+                                }}
+                              />
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      ))
                   )}
                 </div>
               )}

@@ -212,6 +212,9 @@ importers:
 
   apps/super-admin:
     dependencies:
+      '@natm/shared-types':
+        specifier: workspace:^
+        version: link:../../packages/shared-types
       '@natm/supabase':
         specifier: workspace:^
         version: link:../../packages/supabase

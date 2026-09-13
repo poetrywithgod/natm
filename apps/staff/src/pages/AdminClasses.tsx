@@ -15,17 +15,22 @@ import {
 } from "../features/classes/api";
 import {
   fetchClassSubjects,
+  fetchSubjectsForLevel,
   findOrCreateSubject,
   assignSubjectToClass,
   removeSubjectFromClass,
   type ClassSubject,
+  type Subject,
 } from "../features/subjects/api";
+import { fetchEnabledLevels } from "../features/schoolLevels/api";
 
 export default function AdminClasses() {
   const { profile } = useAuth();
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [teacherOptions, setTeacherOptions] = useState<ClassTeacherOption[]>([]);
   const [classSubjects, setClassSubjects] = useState<Record<string, ClassSubject[]>>({});
+  const [levelSubjects, setLevelSubjects] = useState<Record<string, Subject[]>>({});
+  const [enabledLevels, setEnabledLevels] = useState<Set<string> | null>(null);
   const [newSubjectInputs, setNewSubjectInputs] = useState<Record<string, string>>({});
   const [subjectSaving, setSubjectSaving] = useState<Record<string, boolean>>({});
   const [newClassName, setNewClassName] = useState("");
@@ -38,22 +43,48 @@ export default function AdminClasses() {
 
   const schoolId = profile?.school_id;
 
+  // The full level list, narrowed to what this school actually uses
+  // (School Profile > Class Levels), plus whatever level a class is
+  // already set to even if it's since been turned off -- so an existing
+  // assignment never silently disappears from its own dropdown.
+  function levelOptionsFor(currentValue?: string | null) {
+    if (!enabledLevels) return CLASS_LEVELS;
+    return CLASS_LEVELS.filter((l) => enabledLevels.has(l.value) || l.value === currentValue);
+  }
+
   async function loadAll() {
     if (!schoolId) return;
     setLoading(true);
     setError(null);
     try {
-      const [cls, teachers] = await Promise.all([
+      const [cls, teachers, levels] = await Promise.all([
         fetchClasses(schoolId),
         fetchClassTeacherOptions(schoolId),
+        fetchEnabledLevels(schoolId),
       ]);
       setClasses(cls);
       setTeacherOptions(teachers);
+      setEnabledLevels(new Set(levels));
 
       const subjectEntries = await Promise.all(
         cls.map(async (c) => [c.id, await fetchClassSubjects(c.id)] as const)
       );
       setClassSubjects(Object.fromEntries(subjectEntries));
+
+      // Restricted subject lists per distinct level in use, so the "Add
+      // subject" box can offer a picker instead of free text wherever a
+      // Super Admin has actually restricted that level (Early Years
+      // today). Levels nobody's restricted yet resolve to [] and keep
+      // the existing free-text flow.
+      const distinctLevels = Array.from(new Set(cls.map((c) => c.level).filter(Boolean))) as string[];
+      const levelSubjectEntries = await Promise.all(
+        distinctLevels.map(async (lvl) => [lvl, await fetchSubjectsForLevel(lvl as never)] as const)
+      );
+      // Only keep levels that are actually restricted (non-empty) --
+      // an empty result means nobody's restricted that level yet, and
+      // should fall back to the existing free-text flow, not an
+      // empty, unusable picker.
+      setLevelSubjects(Object.fromEntries(levelSubjectEntries.filter(([, subs]) => subs.length > 0)));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load classes");
     } finally {
@@ -150,6 +181,21 @@ export default function AdminClasses() {
     }
   }
 
+  async function handleAddRestrictedSubject(classId: string, subjectId: string) {
+    if (!schoolId || !subjectId) return;
+    setSubjectSaving((prev) => ({ ...prev, [classId]: true }));
+    setError(null);
+    try {
+      await assignSubjectToClass(classId, subjectId, schoolId, profile!.id);
+      const updated = await fetchClassSubjects(classId);
+      setClassSubjects((prev) => ({ ...prev, [classId]: updated }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to add subject");
+    } finally {
+      setSubjectSaving((prev) => ({ ...prev, [classId]: false }));
+    }
+  }
+
   async function handleRemoveSubject(classSubject: ClassSubject) {
     if (!schoolId) return;
     try {
@@ -195,7 +241,7 @@ export default function AdminClasses() {
           className="p-2 rounded bg-forest-700 text-forest-100 font-ui"
         >
           <option value="">Standard Level (optional)</option>
-          {CLASS_LEVELS.map((l) => (
+          {levelOptionsFor(newLevel).map((l) => (
             <option key={l.value} value={l.value}>
               {l.label}
             </option>
@@ -259,7 +305,7 @@ export default function AdminClasses() {
                   className="p-2 rounded bg-forest-700 text-forest-100 font-ui text-sm"
                 >
                   <option value="">Not set</option>
-                  {CLASS_LEVELS.map((l) => (
+                  {levelOptionsFor(cls.level).map((l) => (
                     <option key={l.value} value={l.value}>
                       {l.label}
                     </option>
@@ -315,26 +361,59 @@ export default function AdminClasses() {
                 )}
               </div>
               <div className="flex gap-2 mt-2">
-                <input
-                  type="text"
-                  placeholder='Add subject, e.g. "Mathematics"'
-                  value={newSubjectInputs[cls.id] ?? ""}
-                  onChange={(e) =>
-                    setNewSubjectInputs((prev) => ({ ...prev, [cls.id]: e.target.value }))
+                {(() => {
+                  const available = cls.level ? levelSubjects[cls.level] : undefined;
+                  const assignedIds = new Set((classSubjects[cls.id] ?? []).map((cs) => cs.subject_id));
+                  const choices = available?.filter((s) => !assignedIds.has(s.id));
+                  if (available) {
+                    return (
+                      <select
+                        value=""
+                        onChange={(e) => e.target.value && handleAddRestrictedSubject(cls.id, e.target.value)}
+                        disabled={subjectSaving[cls.id] || (choices?.length ?? 0) === 0}
+                        className="p-2 rounded bg-forest-700 text-forest-100 font-ui text-sm disabled:opacity-50 flex-1"
+                      >
+                        <option value="">
+                          {choices && choices.length > 0 ? "Add a subject..." : "All available subjects added"}
+                        </option>
+                        {choices?.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    );
                   }
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleAddSubject(cls.id);
-                  }}
-                  className="p-2 rounded bg-forest-700 text-forest-100 font-ui text-sm placeholder:text-forest-300/60 flex-1"
-                />
-                <button
-                  onClick={() => handleAddSubject(cls.id)}
-                  disabled={subjectSaving[cls.id] || !(newSubjectInputs[cls.id] ?? "").trim()}
-                  className="px-3 py-2 rounded bg-forest-700 text-forest-100 font-ui text-sm disabled:opacity-50"
-                >
-                  Add
-                </button>
+                  return (
+                    <>
+                      <input
+                        type="text"
+                        placeholder='Add subject, e.g. "Mathematics"'
+                        value={newSubjectInputs[cls.id] ?? ""}
+                        onChange={(e) =>
+                          setNewSubjectInputs((prev) => ({ ...prev, [cls.id]: e.target.value }))
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleAddSubject(cls.id);
+                        }}
+                        className="p-2 rounded bg-forest-700 text-forest-100 font-ui text-sm placeholder:text-forest-300/60 flex-1"
+                      />
+                      <button
+                        onClick={() => handleAddSubject(cls.id)}
+                        disabled={subjectSaving[cls.id] || !(newSubjectInputs[cls.id] ?? "").trim()}
+                        className="px-3 py-2 rounded bg-forest-700 text-forest-100 font-ui text-sm disabled:opacity-50"
+                      >
+                        Add
+                      </button>
+                    </>
+                  );
+                })()}
               </div>
+              {cls.level && levelSubjects[cls.level] && (
+                <p className="font-ui text-[10px] text-forest-500 mt-1">
+                  Only subjects Super Admin has assigned to this level are offered here.
+                </p>
+              )}
             </div>
           </div>
         ))}

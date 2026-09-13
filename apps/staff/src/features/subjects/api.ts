@@ -1,5 +1,6 @@
 import { supabase } from "../../lib/supabase";
 import { logAuditEvent } from "../audit/api";
+import type { ClassLevel } from "@natm/shared-types";
 
 export interface Subject {
   id: string;
@@ -20,6 +21,23 @@ export async function fetchAllSubjects(): Promise<Subject[]> {
   const { data, error } = await supabase.from("subjects").select("*").order("name", { ascending: true });
   if (error) throw new Error(error.message);
   return data;
+}
+
+// Subjects a Super Admin has restricted to a given level via
+// subject_levels (currently just the 8 Early Years subjects, mapped to
+// Creche-KG2). Returns [] for any level nobody's restricted yet
+// (Primary/Secondary today) -- callers should fall back to the full
+// fetchAllSubjects list in that case, so this is additive rather than a
+// behaviour change for levels that haven't been configured.
+export async function fetchSubjectsForLevel(level: ClassLevel): Promise<Subject[]> {
+  const { data, error } = await supabase
+    .from("subject_levels")
+    .select("subject:subjects(*)")
+    .eq("level", level);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as unknown as { subject: Subject }[])
+    .map((r) => r.subject)
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // Creates the subject if it doesn't already exist by that exact name,

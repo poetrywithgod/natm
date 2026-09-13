@@ -1,28 +1,8 @@
 import { supabase } from "../../lib/supabase";
-import type { Database } from "@natm/supabase";
+import { ALL_CLASS_LEVELS as CLASS_LEVELS, type ClassLevel } from "@natm/shared-types";
 
-export type ClassLevel = Database["public"]["Enums"]["class_level"];
-
-export const CLASS_LEVELS: { value: ClassLevel; label: string }[] = [
-  { value: "creche", label: "Creche" },
-  { value: "pre_nursery", label: "Pre-Nursery" },
-  { value: "nursery_1", label: "Nursery 1" },
-  { value: "nursery_2", label: "Nursery 2" },
-  { value: "kg_1", label: "KG 1" },
-  { value: "kg_2", label: "KG 2" },
-  { value: "primary_1", label: "Primary 1" },
-  { value: "primary_2", label: "Primary 2" },
-  { value: "primary_3", label: "Primary 3" },
-  { value: "primary_4", label: "Primary 4" },
-  { value: "primary_5", label: "Primary 5" },
-  { value: "primary_6", label: "Primary 6" },
-  { value: "jss_1", label: "JSS 1" },
-  { value: "jss_2", label: "JSS 2" },
-  { value: "jss_3", label: "JSS 3" },
-  { value: "ss_1", label: "SS 1" },
-  { value: "ss_2", label: "SS 2" },
-  { value: "ss_3", label: "SS 3" },
-];
+export { CLASS_LEVELS };
+export type { ClassLevel };
 
 export interface Subject {
   id: string;
@@ -39,6 +19,29 @@ export async function createSubject(name: string): Promise<Subject> {
   const { data, error } = await supabase.from("subjects").insert({ name: name.trim() }).select().single();
   if (error) throw new Error(error.message);
   return data;
+}
+
+// subject_levels restricts which subjects are offered at which class
+// level -- e.g. "Early Literacy Development" only makes sense for the
+// pre-primary levels, "Mathematics" only from Primary 1 up. Without
+// this, every subject was offered at every level (how Primary/
+// Secondary subjects ended up attached to pre-primary classes).
+export async function fetchSubjectLevelMap(): Promise<Record<string, ClassLevel[]>> {
+  const { data, error } = await supabase.from("subject_levels").select("subject_id, level");
+  if (error) throw new Error(error.message);
+  const map: Record<string, ClassLevel[]> = {};
+  for (const row of data ?? []) (map[row.subject_id] ??= []).push(row.level as ClassLevel);
+  return map;
+}
+
+export async function addSubjectToLevel(subjectId: string, level: ClassLevel): Promise<void> {
+  const { error } = await supabase.from("subject_levels").insert({ subject_id: subjectId, level });
+  if (error) throw new Error(error.message);
+}
+
+export async function removeSubjectFromLevel(subjectId: string, level: ClassLevel): Promise<void> {
+  const { error } = await supabase.from("subject_levels").delete().eq("subject_id", subjectId).eq("level", level);
+  if (error) throw new Error(error.message);
 }
 
 export interface CurriculumDoc {
