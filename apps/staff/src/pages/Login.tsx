@@ -46,8 +46,15 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-forest-950 px-4">
-      <div className="w-full max-w-sm space-y-6">
+    <div className="min-h-screen relative flex items-center justify-center bg-forest-950 px-4 overflow-hidden">
+      {/* Decorative backdrop -- gives the glass card something to blur */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-32 -left-24 h-80 w-80 rounded-full bg-forest-500/30 blur-[100px]" />
+        <div className="absolute top-1/3 -right-20 h-96 w-96 rounded-full bg-forest-300/20 blur-[110px]" />
+        <div className="absolute -bottom-40 left-1/4 h-96 w-96 rounded-full bg-forest-700/40 blur-[120px]" />
+      </div>
+
+      <div className="relative w-full max-w-sm space-y-6">
         <div className="flex flex-col items-center text-center space-y-3">
           {schoolInfo?.logo_url ? (
             <img src={schoolInfo.logo_url} alt="" className="h-16 w-16 rounded-full object-cover" />
@@ -65,13 +72,16 @@ export default function Login() {
         </div>
 
         {mode === "sign-in" ? (
-          <form onSubmit={handleSignIn} className="bg-forest-900 p-8 rounded-lg space-y-4">
+          <form
+            onSubmit={handleSignIn}
+            className="bg-forest-900/40 backdrop-blur-xl border border-forest-100/10 shadow-2xl shadow-black/40 p-8 rounded-2xl space-y-4"
+          >
             <input
               type="email"
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-2 rounded bg-forest-700 text-forest-100 font-ui placeholder:text-forest-300/60"
+              className="w-full p-2 rounded-lg bg-forest-950/40 border border-forest-100/10 text-forest-100 font-ui placeholder:text-forest-300/60 focus:outline-none focus:ring-2 focus:ring-forest-500/60"
               required
             />
             <div className="relative">
@@ -80,7 +90,7 @@ export default function Login() {
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-2 pr-10 rounded bg-forest-700 text-forest-100 font-ui placeholder:text-forest-300/60"
+                className="w-full p-2 pr-10 rounded-lg bg-forest-950/40 border border-forest-100/10 text-forest-100 font-ui placeholder:text-forest-300/60 focus:outline-none focus:ring-2 focus:ring-forest-500/60"
                 required
               />
               <button
@@ -112,13 +122,16 @@ export default function Login() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full p-2 rounded bg-forest-500 text-forest-950 font-ui font-semibold"
+              className="w-full p-2 rounded-lg bg-forest-500 text-forest-950 font-ui font-semibold shadow-lg shadow-forest-500/20 disabled:opacity-50"
             >
               {submitting ? "Signing in..." : "Sign In"}
             </button>
           </form>
         ) : (
-          <form onSubmit={handleForgotPassword} className="bg-forest-900 p-8 rounded-lg space-y-4">
+          <form
+            onSubmit={handleForgotPassword}
+            className="bg-forest-900/40 backdrop-blur-xl border border-forest-100/10 shadow-2xl shadow-black/40 p-8 rounded-2xl space-y-4"
+          >
             <p className="font-ui text-sm text-forest-100">
               Enter the email linked to your staff account and we'll send you a link to reset your password.
             </p>
@@ -127,7 +140,7 @@ export default function Login() {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-2 rounded bg-forest-700 text-forest-100 font-ui placeholder:text-forest-300/60"
+              className="w-full p-2 rounded-lg bg-forest-950/40 border border-forest-100/10 text-forest-100 font-ui placeholder:text-forest-300/60 focus:outline-none focus:ring-2 focus:ring-forest-500/60"
               required
             />
 
@@ -141,7 +154,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full p-2 rounded bg-forest-500 text-forest-950 font-ui font-semibold"
+              className="w-full p-2 rounded-lg bg-forest-500 text-forest-950 font-ui font-semibold shadow-lg shadow-forest-500/20 disabled:opacity-50"
             >
               {submitting ? "Sending..." : "Send Reset Link"}
             </button>

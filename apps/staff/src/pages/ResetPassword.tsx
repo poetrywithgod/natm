@@ -60,11 +60,20 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-forest-950 p-4">
+    <div className="min-h-screen relative flex items-center justify-center bg-forest-950 p-4 overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-32 -left-24 h-80 w-80 rounded-full bg-forest-500/30 blur-[100px]" />
+        <div className="absolute top-1/3 -right-20 h-96 w-96 rounded-full bg-forest-300/20 blur-[110px]" />
+        <div className="absolute -bottom-40 left-1/4 h-96 w-96 rounded-full bg-forest-700/40 blur-[120px]" />
+      </div>
+
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm bg-forest-900 rounded-lg p-6 space-y-4"
+        className="relative w-full max-w-sm bg-forest-900/40 backdrop-blur-xl border border-forest-100/10 shadow-2xl shadow-black/40 rounded-2xl p-6 space-y-4"
       >
+        <div className="flex flex-col items-center text-center space-y-2 mb-2">
+          <img src="/icons/icon-192.png" alt="" className="h-12 w-12 object-contain" />
+        </div>
         <div>
           <h1 className="font-display text-xl text-forest-100">Set your password</h1>
           <p className="font-ui text-xs text-forest-300 mt-1">
@@ -80,7 +89,7 @@ export default function ResetPassword() {
             placeholder="New password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-2 pr-10 rounded bg-forest-700 text-forest-100 font-ui placeholder:text-forest-300/60"
+            className="w-full p-2 pr-10 rounded-lg bg-forest-950/40 border border-forest-100/10 text-forest-100 font-ui placeholder:text-forest-300/60 focus:outline-none focus:ring-2 focus:ring-forest-500/60"
             required
           />
           <button
@@ -98,7 +107,7 @@ export default function ResetPassword() {
             placeholder="Confirm password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full p-2 pr-10 rounded bg-forest-700 text-forest-100 font-ui placeholder:text-forest-300/60"
+            className="w-full p-2 pr-10 rounded-lg bg-forest-950/40 border border-forest-100/10 text-forest-100 font-ui placeholder:text-forest-300/60 focus:outline-none focus:ring-2 focus:ring-forest-500/60"
             required
           />
           <button
@@ -114,7 +123,7 @@ export default function ResetPassword() {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui font-semibold disabled:opacity-50"
+          className="w-full px-4 py-2 rounded-lg bg-forest-500 text-forest-950 font-ui font-semibold shadow-lg shadow-forest-500/20 disabled:opacity-50"
         >
           {submitting ? "Saving..." : "Save Password"}
         </button>

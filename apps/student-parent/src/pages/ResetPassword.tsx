@@ -77,15 +77,19 @@ export default function ResetPassword() {
 
   if (!hasSession) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-abyssal-950 px-4">
-        <div className="w-full max-w-sm bg-abyssal-900 p-8 rounded-lg space-y-3 text-center">
+      <div className="min-h-screen relative flex items-center justify-center bg-abyssal-950 px-4 overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -top-32 -left-24 h-80 w-80 rounded-full bg-lime/20 blur-[100px]" />
+          <div className="absolute -bottom-40 left-1/4 h-96 w-96 rounded-full bg-abyssal-700/40 blur-[120px]" />
+        </div>
+        <div className="relative w-full max-w-sm bg-abyssal-900/40 backdrop-blur-xl border border-abyssal-100/10 shadow-2xl shadow-black/40 p-8 rounded-2xl space-y-3 text-center">
           <h1 className="font-display text-xl text-abyssal-100">Link expired or invalid</h1>
           <p className="font-body text-sm text-abyssal-300">
             This password link is no longer valid. Request a new one from the login screen.
           </p>
           <button
             onClick={() => navigate("/login")}
-            className="w-full p-2 rounded bg-lime text-abyssal-950 font-ui font-semibold"
+            className="w-full p-2 rounded-lg bg-lime text-abyssal-950 font-ui font-semibold shadow-lg shadow-lime/20"
           >
             Back to login
           </button>
@@ -95,8 +99,19 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-abyssal-950 px-4">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm bg-abyssal-900 p-8 rounded-lg space-y-4">
+    <div className="min-h-screen relative flex items-center justify-center bg-abyssal-950 px-4 overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-32 -left-24 h-80 w-80 rounded-full bg-lime/20 blur-[100px]" />
+        <div className="absolute top-1/3 -right-20 h-96 w-96 rounded-full bg-abyssal-500/30 blur-[110px]" />
+        <div className="absolute -bottom-40 left-1/4 h-96 w-96 rounded-full bg-abyssal-700/40 blur-[120px]" />
+      </div>
+      <form
+        onSubmit={handleSubmit}
+        className="relative w-full max-w-sm bg-abyssal-900/40 backdrop-blur-xl border border-abyssal-100/10 shadow-2xl shadow-black/40 p-8 rounded-2xl space-y-4"
+      >
+        <div className="flex flex-col items-center text-center space-y-2 mb-2">
+          <img src="/icons/icon-192.png" alt="" className="h-12 w-12 object-contain" />
+        </div>
         <h1 className="font-display text-xl text-abyssal-100">Set a New Password</h1>
 
         <div className="relative">
@@ -109,7 +124,7 @@ export default function ResetPassword() {
             placeholder="New password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-2 pr-10 rounded bg-abyssal-700 text-abyssal-100 font-ui placeholder:text-abyssal-300/60"
+            className="w-full p-2 pr-10 rounded-lg bg-abyssal-950/40 border border-abyssal-100/10 text-abyssal-100 font-ui placeholder:text-abyssal-300/60 focus:outline-none focus:ring-2 focus:ring-lime/60"
             required
             minLength={8}
           />
@@ -133,7 +148,7 @@ export default function ResetPassword() {
             placeholder="Confirm password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
-            className="w-full p-2 pr-10 rounded bg-abyssal-700 text-abyssal-100 font-ui placeholder:text-abyssal-300/60"
+            className="w-full p-2 pr-10 rounded-lg bg-abyssal-950/40 border border-abyssal-100/10 text-abyssal-100 font-ui placeholder:text-abyssal-300/60 focus:outline-none focus:ring-2 focus:ring-lime/60"
             required
             minLength={8}
           />
@@ -152,7 +167,7 @@ export default function ResetPassword() {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full p-2 rounded bg-lime text-abyssal-950 font-ui font-semibold hover:bg-lime-dark active:scale-95 transition-transform transition-colors duration-150 disabled:opacity-60"
+          className="w-full p-2 rounded-lg bg-lime text-abyssal-950 font-ui font-semibold shadow-lg shadow-lime/20 hover:bg-lime-dark active:scale-95 transition-transform transition-colors duration-150 disabled:opacity-60"
         >
           {submitting ? "Saving..." : "Save Password"}
         </button>

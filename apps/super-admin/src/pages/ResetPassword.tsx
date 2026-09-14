@@ -67,15 +67,19 @@ export default function ResetPassword() {
 
   if (!hasSession) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
-        <div className="w-full max-w-sm bg-slate-900 border border-slate-700 p-8 rounded-2xl space-y-3 text-center">
+      <div className="min-h-screen relative flex items-center justify-center bg-slate-950 px-4 overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -top-32 -left-24 h-80 w-80 rounded-full bg-amber-500/20 blur-[100px]" />
+          <div className="absolute -bottom-40 left-1/4 h-96 w-96 rounded-full bg-slate-700/40 blur-[120px]" />
+        </div>
+        <div className="relative w-full max-w-sm bg-slate-900/40 backdrop-blur-xl border border-slate-100/10 shadow-2xl shadow-black/40 p-8 rounded-2xl space-y-3 text-center">
           <h1 className="font-display text-xl font-bold text-slate-100">Link expired or invalid</h1>
           <p className="font-body text-sm text-slate-300">
             This password link is no longer valid. Request a new one from the login screen.
           </p>
           <button
             onClick={() => navigate("/login")}
-            className="w-full p-2 rounded-lg bg-amber-500 text-slate-950 font-ui font-semibold"
+            className="w-full p-2 rounded-lg bg-amber-500 text-slate-950 font-ui font-semibold shadow-lg shadow-amber-500/20"
           >
             Back to login
           </button>
@@ -85,11 +89,19 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
+    <div className="min-h-screen relative flex items-center justify-center bg-slate-950 px-4 overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-32 -left-24 h-80 w-80 rounded-full bg-amber-500/20 blur-[100px]" />
+        <div className="absolute top-1/3 -right-20 h-96 w-96 rounded-full bg-slate-700/40 blur-[110px]" />
+        <div className="absolute -bottom-40 left-1/4 h-96 w-96 rounded-full bg-amber-600/10 blur-[120px]" />
+      </div>
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm bg-slate-900 border border-slate-700 p-8 rounded-2xl space-y-4"
+        className="relative w-full max-w-sm bg-slate-900/40 backdrop-blur-xl border border-slate-100/10 shadow-2xl shadow-black/40 p-8 rounded-2xl space-y-4"
       >
+        <div className="flex flex-col items-center text-center space-y-2 mb-2">
+          <img src="/icons/icon-192.png" alt="" className="h-12 w-12 object-contain" />
+        </div>
         <h1 className="font-display text-xl font-bold text-slate-100">Set a New Password</h1>
 
         <div className="relative">
@@ -99,7 +111,7 @@ export default function ResetPassword() {
             placeholder="New password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-2 pr-10 rounded bg-slate-800 border border-slate-700 text-slate-100 font-body text-sm"
+            className="w-full p-2 pr-10 rounded-lg bg-slate-950/40 border border-slate-100/10 text-slate-100 font-body text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
             required
             minLength={8}
           />
@@ -120,7 +132,7 @@ export default function ResetPassword() {
             placeholder="Confirm password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
-            className="w-full p-2 pr-10 rounded bg-slate-800 border border-slate-700 text-slate-100 font-body text-sm"
+            className="w-full p-2 pr-10 rounded-lg bg-slate-950/40 border border-slate-100/10 text-slate-100 font-body text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/60"
             required
             minLength={8}
           />
@@ -139,7 +151,7 @@ export default function ResetPassword() {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full p-2 rounded-lg bg-amber-500 text-slate-950 font-ui font-semibold disabled:opacity-60"
+          className="w-full p-2 rounded-lg bg-amber-500 text-slate-950 font-ui font-semibold shadow-lg shadow-amber-500/20 disabled:opacity-60"
         >
           {submitting ? "Saving..." : "Save Password"}
         </button>
