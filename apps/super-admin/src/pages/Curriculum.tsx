@@ -14,6 +14,7 @@ import {
   type CurriculumDoc,
   type ClassLevel,
 } from "../features/curriculum/api";
+import CollapsibleSection from "../components/CollapsibleSection";
 
 const TERMS = [1, 2, 3];
 
@@ -93,8 +94,7 @@ export default function Curriculum() {
         </p>
       </div>
 
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
-        <h2 className="font-display font-bold text-slate-100 text-sm">Subjects</h2>
+      <CollapsibleSection title="Subjects" subtitle={`${subjects.length} subject${subjects.length === 1 ? "" : "s"} across the platform`}>
         <div className="flex flex-wrap gap-2">
           {subjects.map((s) => (
             <span key={s.id} className="font-ui text-xs px-2 py-1 rounded-full bg-slate-800 text-slate-300">
@@ -117,7 +117,7 @@ export default function Curriculum() {
             <Plus size={14} /> Add
           </button>
         </div>
-      </div>
+      </CollapsibleSection>
 
       {error && <p className="font-ui text-sm text-error">{error}</p>}
 
