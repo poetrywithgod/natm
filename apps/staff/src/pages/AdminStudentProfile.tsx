@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { User } from "lucide-react";
+import { User, Download } from "lucide-react";
+import { generateStudentReportPdf } from "../features/dailyLog/pdfExport/generateStudentReportPdf";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchStudentById, getSignedPhotoUrl, type Student } from "../features/students/api";
 import { fetchClasses, type SchoolClass } from "../features/classes/api";
@@ -61,6 +62,26 @@ export default function AdminStudentProfile() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "daily-log">("overview");
+  const [exportingPdf, setExportingPdf] = useState(false);
+
+  async function handleExportPdf() {
+    if (!student) return;
+    setExportingPdf(true);
+    setError(null);
+    try {
+      await generateStudentReportPdf({
+        studentId: student.id,
+        studentName: student.full_name,
+        uniqueStudentId: student.unique_student_id ?? "—",
+        className: currentClass?.name ?? "Unassigned",
+        classId: currentClass?.id ?? null,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to export PDF report");
+    } finally {
+      setExportingPdf(false);
+    }
+  }
 
   async function loadAll() {
     if (!id || !schoolId) return;
@@ -229,22 +250,32 @@ export default function AdminStudentProfile() {
       {error && <p className="text-error font-ui text-sm">{error}</p>}
       {success && <p className="text-forest-500 font-ui text-sm">{success}</p>}
 
-      <div className="flex gap-2 border-b border-forest-700">
+      <div className="flex items-center justify-between gap-2 border-b border-forest-700">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab("overview")}
+            className={`px-3 py-2 font-ui text-sm font-semibold border-b-2 -mb-px ${
+              activeTab === "overview" ? "border-forest-500 text-forest-100" : "border-transparent text-forest-300"
+            }`}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab("daily-log")}
+            className={`px-3 py-2 font-ui text-sm font-semibold border-b-2 -mb-px ${
+              activeTab === "daily-log" ? "border-forest-500 text-forest-100" : "border-transparent text-forest-300"
+            }`}
+          >
+            Daily Log
+          </button>
+        </div>
         <button
-          onClick={() => setActiveTab("overview")}
-          className={`px-3 py-2 font-ui text-sm font-semibold border-b-2 -mb-px ${
-            activeTab === "overview" ? "border-forest-500 text-forest-100" : "border-transparent text-forest-300"
-          }`}
+          onClick={handleExportPdf}
+          disabled={exportingPdf}
+          className="flex items-center gap-1.5 px-3 py-1.5 mb-1.5 rounded bg-forest-700 text-forest-100 font-ui text-xs font-semibold hover:bg-forest-700/70 disabled:opacity-50"
         >
-          Overview
-        </button>
-        <button
-          onClick={() => setActiveTab("daily-log")}
-          className={`px-3 py-2 font-ui text-sm font-semibold border-b-2 -mb-px ${
-            activeTab === "daily-log" ? "border-forest-500 text-forest-100" : "border-transparent text-forest-300"
-          }`}
-        >
-          Daily Log
+          <Download size={14} />
+          {exportingPdf ? "Generating..." : "Export to PDF"}
         </button>
       </div>
 
