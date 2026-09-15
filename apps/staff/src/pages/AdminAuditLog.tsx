@@ -1,42 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchAuditLogs, type AuditLogEntry } from "../features/audit/api";
-
-const ACTION_LABELS: Record<string, string> = {
-  "staff.invited": "invited a staff member",
-  "staff.deactivated": "deactivated a staff member",
-  "staff.reactivated": "reactivated a staff member",
-  "student.created": "added a student",
-  "student.renamed": "renamed a student",
-  "student.class_assigned": "reassigned a student's class",
-  "student.photo_uploaded": "updated a student's photo",
-  "student.promoted": "promoted a student",
-  "student.repeated": "marked a student to repeat",
-  "student.carryover_added": "added a subject carryover",
-  "student.carryover_removed": "removed a subject carryover",
-  "class.created": "created a class",
-  "class.renamed": "renamed a class",
-  "class.level_changed": "changed a class's level",
-  "class.teacher_assigned": "reassigned a class teacher",
-  "attendance.marked": "marked attendance",
-  "timetable.period_created": "added a timetable period",
-  "timetable.period_updated": "edited a timetable period",
-  "timetable.period_deleted": "deleted a timetable period",
-  "timetable.entry_saved": "set a timetable slot",
-  "timetable.entry_cleared": "cleared a timetable slot",
-  "fee_type.created": "created a fee type",
-  "fee.payment_recorded": "recorded a fee payment",
-};
-
-const CATEGORY_PREFIXES = [
-  { label: "All", prefix: "" },
-  { label: "Staff", prefix: "staff." },
-  { label: "Students", prefix: "student." },
-  { label: "Classes", prefix: "class." },
-  { label: "Attendance", prefix: "attendance." },
-  { label: "Timetable", prefix: "timetable." },
-  { label: "Fees", prefix: "fee" },
-];
+import { AUDIT_CATEGORIES, describeAuditAction } from "@natm/shared-types";
 
 function describeDetails(details: Record<string, unknown> | null): string | null {
   if (!details) return null;
@@ -53,7 +18,7 @@ export default function AdminAuditLog() {
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("All");
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -67,8 +32,11 @@ export default function AdminAuditLog() {
   }, [schoolId]);
 
   const filtered = useMemo(() => {
+    const category = AUDIT_CATEGORIES.find((c) => c.label === categoryFilter);
     return logs.filter((l) => {
-      if (categoryFilter && !l.action.startsWith(categoryFilter)) return false;
+      if (category && category.label !== "All" && !category.prefixes.some((p) => l.action.startsWith(p))) {
+        return false;
+      }
       if (search) {
         const haystack = `${l.action} ${l.actor?.full_name ?? ""} ${l.entity_type}`.toLowerCase();
         if (!haystack.includes(search.toLowerCase())) return false;
@@ -91,8 +59,8 @@ export default function AdminAuditLog() {
           onChange={(e) => setCategoryFilter(e.target.value)}
           className="p-2 rounded bg-forest-700 text-forest-100 font-ui text-sm"
         >
-          {CATEGORY_PREFIXES.map((c) => (
-            <option key={c.label} value={c.prefix}>
+          {AUDIT_CATEGORIES.map((c) => (
+            <option key={c.label} value={c.label}>
               {c.label}
             </option>
           ))}
@@ -117,7 +85,7 @@ export default function AdminAuditLog() {
             <div key={log.id} className="bg-forest-900 rounded-lg p-3">
               <p className="font-ui text-sm text-forest-100">
                 <span className="font-semibold">{log.actor?.full_name ?? "Unknown"}</span>{" "}
-                {ACTION_LABELS[log.action] ?? log.action}
+                {describeAuditAction(log.action)}
               </p>
               {detailsText && <p className="font-ui text-xs text-forest-300 mt-0.5">{detailsText}</p>}
               <p className="font-ui text-[11px] text-forest-300/70 mt-1">
