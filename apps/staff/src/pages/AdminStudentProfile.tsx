@@ -341,8 +341,10 @@ export default function AdminStudentProfile() {
         ) : (
           <ul className="space-y-1">
             {linkedParents.map((p) => (
-              <li key={p.id} className="font-ui text-sm text-forest-100">
-                {p.full_name}
+              <li key={p.id} className="font-ui text-sm">
+                <Link to={`/admin/parents/${p.id}`} className="text-forest-100 hover:underline">
+                  {p.full_name}
+                </Link>
                 {p.relationship && <span className="text-forest-300"> ({p.relationship})</span>}
               </li>
             ))}

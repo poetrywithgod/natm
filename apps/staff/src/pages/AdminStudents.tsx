@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Camera, User, X } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
@@ -14,6 +14,47 @@ import {
   type ClassOption,
   type CreateStudentAccountResult,
 } from "../features/students/api";
+import { classLevelRank } from "../features/classes/api";
+
+const UNASSIGNED_GROUP_KEY = "unassigned";
+
+interface StudentClassGroup {
+  key: string;
+  label: string;
+  students: Student[];
+}
+
+// Students in class-level progression order (Creche → SS3), then by class
+// name within a level, then alphabetically within a class. Students with no
+// class yet (pending assessment) always fall in their own group at the end,
+// rather than being scattered alphabetically among classed students.
+function sortAndGroupStudents(students: Student[], classOptions: ClassOption[]): StudentClassGroup[] {
+  const classMap = new Map(classOptions.map((c) => [c.id, c]));
+
+  const sorted = [...students].sort((a, b) => {
+    const classA = a.class_id ? classMap.get(a.class_id) : undefined;
+    const classB = b.class_id ? classMap.get(b.class_id) : undefined;
+    const rankDiff = classLevelRank(classA?.level) - classLevelRank(classB?.level);
+    if (rankDiff !== 0) return rankDiff;
+    const nameDiff = (classA?.name ?? "").localeCompare(classB?.name ?? "");
+    if (nameDiff !== 0) return nameDiff;
+    return a.full_name.localeCompare(b.full_name);
+  });
+
+  const groups: StudentClassGroup[] = [];
+  for (const student of sorted) {
+    const cls = student.class_id ? classMap.get(student.class_id) : undefined;
+    const key = cls?.id ?? UNASSIGNED_GROUP_KEY;
+    const label = cls?.name ?? "No Class (Pending Assessment)";
+    let group = groups[groups.length - 1]?.key === key ? groups[groups.length - 1] : undefined;
+    if (!group) {
+      group = { key, label, students: [] };
+      groups.push(group);
+    }
+    group.students.push(student);
+  }
+  return groups;
+}
 
 export default function AdminStudents() {
   const { profile } = useAuth();
@@ -32,6 +73,11 @@ export default function AdminStudents() {
   const [uploadingId, setUploadingId] = useState<string | null>(null);
 
   const schoolId = profile?.school_id;
+
+  const studentGroups = useMemo(
+    () => sortAndGroupStudents(students, classOptions),
+    [students, classOptions]
+  );
 
   async function loadAll() {
     if (!schoolId) return;
@@ -199,12 +245,18 @@ export default function AdminStudents() {
         </div>
       )}
 
-      <div className="space-y-3">
+      <div className="space-y-6">
         {students.length === 0 && (
           <p className="text-forest-300 font-ui text-sm">No students yet — add one above.</p>
         )}
 
-        {students.map((student) => (
+        {studentGroups.map((group) => (
+        <div key={group.key} className="space-y-3">
+          <h2 className="font-display text-sm text-forest-300 uppercase tracking-wide">
+            {group.label} <span className="font-ui normal-case text-forest-300/70">({group.students.length})</span>
+          </h2>
+
+          {group.students.map((student) => (
           <div
             key={student.id}
             className="bg-forest-900 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-4"
@@ -291,6 +343,8 @@ export default function AdminStudents() {
               View Profile →
             </Link>
           </div>
+          ))}
+        </div>
         ))}
       </div>
     </div>

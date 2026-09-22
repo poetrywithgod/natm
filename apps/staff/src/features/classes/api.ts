@@ -5,6 +5,16 @@ import { ALL_CLASS_LEVELS as CLASS_LEVELS, type ClassLevel } from "@natm/shared-
 export { CLASS_LEVELS };
 export type { ClassLevel };
 
+// Progression-order rank for a class level, for sorting students/parents by
+// class (Creche → SS3) instead of alphabetically. No level (or an unknown
+// value) sorts after every real level, so "pending assessment"/unassigned
+// students always land at the end rather than scattered mid-list.
+export function classLevelRank(level: string | null | undefined): number {
+  if (!level) return CLASS_LEVELS.length;
+  const idx = CLASS_LEVELS.findIndex((l) => l.value === level);
+  return idx === -1 ? CLASS_LEVELS.length : idx;
+}
+
 export interface SchoolClass {
   id: string;
   school_id: string;

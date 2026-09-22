@@ -20,6 +20,7 @@ export interface Student {
 export interface ClassOption {
   id: string;
   name: string;
+  level: string | null;
 }
 
 const PHOTO_BUCKET = "student-photos";
@@ -44,7 +45,7 @@ export async function fetchStudentById(studentId: string): Promise<Student | nul
 export async function fetchClassOptions(schoolId: string): Promise<ClassOption[]> {
   const { data, error } = await supabase
     .from("classes")
-    .select("id, name")
+    .select("id, name, level")
     .eq("school_id", schoolId)
     .order("name", { ascending: true });
   if (error) throw new Error(error.message);
