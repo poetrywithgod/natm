@@ -170,10 +170,12 @@ export async function getSignedParentPhotoUrl(path: string): Promise<string | nu
 }
 
 export interface CreateParentAccountResult {
+  id: string;
   email: string;
-  temporary_password: string;
   linked_student_name: string;
-  password_email_sent: boolean;
+  outcome: "created" | "linked_existing" | "already_linked";
+  temporary_password?: string;
+  password_email_sent?: boolean;
 }
 
 export async function fetchLinkedParents(studentId: string): Promise<LinkedParent[]> {

@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,6 +10,35 @@ function generatePassword(): string {
   let out = "";
   for (let i = 0; i < 10; i++) out += chars[Math.floor(Math.random() * chars.length)];
   return out;
+}
+
+function isDuplicateKeyError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return error.code === "23505" || (error.message ?? "").toLowerCase().includes("duplicate key");
+}
+
+function isEmailAlreadyRegisteredError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  if (error.code === "email_exists") return true;
+  return (error.message ?? "").toLowerCase().includes("already been registered");
+}
+
+// GoTrue's admin API has no "get user by email" lookup, only paginated
+// listUsers() -- so on the (rare) "already registered" path we page through
+// looking for the match. Capped well above any realistic user count for
+// this app today; if that cap is ever hit, this returns null and the caller
+// surfaces the original "already registered" error rather than hanging.
+async function findAuthUserByEmail(adminClient: SupabaseClient, email: string) {
+  const target = email.trim().toLowerCase();
+  const perPage = 1000;
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage });
+    if (error) throw new Error(error.message);
+    const match = data.users.find((u) => u.email?.toLowerCase() === target);
+    if (match) return match;
+    if (data.users.length < perPage) break;
+  }
+  return null;
 }
 
 Deno.serve(async (req) => {
@@ -95,19 +124,154 @@ Deno.serve(async (req) => {
       });
     }
 
+    const jsonHeaders = { ...corsHeaders, "Content-Type": "application/json" };
+
+    async function insertLink(parentId: string) {
+      const { error } = await adminClient
+        .from("parent_student_links")
+        .insert({ parent_id: parentId, student_id: studentRow.id, relationship: relationship || null });
+      if (error && !isDuplicateKeyError(error)) throw new Error(error.message);
+      return { alreadyLinked: !!error };
+    }
+
+    async function logCreated(parentId: string, outcome: string) {
+      await adminClient.from("audit_logs").insert({
+        school_id: callerProfile.school_id,
+        actor_id: user.id,
+        action: "parent.created",
+        entity_type: "profile",
+        entity_id: parentId,
+        details: {
+          full_name,
+          email,
+          linked_student_id: studentRow.id,
+          linked_student_name: studentRow.full_name,
+          outcome,
+        },
+      });
+    }
+
+    // ---------- Try creating a brand-new account first ----------
     const temporaryPassword = generatePassword();
     const { data: created, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password: temporaryPassword,
       email_confirm: true,
     });
+
     if (createError || !created.user) {
-      return new Response(JSON.stringify({ error: createError?.message ?? "Account creation failed" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      if (!isEmailAlreadyRegisteredError(createError)) {
+        return new Response(JSON.stringify({ error: createError?.message ?? "Account creation failed" }), {
+          status: 400,
+          headers: jsonHeaders,
+        });
+      }
+
+      // ---------- Email already has an auth account: find it and reuse it ----------
+      const existingUser = await findAuthUserByEmail(adminClient, email);
+      if (!existingUser) {
+        // Shouldn't happen (createUser just told us it's taken), but don't hang.
+        return new Response(JSON.stringify({ error: createError!.message }), { status: 400, headers: jsonHeaders });
+      }
+
+      const { data: existingProfile, error: existingProfileError } = await adminClient
+        .from("profiles")
+        .select("id, role, school_id, full_name")
+        .eq("id", existingUser.id)
+        .maybeSingle();
+      if (existingProfileError) {
+        return new Response(JSON.stringify({ error: existingProfileError.message }), {
+          status: 400,
+          headers: jsonHeaders,
+        });
+      }
+
+      if (existingProfile) {
+        // A real, complete account already exists for this email.
+        if (existingProfile.role !== "parent") {
+          return new Response(
+            JSON.stringify({ error: "This email is already registered as a different type of account." }),
+            { status: 400, headers: jsonHeaders }
+          );
+        }
+        if (existingProfile.school_id !== callerProfile.school_id) {
+          return new Response(
+            JSON.stringify({ error: "This email is already registered as a parent at a different school." }),
+            { status: 400, headers: jsonHeaders }
+          );
+        }
+
+        const { alreadyLinked } = await insertLink(existingProfile.id);
+        if (!alreadyLinked) await logCreated(existingProfile.id, "linked_existing");
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            id: existingProfile.id,
+            email,
+            linked_student_name: studentRow.full_name,
+            outcome: alreadyLinked ? "already_linked" : "linked_existing",
+          }),
+          { status: 200, headers: jsonHeaders }
+        );
+      }
+
+      // Orphaned auth user (an earlier attempt got this far and failed before
+      // the profile row was written) -- finish setting it up now instead of
+      // staying stuck forever, since createUser() will keep refusing this
+      // email otherwise. Reset the password since whatever was generated on
+      // the failed attempt was never delivered to anyone.
+      const { error: recoverPasswordError } = await adminClient.auth.admin.updateUserById(existingUser.id, {
+        password: temporaryPassword,
       });
+      if (recoverPasswordError) {
+        return new Response(JSON.stringify({ error: recoverPasswordError.message }), {
+          status: 400,
+          headers: jsonHeaders,
+        });
+      }
+
+      const { error: recoverProfileError } = await adminClient.from("profiles").insert({
+        id: existingUser.id,
+        school_id: callerProfile.school_id,
+        role: "parent",
+        full_name,
+        must_change_password: true,
+      });
+      if (recoverProfileError) {
+        return new Response(JSON.stringify({ error: recoverProfileError.message }), {
+          status: 400,
+          headers: jsonHeaders,
+        });
+      }
+
+      await insertLink(existingUser.id);
+      await logCreated(existingUser.id, "recovered_orphaned_account");
+
+      const appUrlRecover = (
+        Deno.env.get("STUDENT_PARENT_APP_URL") ?? "https://natm-student-parent.vercel.app"
+      ).replace(/\/$/, "");
+      const { error: resetEmailErrorRecover } = await adminClient.auth.resetPasswordForEmail(email, {
+        redirectTo: `${appUrlRecover}/reset-password`,
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          id: existingUser.id,
+          email,
+          temporary_password: temporaryPassword,
+          linked_student_name: studentRow.full_name,
+          password_email_sent: !resetEmailErrorRecover,
+          outcome: "created",
+        }),
+        { status: 200, headers: jsonHeaders }
+      );
     }
 
+    // ---------- Brand-new account: create profile + link, rolling back the
+    // auth user on either failure so a retry with the same email isn't
+    // permanently stuck the way this used to leave things. ----------
     const { error: profileInsertError } = await adminClient.from("profiles").insert({
       id: created.user.id,
       school_id: callerProfile.school_id,
@@ -116,32 +280,25 @@ Deno.serve(async (req) => {
       must_change_password: true,
     });
     if (profileInsertError) {
+      await adminClient.auth.admin.deleteUser(created.user.id);
       return new Response(JSON.stringify({ error: profileInsertError.message }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: jsonHeaders,
       });
     }
 
-    const { error: linkError } = await adminClient.from("parent_student_links").insert({
-      parent_id: created.user.id,
-      student_id: studentRow.id,
-      relationship: relationship || null,
-    });
-    if (linkError) {
-      return new Response(JSON.stringify({ error: linkError.message }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    try {
+      await insertLink(created.user.id);
+    } catch (linkErr) {
+      await adminClient.from("profiles").delete().eq("id", created.user.id);
+      await adminClient.auth.admin.deleteUser(created.user.id);
+      return new Response(
+        JSON.stringify({ error: linkErr instanceof Error ? linkErr.message : "Failed to link parent" }),
+        { status: 400, headers: jsonHeaders }
+      );
     }
 
-    await adminClient.from("audit_logs").insert({
-      school_id: callerProfile.school_id,
-      actor_id: user.id,
-      action: "parent.created",
-      entity_type: "profile",
-      entity_id: created.user.id,
-      details: { full_name, email, linked_student_id: studentRow.id, linked_student_name: studentRow.full_name },
-    });
+    await logCreated(created.user.id, "created");
 
     // Send the parent a real password-recovery email so they set their
     // own password without ever needing the admin-generated temporary
@@ -159,11 +316,9 @@ Deno.serve(async (req) => {
       /\/$/,
       ""
     );
-    let passwordEmailSent = false;
     const { error: resetEmailError } = await adminClient.auth.resetPasswordForEmail(email, {
       redirectTo: `${appUrl}/reset-password`,
     });
-    passwordEmailSent = !resetEmailError;
     if (resetEmailError) {
       console.error("Failed to send parent password-recovery email:", resetEmailError.message);
     }
@@ -175,9 +330,10 @@ Deno.serve(async (req) => {
         email,
         temporary_password: temporaryPassword,
         linked_student_name: studentRow.full_name,
-        password_email_sent: passwordEmailSent,
+        password_email_sent: !resetEmailError,
+        outcome: "created",
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: jsonHeaders }
     );
   } catch (e) {
     return new Response(
@@ -186,3 +342,4 @@ Deno.serve(async (req) => {
     );
   }
 });
+

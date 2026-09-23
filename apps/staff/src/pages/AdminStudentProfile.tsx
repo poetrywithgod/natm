@@ -353,26 +353,43 @@ export default function AdminStudentProfile() {
 
         {newParentCredentials && (
           <div className="bg-forest-800 rounded p-3 space-y-1">
-            {newParentCredentials.password_email_sent ? (
+            {newParentCredentials.outcome === "already_linked" && (
               <p className="font-ui text-xs text-forest-300">
-                A login account was created and a password-setup email has been sent to the parent — they'll
-                choose their own password, so the temporary one below is a fallback only (in case the email
-                doesn't arrive) and shouldn't normally be needed.
-              </p>
-            ) : (
-              <p className="font-ui text-xs text-forest-300">
-                A login account was created, but the automated password-setup email couldn't be sent
-                (likely Supabase's free email rate limit) — share the temporary password below with the
-                parent directly. They'll still be forced to set their own password on first login.
+                This parent was already linked to {newParentCredentials.linked_student_name} — nothing new
+                to add.
               </p>
             )}
-            <p className="font-ui text-sm text-forest-100">
-              <span className="text-forest-300">Email:</span> {newParentCredentials.email}
-            </p>
-            <p className="font-ui text-sm text-forest-100">
-              <span className="text-forest-300">Temporary Password:</span>{" "}
-              {newParentCredentials.temporary_password}
-            </p>
+            {newParentCredentials.outcome === "linked_existing" && (
+              <p className="font-ui text-xs text-forest-300">
+                {newParentCredentials.email} already had a parent account (from another child) — it's now
+                also linked to {newParentCredentials.linked_student_name}. No new password was created;
+                they log in with their existing one.
+              </p>
+            )}
+            {newParentCredentials.outcome === "created" && (
+              <>
+                {newParentCredentials.password_email_sent ? (
+                  <p className="font-ui text-xs text-forest-300">
+                    A login account was created and a password-setup email has been sent to the parent —
+                    they'll choose their own password, so the temporary one below is a fallback only (in
+                    case the email doesn't arrive) and shouldn't normally be needed.
+                  </p>
+                ) : (
+                  <p className="font-ui text-xs text-forest-300">
+                    A login account was created, but the automated password-setup email couldn't be sent
+                    (likely Supabase's free email rate limit) — share the temporary password below with the
+                    parent directly. They'll still be forced to set their own password on first login.
+                  </p>
+                )}
+                <p className="font-ui text-sm text-forest-100">
+                  <span className="text-forest-300">Email:</span> {newParentCredentials.email}
+                </p>
+                <p className="font-ui text-sm text-forest-100">
+                  <span className="text-forest-300">Temporary Password:</span>{" "}
+                  {newParentCredentials.temporary_password}
+                </p>
+              </>
+            )}
           </div>
         )}
 
