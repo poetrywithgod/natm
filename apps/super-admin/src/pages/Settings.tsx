@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Settings as SettingsIcon, AlertTriangle } from "lucide-react";
 import { fetchPlatformSettings, updatePlatformSettings, type PlatformSettings } from "../features/settings/api";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function Settings() {
   const [settings, setSettings] = useState<PlatformSettings | null>(null);
@@ -28,7 +29,7 @@ export default function Settings() {
         setMaintenanceMode(s.maintenance_mode);
         setMaintenanceMessage(s.maintenance_message ?? "");
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load settings"))
+      .catch((e) => setError(getFriendlyErrorMessage(e, "Failed to load settings")))
       .finally(() => setLoading(false));
   }, []);
 
@@ -51,7 +52,7 @@ export default function Settings() {
       });
       setFeesSaved(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save default fees");
+      setError(getFriendlyErrorMessage(e, "Failed to save default fees"));
     } finally {
       setFeesSaving(false);
     }
@@ -68,7 +69,7 @@ export default function Settings() {
       });
       setMaintenanceSaved(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save maintenance settings");
+      setError(getFriendlyErrorMessage(e, "Failed to save maintenance settings"));
     } finally {
       setMaintenanceSaving(false);
     }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchIntakeQueue, type IntakeQueueItem } from "../features/assessments/api";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 function statusLabel(status: string): string {
   switch (status) {
@@ -37,7 +38,7 @@ export default function AdminIntake() {
         const items = await fetchIntakeQueue(schoolId);
         if (!cancelled) setQueue(items);
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load intake queue");
+        if (!cancelled) setError(getFriendlyErrorMessage(e, "Failed to load intake queue"));
       } finally {
         if (!cancelled) setLoading(false);
       }

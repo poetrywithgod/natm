@@ -15,6 +15,7 @@ import {
 } from "../features/quiz/api";
 import { checkAndAwardBadges, type BadgeDefinition } from "../features/gamification/api";
 import { getBadgeIcon } from "../features/gamification/icons";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function StudentQuiz() {
   const { quizId } = useParams<{ quizId: string }>();
@@ -60,7 +61,7 @@ export default function StudentQuiz() {
         }
         setAnswers(prefill);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load quiz");
+        if (!cancelled) setError(getFriendlyErrorMessage(err, "Failed to load quiz"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -85,7 +86,7 @@ export default function StudentQuiz() {
       const newBadges = await checkAndAwardBadges(studentId, profile.school_id);
       setResult({ score, newBadges });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to submit quiz");
+      setError(getFriendlyErrorMessage(err, "Failed to submit quiz"));
     } finally {
       setSubmitting(false);
     }

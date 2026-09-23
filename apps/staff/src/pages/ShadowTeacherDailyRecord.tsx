@@ -19,6 +19,7 @@ import {
 } from "@natm/shared-types";
 import { fetchSubjectsForClassDay } from "../features/timetable/api";
 import SectionRenderer from "../features/observations/components/SectionRenderer";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -87,7 +88,7 @@ export default function ShadowTeacherDailyRecord() {
           setStudentId(preselected && studs.some((s) => s.id === preselected) ? preselected : studs[0].id);
         }
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load students"))
+      .catch((e) => setError(getFriendlyErrorMessage(e, "Failed to load students")))
       .finally(() => setLoadingStudents(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id]);
@@ -121,7 +122,7 @@ export default function ShadowTeacherDailyRecord() {
         setWeek(existing?.week != null ? String(existing.week) : "");
         setTherapistInvolved(existing?.therapist_involved ?? "");
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load record"))
+      .catch((e) => setError(getFriendlyErrorMessage(e, "Failed to load record")))
       .finally(() => setLoadingForm(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studentId, date, selectedStudent?.class_id]);
@@ -158,7 +159,7 @@ export default function ShadowTeacherDailyRecord() {
       const hist = await fetchShadowRecordHistory(studentId);
       setHistory(hist);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save record");
+      setError(getFriendlyErrorMessage(e, "Failed to save record"));
     } finally {
       setSaving(null);
     }

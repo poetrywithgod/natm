@@ -15,6 +15,7 @@ import {
   type LinkedChildLite,
 } from "../features/parentProfile/api";
 import { useToast } from "../features/toast/ToastContext";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 const RELATIONSHIP_OPTIONS = ["Mother", "Father", "Guardian", "Other"];
 
@@ -84,7 +85,7 @@ export default function ParentSettings() {
       setPhotoUrl(url);
       await refreshProfile();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to upload photo", "error");
+      showToast(getFriendlyErrorMessage(err, "Failed to upload photo"), "error");
     } finally {
       setUploadingPhoto(false);
     }
@@ -103,7 +104,7 @@ export default function ParentSettings() {
       await refreshProfile();
       setDetailsSaved(true);
     } catch (err) {
-      setDetailsError(err instanceof Error ? err.message : "Failed to save details");
+      setDetailsError(getFriendlyErrorMessage(err, "Failed to save details"));
     } finally {
       setDetailsSaving(false);
     }
@@ -115,7 +116,7 @@ export default function ParentSettings() {
       await updateRelationship(linkId, relationship);
       setChildren((prev) => prev.map((c) => (c.link_id === linkId ? { ...c, relationship } : c)));
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to update relationship", "error");
+      showToast(getFriendlyErrorMessage(err, "Failed to update relationship"), "error");
     } finally {
       setSavingRelationshipId(null);
     }
@@ -144,7 +145,7 @@ export default function ParentSettings() {
       if (err instanceof IncorrectPasswordError) {
         setPasswordError(err.message);
       } else {
-        setPasswordError(err instanceof Error ? err.message : "Failed to change password");
+        setPasswordError(getFriendlyErrorMessage(err, "Failed to change password"));
       }
     } finally {
       setPasswordSaving(false);

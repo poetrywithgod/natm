@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Megaphone, Pencil, Trash2, Send } from "lucide-react";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import {
   fetchPlatformAnnouncements,
   postPlatformAnnouncement,
@@ -23,7 +24,7 @@ export default function Announcements() {
     try {
       setAnnouncements(await fetchPlatformAnnouncements());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load announcements");
+      setError(getFriendlyErrorMessage(e, "Failed to load announcements"));
     } finally {
       setLoading(false);
     }
@@ -43,7 +44,7 @@ export default function Announcements() {
       setBody("");
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to post announcement");
+      setError(getFriendlyErrorMessage(e, "Failed to post announcement"));
     } finally {
       setPosting(false);
     }
@@ -127,7 +128,7 @@ function AnnouncementRow({
       setEditing(false);
       await onChanged();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save");
+      setError(getFriendlyErrorMessage(e, "Failed to save"));
     } finally {
       setSaving(false);
     }
@@ -141,7 +142,7 @@ function AnnouncementRow({
       await deletePlatformAnnouncement(announcement.id);
       await onChanged();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete");
+      setError(getFriendlyErrorMessage(e, "Failed to delete"));
       setSaving(false);
     }
   }

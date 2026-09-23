@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { FileText, ExternalLink, Download } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchCurriculumForStudent, CLASS_LEVEL_LABELS, type CurriculumDocView } from "../features/curriculum/api";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function StudentCurriculum() {
   const { profile } = useAuth();
@@ -13,7 +14,7 @@ export default function StudentCurriculum() {
     if (!profile?.id || !profile.school_id) return;
     fetchCurriculumForStudent(profile.id, profile.school_id)
       .then(setDocs)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load curriculum"))
+      .catch((e) => setError(getFriendlyErrorMessage(e, "Failed to load curriculum")))
       .finally(() => setLoading(false));
   }, [profile?.id, profile?.school_id]);
 

@@ -15,6 +15,7 @@ import {
   type StaffRole,
 } from "../features/staff/api";
 import { fetchSchools, type SchoolRow } from "../features/schools/api";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function Staff() {
   const [staff, setStaff] = useState<StaffRow[]>([]);
@@ -40,7 +41,7 @@ export default function Staff() {
       setStaff(s);
       setSchools(sc);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load staff");
+      setError(getFriendlyErrorMessage(e, "Failed to load staff"));
     } finally {
       setLoading(false);
     }
@@ -73,7 +74,7 @@ export default function Staff() {
       if (e instanceof DeactivationBlockedError) {
         setBlockedReasons({ id: staffId, reasons: e.reasons });
       } else {
-        setError(e instanceof Error ? e.message : "Failed to deactivate staff member");
+        setError(getFriendlyErrorMessage(e, "Failed to deactivate staff member"));
       }
     } finally {
       setProcessingId(null);
@@ -89,7 +90,7 @@ export default function Staff() {
       setSuccessMessage("Staff member reactivated.");
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to reactivate staff member");
+      setError(getFriendlyErrorMessage(e, "Failed to reactivate staff member"));
     } finally {
       setProcessingId(null);
     }
@@ -105,7 +106,7 @@ export default function Staff() {
       setSuccessMessage("Staff member deleted.");
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete staff member");
+      setError(getFriendlyErrorMessage(e, "Failed to delete staff member"));
     } finally {
       setProcessingId(null);
     }
@@ -119,7 +120,7 @@ export default function Staff() {
       const link = await impersonateStaff(staffId);
       window.open(link, "_blank", "noopener,noreferrer");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to generate a sign-in link");
+      setError(getFriendlyErrorMessage(e, "Failed to generate a sign-in link"));
     } finally {
       setProcessingId(null);
     }
@@ -311,7 +312,7 @@ function InviteStaffModal({
       await inviteStaff(schoolId, fullName.trim(), email.trim(), role);
       onInvited();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to invite staff member");
+      setError(getFriendlyErrorMessage(e, "Failed to invite staff member"));
       setSubmitting(false);
     }
   }

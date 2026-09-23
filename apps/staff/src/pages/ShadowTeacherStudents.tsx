@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchMyStudents, type MyStudent } from "../features/shadowteacher/api";
 import { getSignedPhotoUrl } from "../features/students/api";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function ShadowTeacherStudents() {
   const { profile } = useAuth();
@@ -40,7 +41,7 @@ export default function ShadowTeacherStudents() {
           setPhotoUrls(map);
         }
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load students"))
+      .catch((e) => setError(getFriendlyErrorMessage(e, "Failed to load students")))
       .finally(() => {
         if (!cancelled) setLoading(false);
       });

@@ -16,6 +16,7 @@ import {
   type ShadowTeacherOption,
 } from "../features/assessments/api";
 import { ALL_CLASS_LEVELS, type ClassLevel } from "@natm/shared-types";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 const CLASS_LEVELS = ALL_CLASS_LEVELS.map((l) => l.value);
 
@@ -123,7 +124,7 @@ export default function AdminIntakeReview() {
         setSelectedShadowTeacherId(d.currentShadowTeacherId ?? "");
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load submission");
+      setError(getFriendlyErrorMessage(e, "Failed to load submission"));
     } finally {
       setLoading(false);
     }
@@ -143,7 +144,7 @@ export default function AdminIntakeReview() {
       await approveForm1(detail.episodeId, profile.id, profile.school_id);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to approve submission");
+      setError(getFriendlyErrorMessage(e, "Failed to approve submission"));
     } finally {
       setApproving(false);
     }
@@ -157,7 +158,7 @@ export default function AdminIntakeReview() {
       await generateRecommendation(detail.episodeId, profile.school_id, profile.id);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to generate recommendation");
+      setError(getFriendlyErrorMessage(e, "Failed to generate recommendation"));
     } finally {
       setGenerating(false);
     }
@@ -190,7 +191,7 @@ export default function AdminIntakeReview() {
       );
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to approve recommendation");
+      setError(getFriendlyErrorMessage(e, "Failed to approve recommendation"));
     } finally {
       setApprovingRec(false);
     }
@@ -204,7 +205,7 @@ export default function AdminIntakeReview() {
       await assignClass(detail.episodeId, detail.studentId, selectedClassId, profile.school_id, profile.id);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to assign class");
+      setError(getFriendlyErrorMessage(e, "Failed to assign class"));
     } finally {
       setAssigningClass(false);
     }
@@ -224,7 +225,7 @@ export default function AdminIntakeReview() {
       );
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to assign shadow teacher");
+      setError(getFriendlyErrorMessage(e, "Failed to assign shadow teacher"));
     } finally {
       setAssigningShadowTeacher(false);
     }

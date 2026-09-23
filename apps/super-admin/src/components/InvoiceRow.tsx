@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Pencil, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import {
   updateInvoiceAmount,
   deleteInvoice,
@@ -48,7 +49,7 @@ export default function InvoiceRow({
       setEditing(false);
       await onChanged();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update invoice");
+      setError(getFriendlyErrorMessage(e, "Failed to update invoice"));
     } finally {
       setSaving(false);
     }
@@ -62,7 +63,7 @@ export default function InvoiceRow({
       await deleteInvoice(invoice.id);
       await onChanged();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete invoice");
+      setError(getFriendlyErrorMessage(e, "Failed to delete invoice"));
       setSaving(false);
     }
   }

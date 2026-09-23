@@ -28,6 +28,7 @@ import {
 } from "../features/parents/api";
 import DailyLogTab from "../features/dailyLog/components/DailyLogTab";
 import CollapsibleSection from "../components/CollapsibleSection";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 const STATUS_LABELS: Record<string, string> = { present: "Present", absent: "Absent", late: "Late" };
 
@@ -77,7 +78,7 @@ export default function AdminStudentProfile() {
         classId: currentClass?.id ?? null,
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to export PDF report");
+      setError(getFriendlyErrorMessage(e, "Failed to export PDF report"));
     } finally {
       setExportingPdf(false);
     }
@@ -127,7 +128,7 @@ export default function AdminStudentProfile() {
       const parents = await fetchLinkedParents(id);
       setLinkedParents(parents);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load student profile");
+      setError(getFriendlyErrorMessage(e, "Failed to load student profile"));
     } finally {
       setLoading(false);
     }
@@ -158,7 +159,7 @@ export default function AdminStudentProfile() {
       setNewParentRelationship("");
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create parent account");
+      setError(getFriendlyErrorMessage(e, "Failed to create parent account"));
     } finally {
       setCreatingParent(false);
     }
@@ -207,7 +208,7 @@ export default function AdminStudentProfile() {
       setSelectedCarryoverSubjects([]);
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save promotion");
+      setError(getFriendlyErrorMessage(e, "Failed to save promotion"));
     } finally {
       setSaving(false);
     }
@@ -218,7 +219,7 @@ export default function AdminStudentProfile() {
       await removeCarryover(carryoverId, schoolId!, profile!.id);
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to remove carryover");
+      setError(getFriendlyErrorMessage(e, "Failed to remove carryover"));
     }
   }
 

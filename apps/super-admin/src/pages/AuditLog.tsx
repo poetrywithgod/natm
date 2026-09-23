@@ -3,6 +3,7 @@ import { ScrollText } from "lucide-react";
 import { fetchGlobalAuditLog, type AuditLogRow } from "../features/audit/api";
 import { fetchSchools, type SchoolRow } from "../features/schools/api";
 import { AUDIT_CATEGORIES, describeAuditAction } from "@natm/shared-types";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function AuditLog() {
   const [logs, setLogs] = useState<AuditLogRow[]>([]);
@@ -22,7 +23,7 @@ export default function AuditLog() {
     setLoading(true);
     fetchGlobalAuditLog(200, schoolFilter || undefined)
       .then(setLogs)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load audit log"))
+      .catch((e) => setError(getFriendlyErrorMessage(e, "Failed to load audit log")))
       .finally(() => setLoading(false));
   }, [schoolFilter]);
 

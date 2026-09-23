@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { supabase } from "../lib/supabase";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function ParentSetPassword() {
   const { profile, refreshProfile } = useAuth();
@@ -31,7 +32,7 @@ export default function ParentSetPassword() {
     try {
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) {
-        setError(updateError.message);
+        setError(getFriendlyErrorMessage(updateError, "Failed to update your password."));
         setSubmitting(false);
         return;
       }
@@ -40,14 +41,14 @@ export default function ParentSetPassword() {
         .update({ must_change_password: false })
         .eq("id", profile.id);
       if (flagError) {
-        setError(flagError.message);
+        setError(getFriendlyErrorMessage(flagError, "Failed to finish setting up your account."));
         setSubmitting(false);
         return;
       }
       await refreshProfile();
       navigate("/parent", { replace: true });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to set password");
+      setError(getFriendlyErrorMessage(e, "Failed to set password"));
       setSubmitting(false);
     }
   }

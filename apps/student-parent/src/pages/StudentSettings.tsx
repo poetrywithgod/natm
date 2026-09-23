@@ -11,6 +11,7 @@ import {
   type StudentRecord,
 } from "../features/profile/api";
 import { fetchSchoolInfo, type SchoolInfo } from "../features/schools/api";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function StudentSettings() {
   const { profile, session, signOut } = useAuth();
@@ -83,7 +84,7 @@ export default function StudentSettings() {
       const url = await getSignedStudentPhotoUrl(path);
       setPhotoUrl(url);
     } catch (err) {
-      setPhotoError(err instanceof Error ? err.message : "Failed to upload photo");
+      setPhotoError(getFriendlyErrorMessage(err, "Failed to upload photo"));
     } finally {
       setPhotoUploading(false);
     }
@@ -105,7 +106,7 @@ export default function StudentSettings() {
       });
       setDetailsSaved(true);
     } catch (err) {
-      setDetailsError(err instanceof Error ? err.message : "Failed to save details");
+      setDetailsError(getFriendlyErrorMessage(err, "Failed to save details"));
     } finally {
       setDetailsSaving(false);
     }
@@ -132,7 +133,7 @@ export default function StudentSettings() {
       setPasswordSaved(true);
     } catch (err) {
       setPasswordError(
-        err instanceof IncorrectPasswordError ? err.message : err instanceof Error ? err.message : "Failed to change password"
+        err instanceof IncorrectPasswordError ? err.message : getFriendlyErrorMessage(err, "Failed to change password")
       );
     } finally {
       setPasswordSaving(false);

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session } from "@natm/supabase";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import { supabase } from "../../lib/supabase";
 
 interface Profile {
@@ -68,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signIn(email: string, password: string) {
     setNotAuthorized(false);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
+    return { error: error ? getFriendlyErrorMessage(error, "Failed to log in.") : null };
   }
   async function signOut() {
     await supabase.auth.signOut();

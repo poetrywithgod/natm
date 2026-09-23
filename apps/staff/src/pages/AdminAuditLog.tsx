@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchAuditLogs, type AuditLogEntry } from "../features/audit/api";
 import { AUDIT_CATEGORIES, describeAuditAction } from "@natm/shared-types";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 function describeDetails(details: Record<string, unknown> | null): string | null {
   if (!details) return null;
@@ -27,7 +28,7 @@ export default function AdminAuditLog() {
     setError(null);
     fetchAuditLogs(schoolId)
       .then(setLogs)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load audit log"))
+      .catch((e) => setError(getFriendlyErrorMessage(e, "Failed to load audit log")))
       .finally(() => setLoading(false));
   }, [schoolId]);
 

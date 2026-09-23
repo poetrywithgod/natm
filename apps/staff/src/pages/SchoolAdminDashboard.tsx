@@ -35,6 +35,7 @@ import {
 import { fetchStudents, type Student } from "../features/students/api";
 import { fetchSchoolObservationsSince } from "../features/schoolProgress/api";
 import { CLASS_TEACHER_OBSERVATION_SECTIONS, computeRosterProgress, type StudentRosterScore, type SectionsData } from "@natm/shared-types";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 const COLORS = {
   present: "#3D8A4E", // forest-500
@@ -94,7 +95,7 @@ export default function SchoolAdminDashboard() {
       setFeeSummary(fs);
       setClassFeeStats(fc);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load dashboard");
+      setError(getFriendlyErrorMessage(e, "Failed to load dashboard"));
     } finally {
       setLoading(false);
     }
@@ -178,7 +179,7 @@ export default function SchoolAdminDashboard() {
           : "No submitted quiz attempts found for this quarter yet."
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to finalize quarter");
+      setError(getFriendlyErrorMessage(e, "Failed to finalize quarter"));
     } finally {
       setFinalizing(false);
     }

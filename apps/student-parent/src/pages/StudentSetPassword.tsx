@@ -4,6 +4,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { supabase } from "../lib/supabase";
 import { fetchOwnStudentRecord, advanceOnboardingStatus } from "../features/profile/api";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function StudentSetPassword() {
   const { profile } = useAuth();
@@ -49,7 +50,7 @@ export default function StudentSetPassword() {
     try {
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) {
-        setError(updateError.message);
+        setError(getFriendlyErrorMessage(updateError, "Failed to update your password."));
         setSubmitting(false);
         return;
       }
@@ -59,7 +60,7 @@ export default function StudentSetPassword() {
       }
       navigate("/student", { replace: true });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to set password");
+      setError(getFriendlyErrorMessage(e, "Failed to set password"));
       setSubmitting(false);
     }
   }

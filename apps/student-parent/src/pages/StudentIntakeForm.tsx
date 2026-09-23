@@ -7,6 +7,7 @@ import { PART_A_STEPS } from "../features/intake/formConfigA";
 import { FORM_B_DOMAINS } from "../features/intake/formConfigB";
 import IntakeFieldRenderer from "../components/IntakeFieldRenderer";
 import DomainRenderer from "../components/DomainRenderer";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 type Phase = "a" | "b";
 
@@ -41,7 +42,7 @@ export default function StudentIntakeForm() {
         setLoading(false);
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Failed to load form");
+          setError(getFriendlyErrorMessage(e, "Failed to load form"));
           setLoading(false);
         }
       }
@@ -102,7 +103,7 @@ export default function StudentIntakeForm() {
         setStepIndex((i) => i + 1);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save");
+      setError(getFriendlyErrorMessage(e, "Failed to save"));
     } finally {
       setSaving(false);
     }
@@ -117,7 +118,7 @@ export default function StudentIntakeForm() {
       await submitForm1(draft.form1Id, draft.episodeId, profile.id, studentId);
       setSubmitted(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to submit form");
+      setError(getFriendlyErrorMessage(e, "Failed to submit form"));
     } finally {
       setSaving(false);
     }

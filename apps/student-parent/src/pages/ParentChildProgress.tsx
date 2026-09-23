@@ -11,6 +11,7 @@ import {
   type DailyRecordRow,
 } from "../features/dailyProgress/api";
 import DailyProgressSection from "../features/dailyProgress/components/DailyProgressSection";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function ParentChildProgress() {
   const { studentId } = useParams<{ studentId: string }>();
@@ -54,7 +55,7 @@ export default function ParentChildProgress() {
           setSubjectNames(subjects);
         }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load progress");
+        if (!cancelled) setError(getFriendlyErrorMessage(err, "Failed to load progress"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -82,7 +83,7 @@ export default function ParentChildProgress() {
       setClassObservations(classObs);
       setShadowObservations(shadowObs);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load progress");
+      setError(getFriendlyErrorMessage(err, "Failed to load progress"));
     } finally {
       setRangeLoading(false);
     }

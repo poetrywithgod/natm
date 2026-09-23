@@ -21,6 +21,7 @@ import { fetchGlobalAuditLog, type AuditLogRow } from "../features/audit/api";
 import { fetchAllCurrentInvoiceStatuses, fetchRevenueSummary, type SubscriptionStatusRow, type RevenueSummary } from "../features/subscriptions/api";
 import { fetchAllStaff, STAFF_ROLES, ROLE_LABELS, type StaffRow } from "../features/staff/api";
 import StatCard from "../components/StatCard";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 // "Control room" palette pulled straight from index.css's @theme block --
 // kept here rather than reading CSS vars at runtime since Recharts wants
@@ -79,7 +80,7 @@ export default function Dashboard() {
         setInvoiceStatuses(invoices);
         setRevenue(rev);
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load dashboard"))
+      .catch((e) => setError(getFriendlyErrorMessage(e, "Failed to load dashboard")))
       .finally(() => setLoading(false));
   }, []);
 

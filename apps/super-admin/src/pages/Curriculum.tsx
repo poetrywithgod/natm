@@ -15,6 +15,7 @@ import {
   type ClassLevel,
 } from "../features/curriculum/api";
 import CollapsibleSection from "../components/CollapsibleSection";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 const TERMS = [1, 2, 3];
 
@@ -38,7 +39,7 @@ export default function Curriculum() {
       setDocs(d);
       setSubjectLevelMap(m);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load curriculum");
+      setError(getFriendlyErrorMessage(e, "Failed to load curriculum"));
     } finally {
       setLoading(false);
     }
@@ -57,7 +58,7 @@ export default function Curriculum() {
       setNewSubject("");
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to add subject");
+      setError(getFriendlyErrorMessage(e, "Failed to add subject"));
     } finally {
       setAddingSubject(false);
     }
@@ -75,7 +76,7 @@ export default function Curriculum() {
       const m = await fetchSubjectLevelMap();
       setSubjectLevelMap(m);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update subject");
+      setError(getFriendlyErrorMessage(e, "Failed to update subject"));
     } finally {
       setLevelMapBusy(null);
     }
@@ -245,7 +246,7 @@ function TermSlot({
     try {
       await onUpload(file);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      setError(getFriendlyErrorMessage(err, "Upload failed"));
     } finally {
       setBusy(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -259,7 +260,7 @@ function TermSlot({
     try {
       await onDelete(doc.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to remove");
+      setError(getFriendlyErrorMessage(err, "Failed to remove"));
     } finally {
       setBusy(false);
     }

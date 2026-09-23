@@ -15,6 +15,7 @@ import {
   SNAPSHOT_FIELDS,
 } from "../features/observation/observationTypes";
 import { FORM_TWO_DOMAINS } from "../features/observation/form2Config";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import Form2DomainRenderer, {
   type Form2DomainValues,
   type Form2ParameterValue,
@@ -107,7 +108,7 @@ export default function AdminObservation() {
         );
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load Form 2");
+          setError(getFriendlyErrorMessage(err, "Failed to load Form 2"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -135,7 +136,7 @@ export default function AdminObservation() {
       await saveForm2Draft(draft.form2Id, section, data);
       setMessage("Draft saved.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save draft");
+      setError(getFriendlyErrorMessage(err, "Failed to save draft"));
     } finally {
       setSaving(false);
     }
@@ -177,7 +178,7 @@ export default function AdminObservation() {
       // into the next step instead of having to find their way back in.
       navigate(`/admin/intake/${episodeId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to submit Form 2");
+      setError(getFriendlyErrorMessage(err, "Failed to submit Form 2"));
     } finally {
       setSubmitting(false);
     }

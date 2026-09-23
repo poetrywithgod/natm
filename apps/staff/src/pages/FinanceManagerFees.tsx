@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabase";
 import { fetchClasses } from "../features/classes/api";
 import type { SchoolClass } from "../features/classes/api";
 import { fetchSchoolInfo, type FinancialModel } from "../features/schools/api";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import {
   fetchCurrentTerm,
   fetchFeeTypes,
@@ -60,7 +61,7 @@ export default function FinanceManagerFees() {
       });
       setDrafts(nextDrafts);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load student fees");
+      setError(getFriendlyErrorMessage(e, "Failed to load student fees"));
     } finally {
       setRowsLoading(false);
     }
@@ -87,7 +88,7 @@ export default function FinanceManagerFees() {
         await loadFeeTypes(currentTerm);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load fees");
+      setError(getFriendlyErrorMessage(e, "Failed to load fees"));
     } finally {
       setLoading(false);
     }
@@ -144,7 +145,7 @@ export default function FinanceManagerFees() {
       await loadFeeTypes(term);
       showToast(`"${createdName}" ${isPartnership ? "support item" : "fee type"} created`, "success");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to create fee type";
+      const msg = getFriendlyErrorMessage(e, "Failed to create fee type");
       setError(msg);
       showToast(msg, "error");
     } finally {
@@ -170,7 +171,7 @@ export default function FinanceManagerFees() {
       await loadFeeTypes(term);
       showToast(`"${feeType.name}" archived`, "success");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : `Failed to archive ${itemWord}`;
+      const msg = getFriendlyErrorMessage(e, `Failed to archive ${itemWord}`);
       setError(msg);
       showToast(msg, "error");
     } finally {
@@ -200,7 +201,7 @@ export default function FinanceManagerFees() {
       await upsertStudentFee(schoolId, studentId, selectedFeeTypeId, term.id, due, paid, profile!.id);
       showToast("Fee record saved", "success");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to save fee";
+      const msg = getFriendlyErrorMessage(e, "Failed to save fee");
       setError(msg);
       showToast(msg, "error");
     } finally {
@@ -219,7 +220,7 @@ export default function FinanceManagerFees() {
       const studentName = rows.find((r) => r.student_id === studentId)?.full_name ?? "Student";
       showToast(`${studentName} marked as paid`, "success");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to mark as paid";
+      const msg = getFriendlyErrorMessage(e, "Failed to mark as paid");
       setError(msg);
       showToast(msg, "error");
     } finally {

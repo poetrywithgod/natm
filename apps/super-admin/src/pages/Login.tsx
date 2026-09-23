@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import { useAuth } from "../features/auth/AuthContext";
 import { supabase } from "../lib/supabase";
 
@@ -31,7 +32,7 @@ export default function Login() {
       redirectTo: `${window.location.origin}/reset-password`,
     });
     if (error) {
-      setError(error.message);
+      setError(getFriendlyErrorMessage(error, "Failed to send the password reset email."));
     } else {
       setResetSent(true);
     }

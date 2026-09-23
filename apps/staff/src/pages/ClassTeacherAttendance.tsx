@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchCurrentTerm } from "../features/fees/api";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import {
   fetchMyClass,
   fetchClassStudents,
@@ -64,7 +65,7 @@ export default function ClassTeacherAttendance() {
         }
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load attendance");
+      setError(getFriendlyErrorMessage(e, "Failed to load attendance"));
     } finally {
       setLoading(false);
     }
@@ -98,7 +99,7 @@ export default function ClassTeacherAttendance() {
       setSuccessMessage("Attendance saved.");
       setAlreadySaved(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save attendance");
+      setError(getFriendlyErrorMessage(e, "Failed to save attendance"));
     } finally {
       setSaving(false);
     }

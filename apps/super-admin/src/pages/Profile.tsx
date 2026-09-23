@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import {
   uploadOwnPhoto,
   getSignedPhotoUrl,
@@ -54,7 +55,7 @@ export default function Profile() {
       await uploadOwnPhoto(profile.id, file);
       await refreshProfile();
     } catch (err) {
-      setPhotoError(err instanceof Error ? err.message : "Upload failed.");
+      setPhotoError(getFriendlyErrorMessage(err, "Upload failed."));
     } finally {
       setPhotoLoading(false);
       e.target.value = "";
@@ -71,7 +72,7 @@ export default function Profile() {
       await refreshProfile();
       setNameSaved(true);
     } catch (err) {
-      setNameError(err instanceof Error ? err.message : "Failed to update name.");
+      setNameError(getFriendlyErrorMessage(err, "Failed to update name."));
     } finally {
       setNameSaving(false);
     }
@@ -107,7 +108,7 @@ export default function Profile() {
       if (err instanceof IncorrectPasswordError) {
         setPasswordError(err.message);
       } else {
-        setPasswordError(err instanceof Error ? err.message : "Failed to change password.");
+        setPasswordError(getFriendlyErrorMessage(err, "Failed to change password."));
       }
     } finally {
       setPasswordSaving(false);

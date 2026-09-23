@@ -22,6 +22,7 @@ import {
   type QuizDifficulty,
 } from "../features/quizzes/api";
 import QuizReview from "../features/quizzes/QuizReview";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 const DIFFICULTIES: QuizDifficulty[] = ["easy", "normal", "hard"];
 
@@ -70,7 +71,7 @@ export default function ClassTeacherLessons() {
         setQuizzesByLesson(Object.fromEntries(quizEntries));
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load lessons");
+      setError(getFriendlyErrorMessage(e, "Failed to load lessons"));
     } finally {
       setLoading(false);
     }
@@ -95,7 +96,7 @@ export default function ClassTeacherLessons() {
       }
       setExtractedText(text);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to read PDF");
+      setError(getFriendlyErrorMessage(err, "Failed to read PDF"));
     } finally {
       setPdfExtracting(false);
     }
@@ -132,7 +133,7 @@ export default function ClassTeacherLessons() {
       await uploadVideoFile(uploadURL, file, setVideoUploadProgress);
       setVideoUid(uid);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to upload video");
+      setError(getFriendlyErrorMessage(err, "Failed to upload video"));
       setVideoFile(null);
     } finally {
       setVideoUploading(false);
@@ -180,7 +181,7 @@ export default function ClassTeacherLessons() {
       resetForm();
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save lesson");
+      setError(getFriendlyErrorMessage(e, "Failed to save lesson"));
     } finally {
       setSaving(false);
     }
@@ -202,7 +203,7 @@ export default function ClassTeacherLessons() {
       const updated = await fetchQuizzesForLesson(lessonId);
       setQuizzesByLesson((prev) => ({ ...prev, [lessonId]: updated }));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to generate quiz");
+      setError(getFriendlyErrorMessage(e, "Failed to generate quiz"));
     } finally {
       setGenerating((prev) => ({ ...prev, [lessonId]: false }));
     }

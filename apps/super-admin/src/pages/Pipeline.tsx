@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Target, Plus, Trash2, ArrowRightCircle, ExternalLink } from "lucide-react";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import {
   fetchProspects,
   createProspect,
@@ -35,7 +36,7 @@ export default function Pipeline() {
     try {
       setProspects(await fetchProspects());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load prospects");
+      setError(getFriendlyErrorMessage(e, "Failed to load prospects"));
     } finally {
       setLoading(false);
     }
@@ -130,7 +131,7 @@ function ProspectRow({ prospect, onChanged }: { prospect: Prospect; onChanged: (
       await updateProspect(prospect.id, { stage });
       await onChanged();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update stage");
+      setError(getFriendlyErrorMessage(e, "Failed to update stage"));
     } finally {
       setSaving(false);
     }
@@ -144,7 +145,7 @@ function ProspectRow({ prospect, onChanged }: { prospect: Prospect; onChanged: (
       setEditing(false);
       await onChanged();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save notes");
+      setError(getFriendlyErrorMessage(e, "Failed to save notes"));
     } finally {
       setSaving(false);
     }
@@ -158,7 +159,7 @@ function ProspectRow({ prospect, onChanged }: { prospect: Prospect; onChanged: (
       await deleteProspect(prospect.id);
       await onChanged();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete");
+      setError(getFriendlyErrorMessage(e, "Failed to delete"));
       setSaving(false);
     }
   }
@@ -171,7 +172,7 @@ function ProspectRow({ prospect, onChanged }: { prospect: Prospect; onChanged: (
       await convertProspectToSchool(prospect);
       await onChanged();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to convert");
+      setError(getFriendlyErrorMessage(e, "Failed to convert"));
     } finally {
       setConverting(false);
     }
@@ -292,7 +293,7 @@ function AddProspectModal({ onClose, onAdded }: { onClose: () => void; onAdded: 
       });
       onAdded();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to add prospect");
+      setError(getFriendlyErrorMessage(e, "Failed to add prospect"));
       setSubmitting(false);
     }
   }

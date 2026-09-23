@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchClasses, type SchoolClass } from "../features/classes/api";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import {
   fetchClassStudents,
   fetchAttendanceForDate,
@@ -45,7 +46,7 @@ export default function AdminAttendance() {
         setClasses(cls);
         if (cls.length > 0) setSelectedClassId(cls[0].id);
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load classes"))
+      .catch((e) => setError(getFriendlyErrorMessage(e, "Failed to load classes")))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schoolId]);
@@ -67,7 +68,7 @@ export default function AdminAttendance() {
         });
         setStatusMap(map);
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load attendance"))
+      .catch((e) => setError(getFriendlyErrorMessage(e, "Failed to load attendance")))
       .finally(() => setRowsLoading(false));
   }, [selectedClassId, date]);
 

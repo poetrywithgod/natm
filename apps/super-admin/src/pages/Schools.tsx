@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Building2, Search } from "lucide-react";
 import { fetchSchools, createSchool, type SchoolRow } from "../features/schools/api";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function Schools() {
   const [schools, setSchools] = useState<SchoolRow[]>([]);
@@ -15,7 +16,7 @@ export default function Schools() {
     try {
       setSchools(await fetchSchools());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load schools");
+      setError(getFriendlyErrorMessage(e, "Failed to load schools"));
     } finally {
       setLoading(false);
     }
@@ -133,7 +134,7 @@ function CreateSchoolModal({ onClose, onCreated }: { onClose: () => void; onCrea
         onCreated();
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create school");
+      setError(getFriendlyErrorMessage(e, "Failed to create school"));
       setSubmitting(false);
     }
   }

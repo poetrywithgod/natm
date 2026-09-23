@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { User } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import {
   fetchParentsGroupedByClass,
   getSignedParentPhotoUrl,
@@ -38,7 +39,7 @@ export default function AdminParents() {
         );
         if (!cancelled) setPhotoUrls(urls);
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load parents");
+        if (!cancelled) setError(getFriendlyErrorMessage(e, "Failed to load parents"));
       } finally {
         if (!cancelled) setLoading(false);
       }

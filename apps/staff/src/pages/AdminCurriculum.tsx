@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchCurriculumForSchoolAdmin, type CurriculumDocView } from "../features/curriculum/api";
 import CurriculumList from "../components/CurriculumList";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function AdminCurriculum() {
   const { profile } = useAuth();
@@ -13,7 +14,7 @@ export default function AdminCurriculum() {
     if (!profile?.school_id) return;
     fetchCurriculumForSchoolAdmin(profile.school_id)
       .then(setDocs)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load curriculum"))
+      .catch((e) => setError(getFriendlyErrorMessage(e, "Failed to load curriculum")))
       .finally(() => setLoading(false));
   }, [profile?.school_id]);
 

@@ -13,6 +13,7 @@ import {
 import { openRemitaCheckout } from "../features/fees/remitaCheckout";
 import { useToast } from "../features/toast/ToastContext";
 import { fetchSchoolInfo, type FinancialModel } from "../features/schools/api";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 const GOLD_MINIMUM = 1_000_000;
 
@@ -81,7 +82,7 @@ export default function ParentFees() {
       showToast("Interest registered — the school will reach out to arrange details.", "success");
       setPayingFee(null);
     } catch (err) {
-      setPayError(err instanceof Error ? err.message : "Failed to register interest");
+      setPayError(getFriendlyErrorMessage(err, "Failed to register interest"));
     } finally {
       setPaySubmitting(false);
     }
@@ -140,7 +141,7 @@ export default function ParentFees() {
       });
     } catch (err) {
       setPaySubmitting(false);
-      setPayError(err instanceof Error ? err.message : "Failed to start payment");
+      setPayError(getFriendlyErrorMessage(err, "Failed to start payment"));
     }
   }
 

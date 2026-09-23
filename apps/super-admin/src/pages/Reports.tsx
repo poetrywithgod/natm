@@ -4,6 +4,7 @@ import { fetchSchools } from "../features/schools/api";
 import { fetchAllInvoices, fetchAllCurrentInvoiceStatuses } from "../features/subscriptions/api";
 import { fetchAllStaff, ROLE_LABELS } from "../features/staff/api";
 import { toCsv, downloadCsv, type CsvColumn } from "../lib/csv";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -30,7 +31,7 @@ function ReportCard<T>({ title, description, icon: Icon, fetchRows, columns, fil
       const csv = toCsv(rows, columns);
       downloadCsv(`${filenamePrefix}-${today()}.csv`, csv);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to generate report");
+      setError(getFriendlyErrorMessage(e, "Failed to generate report"));
     } finally {
       setDownloading(false);
     }

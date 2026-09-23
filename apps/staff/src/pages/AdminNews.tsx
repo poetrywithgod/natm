@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../features/auth/AuthContext";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import {
   fetchNewsPosts,
   createNewsPost,
@@ -35,7 +36,7 @@ export default function AdminNews() {
     try {
       setPosts(await fetchNewsPosts(schoolId));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load news posts");
+      setError(getFriendlyErrorMessage(e, "Failed to load news posts"));
     } finally {
       setLoading(false);
     }
@@ -56,7 +57,7 @@ export default function AdminNews() {
       if (target === "create") setForm((f) => ({ ...f, image_url: url }));
       else setEditForm((f) => ({ ...f, image_url: url }));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to upload image");
+      setError(getFriendlyErrorMessage(e, "Failed to upload image"));
     } finally {
       setUploading(false);
     }
@@ -80,7 +81,7 @@ export default function AdminNews() {
       if (fileInputRef.current) fileInputRef.current.value = "";
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to post news item");
+      setError(getFriendlyErrorMessage(e, "Failed to post news item"));
     } finally {
       setSaving(false);
     }
@@ -105,7 +106,7 @@ export default function AdminNews() {
       setEditingId(null);
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update news item");
+      setError(getFriendlyErrorMessage(e, "Failed to update news item"));
     } finally {
       setSaving(false);
     }
@@ -119,7 +120,7 @@ export default function AdminNews() {
       await setNewsPostPublished(p.id, schoolId, profile.id, !p.published);
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update publish status");
+      setError(getFriendlyErrorMessage(e, "Failed to update publish status"));
     } finally {
       setSaving(false);
     }
@@ -133,7 +134,7 @@ export default function AdminNews() {
       await deleteNewsPost(id, schoolId, profile.id);
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete news item");
+      setError(getFriendlyErrorMessage(e, "Failed to delete news item"));
     } finally {
       setSaving(false);
     }

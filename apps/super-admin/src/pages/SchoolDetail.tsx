@@ -30,6 +30,7 @@ import {
   type SubscriptionInvoice,
 } from "../features/subscriptions/api";
 import InvoiceRow from "../components/InvoiceRow";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function SchoolDetail() {
   const { id } = useParams<{ id: string }>();
@@ -82,7 +83,7 @@ export default function SchoolDetail() {
       await ensureTermSubscriptionInvoice(id);
       setInvoices(await fetchSchoolInvoices(id));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load school");
+      setError(getFriendlyErrorMessage(e, "Failed to load school"));
     } finally {
       setLoading(false);
     }
@@ -101,7 +102,7 @@ export default function SchoolDetail() {
       await updateSchoolDetails(id, { name: name.trim(), contact_email: contactEmail.trim() || null });
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save changes");
+      setError(getFriendlyErrorMessage(e, "Failed to save changes"));
     } finally {
       setSavingDetails(false);
     }
@@ -114,7 +115,7 @@ export default function SchoolDetail() {
       await setSchoolActive(id, !school.is_active);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update status");
+      setError(getFriendlyErrorMessage(e, "Failed to update status"));
     } finally {
       setTogglingActive(false);
     }
@@ -143,7 +144,7 @@ export default function SchoolDetail() {
         setFeeNotice(`Term ${termNumber} rate saved and the current term's invoice was updated to match.`);
       }
     } catch (e) {
-      setFeeError(e instanceof Error ? e.message : "Failed to save rate");
+      setFeeError(getFriendlyErrorMessage(e, "Failed to save rate"));
       throw e;
     }
   }
@@ -160,7 +161,7 @@ export default function SchoolDetail() {
       setInviteRole("class_teacher");
       await load();
     } catch (e) {
-      setInviteError(e instanceof Error ? e.message : "Failed to invite staff member");
+      setInviteError(getFriendlyErrorMessage(e, "Failed to invite staff member"));
     } finally {
       setInviteSubmitting(false);
     }
@@ -179,7 +180,7 @@ export default function SchoolDetail() {
       if (e instanceof DeactivationBlockedError) {
         setBlockedReasons({ id: staffId, reasons: e.reasons });
       } else {
-        setError(e instanceof Error ? e.message : "Failed to deactivate staff member");
+        setError(getFriendlyErrorMessage(e, "Failed to deactivate staff member"));
       }
     } finally {
       setProcessingId(null);
@@ -195,7 +196,7 @@ export default function SchoolDetail() {
       setStaffNotice("Staff member reactivated.");
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to reactivate staff member");
+      setError(getFriendlyErrorMessage(e, "Failed to reactivate staff member"));
     } finally {
       setProcessingId(null);
     }
@@ -211,7 +212,7 @@ export default function SchoolDetail() {
       setStaffNotice("Staff member deleted.");
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete staff member");
+      setError(getFriendlyErrorMessage(e, "Failed to delete staff member"));
     } finally {
       setProcessingId(null);
     }
@@ -225,7 +226,7 @@ export default function SchoolDetail() {
       const link = await impersonateStaff(staffId);
       window.open(link, "_blank", "noopener,noreferrer");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to generate a sign-in link");
+      setError(getFriendlyErrorMessage(e, "Failed to generate a sign-in link"));
     } finally {
       setProcessingId(null);
     }
@@ -240,7 +241,7 @@ export default function SchoolDetail() {
       await deleteSchool(id);
       navigate("/schools");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete school");
+      setError(getFriendlyErrorMessage(e, "Failed to delete school"));
       setDeleting(false);
     }
   }
@@ -537,7 +538,7 @@ function TermFeeRow({ termFee, onSave }: { termFee: TermFee; onSave: (amount: nu
       await onSave(amount);
       setEditing(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save");
+      setError(getFriendlyErrorMessage(e, "Failed to save"));
     } finally {
       setSaving(false);
     }

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../features/auth/AuthContext";
 
@@ -48,7 +49,7 @@ export default function ResetPassword() {
     setSubmitting(false);
 
     if (updateError) {
-      setError(updateError.message);
+      setError(getFriendlyErrorMessage(updateError, "Failed to update your password."));
       return;
     }
 

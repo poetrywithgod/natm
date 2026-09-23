@@ -15,6 +15,7 @@ import {
   type CreateStudentAccountResult,
 } from "../features/students/api";
 import { classLevelRank } from "../features/classes/api";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 const UNASSIGNED_GROUP_KEY = "unassigned";
 
@@ -99,7 +100,7 @@ export default function AdminStudents() {
       );
       setPhotoUrls(urls);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load students");
+      setError(getFriendlyErrorMessage(e, "Failed to load students"));
     } finally {
       setLoading(false);
     }
@@ -125,7 +126,7 @@ export default function AdminStudents() {
       setNewEmail("");
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create student account");
+      setError(getFriendlyErrorMessage(e, "Failed to create student account"));
     } finally {
       setCreating(false);
     }
@@ -136,7 +137,7 @@ export default function AdminStudents() {
       await assignStudentClass(studentId, classId === "" ? null : classId, schoolId!, profile!.id);
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to assign class");
+      setError(getFriendlyErrorMessage(e, "Failed to assign class"));
     }
   }
 
@@ -152,7 +153,7 @@ export default function AdminStudents() {
       setEditingId(null);
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to rename student");
+      setError(getFriendlyErrorMessage(e, "Failed to rename student"));
     }
   }
 
@@ -163,7 +164,7 @@ export default function AdminStudents() {
       await uploadStudentPhoto(schoolId, studentId, file, profile!.id);
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to upload photo");
+      setError(getFriendlyErrorMessage(e, "Failed to upload photo"));
     } finally {
       setUploadingId(null);
     }

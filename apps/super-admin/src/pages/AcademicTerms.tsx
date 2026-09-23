@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CalendarClock, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { fetchTermsOverview, type SchoolTermStatus } from "../features/terms/api";
 import StatCard from "../components/StatCard";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 function formatDateRange(start: string | null, end: string | null): string | null {
   if (!start && !end) return null;
@@ -19,7 +20,7 @@ export default function AcademicTerms() {
   useEffect(() => {
     fetchTermsOverview()
       .then(setRows)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load academic terms"))
+      .catch((e) => setError(getFriendlyErrorMessage(e, "Failed to load academic terms")))
       .finally(() => setLoading(false));
   }, []);
 

@@ -19,6 +19,7 @@ import {
   type FeeRecord,
 } from "../features/promotion/api";
 import { fetchCurrentTermNumber, fetchObservationsForTerm } from "../features/observations/api";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import {
   CLASS_TEACHER_OBSERVATION_SECTIONS,
   SUBJECT_PERFORMANCE_SECTION_KEY,
@@ -83,7 +84,7 @@ export default function AdminPromotion() {
           setActioned(actionedIds);
         }
       } catch (e) {
-        setLoadError(e instanceof Error ? e.message : "Failed to load");
+        setLoadError(getFriendlyErrorMessage(e, "Failed to load"));
       } finally {
         setLoading(false);
       }
@@ -142,7 +143,7 @@ export default function AdminPromotion() {
         );
       }
     } catch (e) {
-      setRowError(e instanceof Error ? e.message : "Failed to load student details");
+      setRowError(getFriendlyErrorMessage(e, "Failed to load student details"));
     } finally {
       setRowLoading(false);
     }
@@ -170,7 +171,7 @@ export default function AdminPromotion() {
       setActioned((prev) => new Set(prev).add(student.id));
       setRowSuccess(true);
     } catch (e) {
-      setRowError(e instanceof Error ? e.message : "Failed to save decision");
+      setRowError(getFriendlyErrorMessage(e, "Failed to save decision"));
     } finally {
       setSaving(false);
     }
@@ -200,7 +201,7 @@ export default function AdminPromotion() {
       setExistingCarryovers(carry);
       setCarryoverSubjectId("");
     } catch (e) {
-      setRowError(e instanceof Error ? e.message : "Failed to add carryover");
+      setRowError(getFriendlyErrorMessage(e, "Failed to add carryover"));
     } finally {
       setSaving(false);
     }
@@ -212,7 +213,7 @@ export default function AdminPromotion() {
       await removeCarryover(carryoverId, schoolId, profile.id);
       setExistingCarryovers((prev) => prev.filter((c) => c.id !== carryoverId));
     } catch (e) {
-      setRowError(e instanceof Error ? e.message : "Failed to remove carryover");
+      setRowError(getFriendlyErrorMessage(e, "Failed to remove carryover"));
     }
   }
 

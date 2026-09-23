@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../features/auth/AuthContext";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import {
   fetchSessions,
   fetchTerms,
@@ -41,7 +42,7 @@ export default function SessionsTerms() {
       }
       setTermsBySession(termsMap);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load sessions");
+      setError(getFriendlyErrorMessage(e, "Failed to load sessions"));
     } finally {
       setLoading(false);
     }
@@ -59,7 +60,7 @@ export default function SessionsTerms() {
       setNewSessionName("");
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create session");
+      setError(getFriendlyErrorMessage(e, "Failed to create session"));
     }
   }
 
@@ -79,7 +80,7 @@ export default function SessionsTerms() {
       });
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create term");
+      setError(getFriendlyErrorMessage(e, "Failed to create term"));
     }
   }
 
@@ -94,7 +95,7 @@ export default function SessionsTerms() {
       setEditingTermId(null);
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save term dates");
+      setError(getFriendlyErrorMessage(e, "Failed to save term dates"));
     }
   }
 
@@ -104,7 +105,7 @@ export default function SessionsTerms() {
       await setCurrentSession(schoolId, sessionId);
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to set current session");
+      setError(getFriendlyErrorMessage(e, "Failed to set current session"));
     }
   }
 
@@ -113,7 +114,7 @@ export default function SessionsTerms() {
       await setCurrentTerm(sessionId, termId);
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to set current term");
+      setError(getFriendlyErrorMessage(e, "Failed to set current term"));
     }
   }
 

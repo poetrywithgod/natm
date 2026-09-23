@@ -19,6 +19,7 @@ import {
 } from "@natm/shared-types";
 import { fetchSubjectsForClassDay } from "../features/timetable/api";
 import SectionRenderer from "../features/observations/components/SectionRenderer";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -93,7 +94,7 @@ export default function ClassTeacherActivities() {
           }
         }
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load class"))
+      .catch((e) => setError(getFriendlyErrorMessage(e, "Failed to load class")))
       .finally(() => setLoadingClass(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id]);
@@ -124,7 +125,7 @@ export default function ClassTeacherActivities() {
         setParentSignature(existing?.parent_signature ?? "");
         setWeek(existing?.week != null ? String(existing.week) : "");
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load observation form"))
+      .catch((e) => setError(getFriendlyErrorMessage(e, "Failed to load observation form")))
       .finally(() => setLoadingForm(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studentId, date, myClass?.id]);
@@ -160,7 +161,7 @@ export default function ClassTeacherActivities() {
       const hist = await fetchObservationHistory(studentId);
       setHistory(hist);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save form");
+      setError(getFriendlyErrorMessage(e, "Failed to save form"));
     } finally {
       setSaving(null);
     }

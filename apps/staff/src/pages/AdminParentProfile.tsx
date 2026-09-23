@@ -8,6 +8,7 @@ import {
   type ParentProfile,
 } from "../features/parents/api";
 import CollapsibleSection from "../components/CollapsibleSection";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function AdminParentProfile() {
   const { id } = useParams<{ id: string }>();
@@ -34,7 +35,7 @@ export default function AdminParentProfile() {
           if (!cancelled) setPhotoUrl(url);
         }
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load parent profile");
+        if (!cancelled) setError(getFriendlyErrorMessage(e, "Failed to load parent profile"));
       } finally {
         if (!cancelled) setLoading(false);
       }

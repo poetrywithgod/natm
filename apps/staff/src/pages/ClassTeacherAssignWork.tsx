@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchMyClass, fetchClassStudents, type MyClass, type ClassStudent } from "../features/attendance/api";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import {
   fetchAssignableQuizzes,
   fetchClassWork,
@@ -47,7 +48,7 @@ export default function ClassTeacherAssignWork() {
         setAssignedWork(work);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load assign work");
+      setError(getFriendlyErrorMessage(e, "Failed to load assign work"));
     } finally {
       setLoading(false);
     }
@@ -89,7 +90,7 @@ export default function ClassTeacherAssignWork() {
       const work = await fetchClassWork(myClass.id);
       setAssignedWork(work);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to assign work");
+      setError(getFriendlyErrorMessage(e, "Failed to assign work"));
     } finally {
       setSaving(false);
     }

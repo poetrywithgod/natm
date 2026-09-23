@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchStaffAnnouncements, type Announcement } from "../features/announcements/api";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function ShadowTeacherAnnouncements() {
   const { profile } = useAuth();
@@ -15,7 +16,7 @@ export default function ShadowTeacherAnnouncements() {
     setError(null);
     fetchStaffAnnouncements(schoolId)
       .then(setAnnouncements)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load announcements"))
+      .catch((e) => setError(getFriendlyErrorMessage(e, "Failed to load announcements")))
       .finally(() => setLoading(false));
   }, [schoolId]);
 

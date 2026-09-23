@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../features/auth/AuthContext";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import {
   fetchStaff,
   createStaffMember,
@@ -39,7 +40,7 @@ export default function AdminStaffManagement() {
     try {
       setStaff(await fetchStaff(schoolId, showInactive));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load staff");
+      setError(getFriendlyErrorMessage(e, "Failed to load staff"));
     } finally {
       setLoading(false);
     }
@@ -62,7 +63,7 @@ export default function AdminStaffManagement() {
       setNewEmail("");
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to invite staff member");
+      setError(getFriendlyErrorMessage(e, "Failed to invite staff member"));
     } finally {
       setInviting(false);
     }
@@ -81,7 +82,7 @@ export default function AdminStaffManagement() {
       if (e instanceof DeactivationBlockedError) {
         setBlockedReasons({ id: staffId, reasons: e.reasons });
       } else {
-        setError(e instanceof Error ? e.message : "Failed to deactivate staff member");
+        setError(getFriendlyErrorMessage(e, "Failed to deactivate staff member"));
       }
     } finally {
       setProcessingId(null);
@@ -98,7 +99,7 @@ export default function AdminStaffManagement() {
       setSuccessMessage("Staff member deleted.");
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete staff member");
+      setError(getFriendlyErrorMessage(e, "Failed to delete staff member"));
     } finally {
       setProcessingId(null);
     }
@@ -113,7 +114,7 @@ export default function AdminStaffManagement() {
       setSuccessMessage("Staff member reactivated.");
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to reactivate staff member");
+      setError(getFriendlyErrorMessage(e, "Failed to reactivate staff member"));
     } finally {
       setProcessingId(null);
     }

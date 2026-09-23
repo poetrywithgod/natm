@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Send } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import {
   fetchConversationsForShadowTeacher,
   fetchMessages,
@@ -46,7 +47,7 @@ export default function ShadowTeacherChat() {
         setMessages(msgs);
         await markConversationRead(conversationId, "shadow_teacher");
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load conversation");
+        if (!cancelled) setError(getFriendlyErrorMessage(err, "Failed to load conversation"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -80,7 +81,7 @@ export default function ShadowTeacherChat() {
       const msgs = await fetchMessages(conversationId);
       setMessages(msgs);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send message");
+      setError(getFriendlyErrorMessage(err, "Failed to send message"));
       setDraft(body);
     } finally {
       setSending(false);

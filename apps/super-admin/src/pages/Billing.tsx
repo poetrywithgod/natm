@@ -4,6 +4,7 @@ import { fetchAllInvoices, type SubscriptionInvoice } from "../features/subscrip
 import { fetchSchools, type SchoolRow } from "../features/schools/api";
 import StatCard from "../components/StatCard";
 import InvoiceRow from "../components/InvoiceRow";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function Billing() {
   const [invoices, setInvoices] = useState<SubscriptionInvoice[]>([]);
@@ -22,7 +23,7 @@ export default function Billing() {
       setInvoices(inv);
       setSchools(sc);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load invoices");
+      setError(getFriendlyErrorMessage(e, "Failed to load invoices"));
     } finally {
       setLoading(false);
     }

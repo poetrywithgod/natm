@@ -12,6 +12,7 @@ import {
 } from "../features/schools/api";
 import CollapsibleSection from "../components/CollapsibleSection";
 import ClassLevelsSettings from "../features/schoolLevels/components/ClassLevelsSettings";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 const EMPTY_DETAILS: SchoolDetailsInput = {
   contact_email: "",
@@ -76,7 +77,7 @@ export default function AdminSchoolProfile() {
       setSchool((prev) => (prev ? { ...prev, name: nameInput.trim() } : prev));
       setNameSaved(true);
     } catch (err) {
-      setNameError(err instanceof Error ? err.message : "Failed to update name.");
+      setNameError(getFriendlyErrorMessage(err, "Failed to update name."));
     } finally {
       setNameSaving(false);
     }
@@ -91,7 +92,7 @@ export default function AdminSchoolProfile() {
       const publicUrl = await uploadSchoolLogo(profile.school_id, file, profile.id);
       setSchool((prev) => (prev ? { ...prev, logo_url: publicUrl } : prev));
     } catch (err) {
-      setLogoError(err instanceof Error ? err.message : "Upload failed.");
+      setLogoError(getFriendlyErrorMessage(err, "Upload failed."));
     } finally {
       setLogoLoading(false);
       e.target.value = "";
@@ -106,7 +107,7 @@ export default function AdminSchoolProfile() {
       await updateFinancialModel(profile.school_id, nextModel, profile.id);
       setSchool((prev) => (prev ? { ...prev, financial_model: nextModel } : prev));
     } catch (err) {
-      setModelError(err instanceof Error ? err.message : "Failed to update financial model.");
+      setModelError(getFriendlyErrorMessage(err, "Failed to update financial model."));
     } finally {
       setModelSaving(false);
     }
@@ -137,7 +138,7 @@ export default function AdminSchoolProfile() {
       setSchool((prev) => (prev ? { ...prev, ...payload } : prev));
       setDetailsSaved(true);
     } catch (err) {
-      setDetailsError(err instanceof Error ? err.message : "Failed to update details.");
+      setDetailsError(getFriendlyErrorMessage(err, "Failed to update details."));
     } finally {
       setDetailsSaving(false);
     }

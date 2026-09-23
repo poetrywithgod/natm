@@ -12,6 +12,7 @@ import {
 import { useAuth } from "../features/auth/AuthContext";
 import { supabase } from "../lib/supabase";
 import { fetchSchoolInfo, type FinancialModel } from "../features/schools/api";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import {
   fetchCurrentTerm,
   fetchFeesSummary,
@@ -139,7 +140,7 @@ export default function FinanceManagerDashboard() {
         setSelectedFeeTypeId((prev) => prev ?? types[0]?.id ?? null);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load dashboard");
+      setError(getFriendlyErrorMessage(e, "Failed to load dashboard"));
     } finally {
       setLoading(false);
     }
@@ -161,7 +162,7 @@ export default function FinanceManagerDashboard() {
         const rows = await fetchStudentFeeRowsForType(selectedFeeTypeId);
         setClassBreakdown(summarizeByClass(rows));
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load class breakdown");
+        setError(getFriendlyErrorMessage(e, "Failed to load class breakdown"));
       } finally {
         setBreakdownLoading(false);
       }

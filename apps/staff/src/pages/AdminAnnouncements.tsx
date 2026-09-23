@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../features/auth/AuthContext";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import {
   fetchAnnouncements,
   createAnnouncement,
@@ -30,7 +31,7 @@ export default function AdminAnnouncements() {
     try {
       setAnnouncements(await fetchAnnouncements(schoolId));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load announcements");
+      setError(getFriendlyErrorMessage(e, "Failed to load announcements"));
     } finally {
       setLoading(false);
     }
@@ -58,7 +59,7 @@ export default function AdminAnnouncements() {
       setForm(emptyForm);
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to post announcement");
+      setError(getFriendlyErrorMessage(e, "Failed to post announcement"));
     } finally {
       setSaving(false);
     }
@@ -90,7 +91,7 @@ export default function AdminAnnouncements() {
       setEditingId(null);
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update announcement");
+      setError(getFriendlyErrorMessage(e, "Failed to update announcement"));
     } finally {
       setSaving(false);
     }
@@ -103,7 +104,7 @@ export default function AdminAnnouncements() {
       await deleteAnnouncement(id);
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete announcement");
+      setError(getFriendlyErrorMessage(e, "Failed to delete announcement"));
     } finally {
       setSaving(false);
     }

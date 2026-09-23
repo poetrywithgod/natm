@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ALL_CLASS_LEVELS, groupClassLevels, type ClassLevel } from "@natm/shared-types";
 import { fetchConfiguredLevels, setLevelEnabled } from "../api";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 interface Props {
   schoolId: string;
@@ -29,7 +30,7 @@ export default function ClassLevelsSettings({ schoolId, actorId }: Props) {
         const initial = configured ?? ALL_CLASS_LEVELS.map((l) => l.value);
         if (!cancelled) setEnabled(new Set(initial));
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load class levels");
+        if (!cancelled) setError(getFriendlyErrorMessage(e, "Failed to load class levels"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -53,7 +54,7 @@ export default function ClassLevelsSettings({ schoolId, actorId }: Props) {
         return next;
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update");
+      setError(getFriendlyErrorMessage(e, "Failed to update"));
     } finally {
       setBusyLevel(null);
     }

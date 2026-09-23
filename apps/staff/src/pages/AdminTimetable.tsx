@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchClasses, type SchoolClass } from "../features/classes/api";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import {
   DAYS,
   fetchPeriods,
@@ -54,7 +55,7 @@ export default function AdminTimetable() {
       setTeachers(teach);
       if (!selectedClassId && cls.length > 0) setSelectedClassId(cls[0].id);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load timetable data");
+      setError(getFriendlyErrorMessage(e, "Failed to load timetable data"));
     } finally {
       setLoading(false);
     }
@@ -65,7 +66,7 @@ export default function AdminTimetable() {
       const data = await fetchTimetableEntries(classId);
       setEntries(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load timetable entries");
+      setError(getFriendlyErrorMessage(e, "Failed to load timetable entries"));
     }
   }
 
@@ -92,7 +93,7 @@ export default function AdminTimetable() {
       setNewPeriod({ label: "", start_time: "", end_time: "" });
       await loadBase();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to add period");
+      setError(getFriendlyErrorMessage(e, "Failed to add period"));
     }
   }
 
@@ -107,7 +108,7 @@ export default function AdminTimetable() {
       setEditingPeriodId(null);
       await loadBase();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update period");
+      setError(getFriendlyErrorMessage(e, "Failed to update period"));
     }
   }
 
@@ -116,7 +117,7 @@ export default function AdminTimetable() {
       await deletePeriod(id, schoolId!, profile!.id);
       await loadBase();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete period");
+      setError(getFriendlyErrorMessage(e, "Failed to delete period"));
     }
   }
 
@@ -145,7 +146,7 @@ export default function AdminTimetable() {
       setEditingCell(null);
       await loadEntries(selectedClassId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save timetable slot");
+      setError(getFriendlyErrorMessage(e, "Failed to save timetable slot"));
     }
   }
 
@@ -161,7 +162,7 @@ export default function AdminTimetable() {
       setEditingCell(null);
       await loadEntries(selectedClassId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to clear timetable slot");
+      setError(getFriendlyErrorMessage(e, "Failed to clear timetable slot"));
     }
   }
 

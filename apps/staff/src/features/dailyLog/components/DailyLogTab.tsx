@@ -6,6 +6,7 @@ import type { ShadowTeacherDailyRecord } from "../../shadowRecords/api";
 import DailyLogRangeTabs from "./DailyLogRangeTabs";
 import StudentSkillsCharts from "./StudentSkillsCharts";
 import DailyLogEntryList from "./DailyLogEntryList";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 interface Props {
   studentId: string;
@@ -44,7 +45,7 @@ export default function DailyLogTab({ studentId, studentFirstName }: Props) {
           setSubjectNames(subjects);
         }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load daily log");
+        if (!cancelled) setError(getFriendlyErrorMessage(err, "Failed to load daily log"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -69,7 +70,7 @@ export default function DailyLogTab({ studentId, studentFirstName }: Props) {
       setClassObservations(classObs);
       setShadowObservations(shadowObs);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load daily log");
+      setError(getFriendlyErrorMessage(err, "Failed to load daily log"));
     } finally {
       setRangeLoading(false);
     }

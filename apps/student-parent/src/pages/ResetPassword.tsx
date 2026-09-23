@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import { supabase } from "../lib/supabase";
 
 // Landing page for both the "forgot password" link and the parent invite's
@@ -54,7 +55,7 @@ export default function ResetPassword() {
     setSubmitting(true);
     const { data: userData, error } = await supabase.auth.updateUser({ password });
     if (error) {
-      setError(error.message);
+      setError(getFriendlyErrorMessage(error, "Failed to update your password."));
       setSubmitting(false);
       return;
     }

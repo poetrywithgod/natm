@@ -19,6 +19,7 @@ import {
 import { getSignedPhotoUrl } from "../features/students/api";
 import DailyLogTab from "../features/dailyLog/components/DailyLogTab";
 import CollapsibleSection from "../components/CollapsibleSection";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function ShadowTeacherStudentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -75,7 +76,7 @@ export default function ShadowTeacherStudentDetail() {
           setFeed(feedData);
         }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load student");
+        if (!cancelled) setError(getFriendlyErrorMessage(err, "Failed to load student"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -104,7 +105,7 @@ export default function ShadowTeacherStudentDetail() {
         )
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save note");
+      setError(getFriendlyErrorMessage(err, "Failed to save note"));
     } finally {
       setSavingId(null);
     }
@@ -120,7 +121,7 @@ export default function ShadowTeacherStudentDetail() {
       const conversationId = await getOrCreateConversationForStudent(id, profile.id, profile.school_id);
       navigate(`/shadow-teacher/messages/${conversationId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to open conversation");
+      setError(getFriendlyErrorMessage(err, "Failed to open conversation"));
     } finally {
       setMessagingParent(false);
     }

@@ -23,6 +23,7 @@ import {
   type Subject,
 } from "../features/subjects/api";
 import { fetchEnabledLevels } from "../features/schoolLevels/api";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function AdminClasses() {
   const { profile } = useAuth();
@@ -86,7 +87,7 @@ export default function AdminClasses() {
       // empty, unusable picker.
       setLevelSubjects(Object.fromEntries(levelSubjectEntries.filter(([, subs]) => subs.length > 0)));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load classes");
+      setError(getFriendlyErrorMessage(e, "Failed to load classes"));
     } finally {
       setLoading(false);
     }
@@ -105,7 +106,7 @@ export default function AdminClasses() {
       setNewLevel("");
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create class");
+      setError(getFriendlyErrorMessage(e, "Failed to create class"));
     }
   }
 
@@ -114,7 +115,7 @@ export default function AdminClasses() {
       await assignClassTeacher(classId, teacherId === "" ? null : teacherId, schoolId!, profile!.id);
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to assign class teacher");
+      setError(getFriendlyErrorMessage(e, "Failed to assign class teacher"));
     }
   }
 
@@ -123,7 +124,7 @@ export default function AdminClasses() {
       await assignClassLevel(classId, level === "" ? null : level, schoolId!, profile!.id);
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to set class level");
+      setError(getFriendlyErrorMessage(e, "Failed to set class level"));
     }
   }
 
@@ -139,7 +140,7 @@ export default function AdminClasses() {
       setEditingId(null);
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to rename class");
+      setError(getFriendlyErrorMessage(e, "Failed to rename class"));
     }
   }
 
@@ -152,7 +153,7 @@ export default function AdminClasses() {
       await deleteClass(cls.id, schoolId, profile!.id);
       await loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete class");
+      setError(getFriendlyErrorMessage(e, "Failed to delete class"));
     } finally {
       setDeletingId(null);
     }
@@ -175,7 +176,7 @@ export default function AdminClasses() {
       const updated = await fetchClassSubjects(classId);
       setClassSubjects((prev) => ({ ...prev, [classId]: updated }));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to add subject");
+      setError(getFriendlyErrorMessage(e, "Failed to add subject"));
     } finally {
       setSubjectSaving((prev) => ({ ...prev, [classId]: false }));
     }
@@ -190,7 +191,7 @@ export default function AdminClasses() {
       const updated = await fetchClassSubjects(classId);
       setClassSubjects((prev) => ({ ...prev, [classId]: updated }));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to add subject");
+      setError(getFriendlyErrorMessage(e, "Failed to add subject"));
     } finally {
       setSubjectSaving((prev) => ({ ...prev, [classId]: false }));
     }
@@ -209,7 +210,7 @@ export default function AdminClasses() {
       const updated = await fetchClassSubjects(classSubject.class_id);
       setClassSubjects((prev) => ({ ...prev, [classSubject.class_id]: updated }));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to remove subject");
+      setError(getFriendlyErrorMessage(e, "Failed to remove subject"));
     }
   }
 

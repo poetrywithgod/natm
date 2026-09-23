@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Plug, Pencil, RefreshCw } from "lucide-react";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import {
   fetchIntegrations,
   updateIntegration,
@@ -35,7 +36,7 @@ export default function Integrations() {
     try {
       setIntegrations(await fetchIntegrations());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load integrations");
+      setError(getFriendlyErrorMessage(e, "Failed to load integrations"));
     } finally {
       setLoading(false);
     }
@@ -85,7 +86,7 @@ function IntegrationCard({ integration, onChanged }: { integration: Integration;
       setEditing(false);
       await onChanged();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save");
+      setError(getFriendlyErrorMessage(e, "Failed to save"));
     } finally {
       setSaving(false);
     }
@@ -98,7 +99,7 @@ function IntegrationCard({ integration, onChanged }: { integration: Integration;
       await testAnthropicConnection();
       await onChanged();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Test failed");
+      setError(getFriendlyErrorMessage(e, "Test failed"));
     } finally {
       setTesting(false);
     }

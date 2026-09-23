@@ -12,6 +12,7 @@ import {
   type SubscriptionPayment,
 } from "../features/subscription/api";
 import { openRemitaCheckout } from "../features/subscription/remitaCheckout";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function AdminSubscription() {
   const { profile } = useAuth();
@@ -29,7 +30,7 @@ export default function AdminSubscription() {
       await ensureTermSubscriptionInvoice(profile.school_id);
       setInvoices(await fetchSchoolInvoices(profile.school_id));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load subscription");
+      setError(getFriendlyErrorMessage(e, "Failed to load subscription"));
     } finally {
       setLoading(false);
     }
@@ -60,7 +61,7 @@ export default function AdminSubscription() {
         onClose: () => setPayingInvoiceId(null),
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to start payment");
+      setError(getFriendlyErrorMessage(e, "Failed to start payment"));
     } finally {
       setPayingInvoiceId(null);
     }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { X, Trash2 } from "lucide-react";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 import {
   fetchQuizQuestions,
   updateQuizQuestion,
@@ -30,7 +31,7 @@ export default function QuizReview({ quizId, schoolId, actorId, onClose }: QuizR
       const qs = await fetchQuizQuestions(quizId);
       setQuestions(qs);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load questions");
+      setError(getFriendlyErrorMessage(e, "Failed to load questions"));
     } finally {
       setLoading(false);
     }
@@ -60,7 +61,7 @@ export default function QuizReview({ quizId, schoolId, actorId, onClose }: QuizR
       setEditingId(null);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save question");
+      setError(getFriendlyErrorMessage(e, "Failed to save question"));
     }
   }
 
@@ -69,7 +70,7 @@ export default function QuizReview({ quizId, schoolId, actorId, onClose }: QuizR
       await deleteQuizQuestion(questionId, schoolId, quizId, actorId);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete question");
+      setError(getFriendlyErrorMessage(e, "Failed to delete question"));
     }
   }
 

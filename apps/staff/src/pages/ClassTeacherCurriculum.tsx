@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchCurriculumForClassTeacher, type CurriculumDocView } from "../features/curriculum/api";
 import CurriculumList from "../components/CurriculumList";
+import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function ClassTeacherCurriculum() {
   const { profile } = useAuth();
@@ -13,7 +14,7 @@ export default function ClassTeacherCurriculum() {
     if (!profile?.id || !profile.school_id) return;
     fetchCurriculumForClassTeacher(profile.id, profile.school_id)
       .then(setDocs)
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load curriculum"))
+      .catch((e) => setError(getFriendlyErrorMessage(e, "Failed to load curriculum")))
       .finally(() => setLoading(false));
   }, [profile?.id, profile?.school_id]);
 
