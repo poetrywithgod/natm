@@ -151,6 +151,7 @@ export async function getSignedPhotoUrl(path: string): Promise<string | null> {
 }
 
 export interface CreateStudentAccountResult {
+  id: string;
   email: string;
   temporary_password: string;
   unique_student_id: string;
