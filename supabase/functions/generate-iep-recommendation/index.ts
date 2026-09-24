@@ -204,14 +204,24 @@ Respond with ONLY a JSON object (no markdown, no prose, no code fences) in exact
 
     if (updateError) return jsonResponse({ error: updateError.message }, 500);
 
-    await adminClient.from("audit_logs").insert({
-      school_id: episode.school_id,
-      actor_id: user.id,
-      action: "iep.ai_recommendation_generated",
-      entity_type: "assessment_episode",
-      entity_id: episode_id,
-      details: { suggested_level: parsed.suggested_level, subject_count: parsed.suggested_subjects.length },
-    });
+    // Fire-and-forget: the recommendation is already saved at this point, so
+    // a transient audit-log failure shouldn't surface as a request failure
+    // to the client -- "ai_suggested" status explicitly allows re-running,
+    // so a misreported failure here would just cause an unnecessary
+    // (billed) duplicate AI call.
+    adminClient
+      .from("audit_logs")
+      .insert({
+        school_id: episode.school_id,
+        actor_id: user.id,
+        action: "iep.ai_recommendation_generated",
+        entity_type: "assessment_episode",
+        entity_id: episode_id,
+        details: { suggested_level: parsed.suggested_level, subject_count: parsed.suggested_subjects.length },
+      })
+      .then(({ error }) => {
+        if (error) console.error(`[generate-iep-recommendation] audit log insert failed: ${error.message}`);
+      });
 
     return jsonResponse({ success: true, episode_id }, 200);
   } catch (e) {

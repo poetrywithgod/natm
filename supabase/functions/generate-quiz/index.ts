@@ -70,14 +70,35 @@ Deno.serve(async (req) => {
       .single();
 
     if (lessonError || !lesson) return jsonResponse({ error: "Lesson not found" }, 404);
+    // Tenant check first, before anything that could reveal state about a
+    // lesson belonging to another school (e.g. how much text it has).
+    if (lesson.school_id !== callerProfile.school_id) {
+      return jsonResponse({ error: "Forbidden" }, 403);
+    }
     if (!lesson.extracted_text || lesson.extracted_text.trim().length < 50) {
       return jsonResponse(
         { error: "This lesson doesn't have enough extracted text to generate a quiz from." },
         400
       );
     }
-    if (lesson.school_id !== callerProfile.school_id) {
-      return jsonResponse({ error: "Forbidden" }, 403);
+
+    // Guard against a double-click or network retry firing two generation
+    // runs for the same lesson+difficulty at once -- each would
+    // independently call the AI and insert its own quiz+questions rows.
+    // Only blocks while one is actively in flight; a teacher regenerating
+    // after seeing a completed/failed quiz is unaffected.
+    const { data: inFlight } = await adminClient
+      .from("quizzes")
+      .select("id")
+      .eq("lesson_id", lesson_id)
+      .eq("difficulty", difficulty)
+      .eq("status", "generating")
+      .maybeSingle();
+    if (inFlight) {
+      return jsonResponse(
+        { error: "A quiz is already being generated for this lesson at this difficulty.", quiz_id: inFlight.id },
+        409
+      );
     }
 
     // Create the quiz row up front (status: generating) so the client can
@@ -184,14 +205,23 @@ Respond with ONLY a JSON array (no markdown, no prose, no code fences) where eac
 
     await adminClient.from("quizzes").update({ status: "ready" }).eq("id", quiz.id);
 
-    await adminClient.from("audit_logs").insert({
-      school_id: lesson.school_id,
-      actor_id: user.id,
-      action: "quiz.generated",
-      entity_type: "lesson",
-      entity_id: lesson_id,
-      details: { quiz_id: quiz.id, difficulty, question_count: rows.length },
-    });
+    // Fire-and-forget, same reasoning as generate-iep-recommendation: the
+    // quiz is already saved and marked "ready" at this point, so a
+    // transient audit-log failure shouldn't report the whole request as
+    // failed back to the client.
+    adminClient
+      .from("audit_logs")
+      .insert({
+        school_id: lesson.school_id,
+        actor_id: user.id,
+        action: "quiz.generated",
+        entity_type: "lesson",
+        entity_id: lesson_id,
+        details: { quiz_id: quiz.id, difficulty, question_count: rows.length },
+      })
+      .then(({ error }) => {
+        if (error) console.error(`[generate-quiz] audit log insert failed: ${error.message}`);
+      });
 
     return jsonResponse({ success: true, quiz_id: quiz.id }, 200);
   } catch (e) {
