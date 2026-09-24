@@ -144,7 +144,17 @@ Deno.serve(async (req) => {
         .update({ is_active: false, deactivated_at: new Date().toISOString() })
         .eq("id", staff_id);
       if (updateError) {
-        return new Response(JSON.stringify({ error: updateError.message }), {
+        // The ban already went through -- if the profile update fails here,
+        // undo the ban so the account doesn't end up locked out while still
+        // showing as active everywhere in the UI/DB. If the rollback itself
+        // fails, surface both errors so this doesn't fail silently.
+        const { error: rollbackError } = await adminClient.auth.admin.updateUserById(staff_id, {
+          ban_duration: "none",
+        });
+        const message = rollbackError
+          ? `${updateError.message} (additionally, rolling back the account ban failed: ${rollbackError.message} — this account may be banned but still show as active; check manually)`
+          : updateError.message;
+        return new Response(JSON.stringify({ error: message }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -174,7 +184,16 @@ Deno.serve(async (req) => {
         .update({ is_active: true, deactivated_at: null })
         .eq("id", staff_id);
       if (updateError) {
-        return new Response(JSON.stringify({ error: updateError.message }), {
+        // The unban already went through -- if the profile update fails
+        // here, re-ban so the account doesn't end up able to sign in while
+        // still showing as inactive everywhere in the UI/DB.
+        const { error: rollbackError } = await adminClient.auth.admin.updateUserById(staff_id, {
+          ban_duration: INDEFINITE_BAN,
+        });
+        const message = rollbackError
+          ? `${updateError.message} (additionally, rolling back the account unban failed: ${rollbackError.message} — this account may be able to sign in but still show as inactive; check manually)`
+          : updateError.message;
+        return new Response(JSON.stringify({ error: message }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

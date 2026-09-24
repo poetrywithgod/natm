@@ -1,0 +1,366 @@
+diff --git a/supabase/functions/delete-school/index.ts b/supabase/functions/delete-school/index.ts
+index a4732df..6d96568 100644
+--- a/supabase/functions/delete-school/index.ts
++++ b/supabase/functions/delete-school/index.ts
+@@ -70,21 +70,48 @@ Deno.serve(async (req) => {
+ 
+     const adminClient = createClient(supabaseUrl, serviceRoleKey);
+ 
+-    const [{ count: studentCount }, { count: staffCount }, { data: school }] = await Promise.all([
++    const [{ count: studentCount }, { data: staffProfiles }, { data: school }] = await Promise.all([
+       adminClient.from("students").select("id", { count: "exact", head: true }).eq("school_id", school_id),
+-      adminClient.from("profiles").select("id", { count: "exact", head: true }).eq("school_id", school_id),
++      adminClient.from("profiles").select("id, role").eq("school_id", school_id),
+       adminClient.from("schools").select("name").eq("id", school_id).single(),
+     ]);
+ 
+-    if ((studentCount ?? 0) > 0 || (staffCount ?? 0) > 0) {
++    const staffCount = staffProfiles?.length ?? 0;
++    // "Empty" means no students, and no staff beyond a single School Admin
++    // that never did anything else -- exactly the school-created-by-mistake
++    // case this function exists for. Any other staff composition (a second
++    // account, or a non-admin role) means real setup work happened, so it
++    // falls back to the normal block.
++    const isLoneUnusedAdmin = staffCount === 1 && staffProfiles?.[0]?.role === "school_admin";
++
++    if ((studentCount ?? 0) > 0 || (staffCount > 0 && !isLoneUnusedAdmin)) {
+       return new Response(
+         JSON.stringify({
+-          error: `This school has ${studentCount ?? 0} student(s) and ${staffCount ?? 0} staff account(s). Deactivate it instead of deleting, or remove all students and staff first.`,
++          error: `This school has ${studentCount ?? 0} student(s) and ${staffCount} staff account(s). Deactivate it instead of deleting, or remove all students and staff first.`,
+         }),
+         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+       );
+     }
+ 
++    // If there's a lone unused admin, delete their auth account BEFORE the
++    // school. Deleting the school cascades away their `profiles` row, but
++    // never touches `auth.users` -- leaving an orphaned auth account that
++    // silently blocks re-inviting that same email later (the exact bug
++    // already found and fixed in create-parent/create-student). Deleting
++    // the auth user first, and only proceeding to delete the school if that
++    // succeeds, avoids ever creating that orphan in the first place.
++    if (isLoneUnusedAdmin && staffProfiles?.[0]?.id) {
++      const { error: adminDeleteError } = await adminClient.auth.admin.deleteUser(staffProfiles[0].id);
++      if (adminDeleteError) {
++        return new Response(
++          JSON.stringify({
++            error: `Could not remove the school's admin account first: ${adminDeleteError.message}`,
++          }),
++          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
++        );
++      }
++    }
++
+     const { error: deleteError } = await adminClient.from("schools").delete().eq("id", school_id);
+     if (deleteError) {
+       return new Response(JSON.stringify({ error: deleteError.message }), {
+diff --git a/supabase/functions/remita-webhook/index.ts b/supabase/functions/remita-webhook/index.ts
+index 1748141..9476ba5 100644
+--- a/supabase/functions/remita-webhook/index.ts
++++ b/supabase/functions/remita-webhook/index.ts
+@@ -5,21 +5,95 @@ const corsHeaders = {
+   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+ };
+ 
+-// Remita calls this once a transaction settles. Payload shape isn't
+-// live-verified yet (no Remita merchant account as of this build) — this
+-// reads the fields Remita's docs describe (RRR + a status/paymentStatus
+-// field + their own transaction id) but should be checked against the
+-// real webhook payload once Remita sends onboarding docs. Idempotent by
+-// design: the DB update below only fires on a genuine pending -> success
+-// transition, so a duplicate delivery can't double-credit a fee.
++// Remita calls this once a transaction settles. SECURITY: this endpoint is
++// necessarily public (Supabase Edge Functions have no auth of their own, and
++// Remita's servers can't send a Supabase JWT anyway) -- so the incoming
++// payload's RRR/status fields are NEVER trusted on their own. A parent
++// legitimately sees their own RRR client-side (Remita's checkout widget
++// needs it), so without this check anyone could POST a fake
++// {"RRR": "<their own rrr>", "status": "00"} here and get a fee marked paid
++// without ever paying. Same risk applies to a school forging its own
++// subscription payment.
+ //
+-// Handles two unrelated kinds of payment through one webhook (Remita
+-// only supports one configured webhook URL per merchant account, so
+-// both have to land here): a parent paying a school's student_fees
+-// (payment_transactions) and a school paying its own platform
+-// subscription (subscription_payment_transactions). Looks up the RRR
+-// in the first table, then the second, and only proceeds with whichever
+-// one actually matches.
++// Fix: the incoming call is treated as nothing but a "go check RRR X"
++// trigger. Before crediting anything, verifyPaymentWithRemita() independently
++// queries Remita's own Payment Status Query API server-to-server, using our
++// own merchant secret (never anything from the caller), and only what THAT
++// call reports is trusted. Endpoint path + hash field order below follow
++// Remita's Collection Integration doc as described
++// (SHA512(RRR + apiKey + merchantId) for the status-check hash) -- same
++// "verify against the real onboarding docs once a merchant account exists"
++// caveat as initiate-remita-payment; this hasn't been live-tested against
++// Remita's actual servers, since no merchant account exists yet. If the
++// path or hash order turns out wrong once real docs arrive, this fails
++// CLOSED (verified: false -> 502, nothing gets credited), not open.
++//
++// Idempotent by design: the DB update below only fires on a genuine
++// pending -> success transition, so a duplicate delivery can't double-credit
++// a fee.
++//
++// Handles two unrelated kinds of payment through one webhook (Remita only
++// supports one configured webhook URL per merchant account, so both have to
++// land here): a parent paying a school's student_fees (payment_transactions)
++// and a school paying its own platform subscription
++// (subscription_payment_transactions). Looks up the RRR in the first table,
++// then the second, and only proceeds with whichever one actually matches.
++
++const REMITA_BASE_URL = Deno.env.get("REMITA_BASE_URL") ?? "https://remitademo.net/remita/exapp/api/v1/send/api";
++const STATUS_QUERY_PATH = "/echannelsvc/merchant/api/paymentstatus";
++
++async function sha512Hex(input: string): Promise<string> {
++  const data = new TextEncoder().encode(input);
++  const digest = await crypto.subtle.digest("SHA-512", data);
++  return Array.from(new Uint8Array(digest))
++    .map((b) => b.toString(16).padStart(2, "0"))
++    .join("");
++}
++
++interface RemitaVerification {
++  verified: boolean;
++  isSuccess: boolean;
++  status?: string;
++  remitaTransactionId?: string;
++  remitaAmount?: number;
++}
++
++// Independently asks Remita whether RRR actually succeeded. Never trusts the
++// webhook request body's own status field -- this is the only source of
++// truth the rest of the function is allowed to act on.
++async function verifyPaymentWithRemita(rrr: string): Promise<RemitaVerification> {
++  const merchantId = Deno.env.get("REMITA_MERCHANT_ID");
++  const apiKey = Deno.env.get("REMITA_API_KEY");
++  if (!merchantId || !apiKey) {
++    // Remita isn't configured -- can't verify anything, so refuse to trust
++    // the webhook rather than silently crediting on an unverifiable claim.
++    return { verified: false, isSuccess: false };
++  }
++
++  const hash = await sha512Hex(`${rrr}${apiKey}${merchantId}`);
++  const res = await fetch(`${REMITA_BASE_URL}${STATUS_QUERY_PATH}/${merchantId}/${rrr}/${hash}`, {
++    method: "GET",
++    headers: { "Content-Type": "application/json" },
++  }).catch(() => null);
++
++  if (!res || !res.ok) {
++    return { verified: false, isSuccess: false };
++  }
++
++  const data = await res.json().catch(() => null);
++  if (!data) {
++    return { verified: false, isSuccess: false };
++  }
++
++  const status: string | undefined = data.status ?? data.paymentStatus ?? data?.data?.status;
++  const isSuccess = status === "00" || String(status).toLowerCase() === "successful";
++  const remitaTransactionId: string | undefined =
++    data.transactionId ?? data.paymentReference ?? data?.data?.transactionId;
++  const remitaAmount = data.amount !== undefined ? Number(data.amount) : undefined;
++
++  return { verified: true, isSuccess, status, remitaTransactionId, remitaAmount };
++}
++
+ Deno.serve(async (req) => {
+   if (req.method === "OPTIONS") {
+     return new Response("ok", { headers: corsHeaders });
+@@ -28,8 +102,6 @@ Deno.serve(async (req) => {
+   try {
+     const payload = await req.json();
+     const rrr: string | undefined = payload?.RRR ?? payload?.rrr;
+-    const remitaStatus: string | undefined = payload?.status ?? payload?.paymentStatus;
+-    const remitaTransactionId: string | undefined = payload?.transactionId ?? payload?.paymentReference;
+ 
+     if (!rrr) {
+       return new Response(JSON.stringify({ error: "Missing RRR in webhook payload" }), {
+@@ -42,9 +114,17 @@ Deno.serve(async (req) => {
+     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+     const admin = createClient(supabaseUrl, serviceRoleKey);
+ 
+-    // Remita's success status is typically "00" or "Successful" depending
+-    // on product line — treat either as success, everything else as failed.
+-    const isSuccess = remitaStatus === "00" || String(remitaStatus).toLowerCase() === "successful";
++    const verification = await verifyPaymentWithRemita(rrr);
++    if (!verification.verified) {
++      // Can't confirm anything right now (Remita unreachable or REMITA_*
++      // secrets not set). Return 502 so Remita's own retry mechanism
++      // re-delivers later, instead of silently accepting or silently
++      // dropping a possibly-real payment.
++      return new Response(JSON.stringify({ error: "Could not verify payment status with Remita" }), {
++        status: 502,
++        headers: { ...corsHeaders, "Content-Type": "application/json" },
++      });
++    }
+ 
+     const { data: feeTxn } = await admin
+       .from("payment_transactions")
+@@ -53,7 +133,7 @@ Deno.serve(async (req) => {
+       .maybeSingle();
+ 
+     if (feeTxn) {
+-      return handleFeePayment(admin, feeTxn, isSuccess, remitaStatus, remitaTransactionId, corsHeaders);
++      return handleFeePayment(admin, feeTxn, verification, corsHeaders);
+     }
+ 
+     const { data: subTxn } = await admin
+@@ -63,7 +143,7 @@ Deno.serve(async (req) => {
+       .maybeSingle();
+ 
+     if (subTxn) {
+-      return handleSubscriptionPayment(admin, subTxn, isSuccess, remitaStatus, remitaTransactionId, corsHeaders);
++      return handleSubscriptionPayment(admin, subTxn, verification, corsHeaders);
+     }
+ 
+     return new Response(JSON.stringify({ error: "Unknown RRR" }), {
+@@ -82,9 +162,7 @@ Deno.serve(async (req) => {
+ async function handleFeePayment(
+   admin: any,
+   txn: any,
+-  isSuccess: boolean,
+-  remitaStatus: unknown,
+-  remitaTransactionId: string | undefined,
++  verification: RemitaVerification,
+   corsHeaders: Record<string, string>
+ ): Promise<Response> {
+   if (txn.status !== "pending") {
+@@ -94,10 +172,14 @@ async function handleFeePayment(
+     });
+   }
+ 
+-  if (!isSuccess) {
++  if (!verification.isSuccess) {
+     await admin
+       .from("payment_transactions")
+-      .update({ status: "failed", failure_reason: String(remitaStatus ?? "unknown"), updated_at: new Date().toISOString() })
++      .update({
++        status: "failed",
++        failure_reason: String(verification.status ?? "unknown"),
++        updated_at: new Date().toISOString(),
++      })
+       .eq("id", txn.id)
+       .eq("status", "pending");
+     return new Response(JSON.stringify({ ok: true }), {
+@@ -106,13 +188,26 @@ async function handleFeePayment(
+     });
+   }
+ 
++  // Cross-check: Remita's own verified amount vs. what we expect to credit.
++  // Doesn't block the credit (amount here comes from our own DB, set and
++  // range-checked during initiate-remita-payment, not from this request), but
++  // a mismatch means something's worth a human looking at.
++  if (
++    verification.remitaAmount !== undefined &&
++    Math.abs(verification.remitaAmount - Number(txn.amount)) > 0.01
++  ) {
++    console.warn(
++      `remita-webhook: amount mismatch on txn ${txn.id} -- Remita reports ${verification.remitaAmount}, expected ${txn.amount}`
++    );
++  }
++
+   // Guarded by .eq("status", "pending") so a duplicate webhook delivery
+   // racing this one can't flip it to success twice.
+   const { data: updated, error: updateError } = await admin
+     .from("payment_transactions")
+     .update({
+       status: "success",
+-      remita_transaction_id: remitaTransactionId ?? null,
++      remita_transaction_id: verification.remitaTransactionId ?? null,
+       updated_at: new Date().toISOString(),
+     })
+     .eq("id", txn.id)
+@@ -180,9 +275,7 @@ async function handleFeePayment(
+ async function handleSubscriptionPayment(
+   admin: any,
+   txn: any,
+-  isSuccess: boolean,
+-  remitaStatus: unknown,
+-  remitaTransactionId: string | undefined,
++  verification: RemitaVerification,
+   corsHeaders: Record<string, string>
+ ): Promise<Response> {
+   if (txn.status !== "pending") {
+@@ -192,10 +285,14 @@ async function handleSubscriptionPayment(
+     });
+   }
+ 
+-  if (!isSuccess) {
++  if (!verification.isSuccess) {
+     await admin
+       .from("subscription_payment_transactions")
+-      .update({ status: "failed", failure_reason: String(remitaStatus ?? "unknown"), updated_at: new Date().toISOString() })
++      .update({
++        status: "failed",
++        failure_reason: String(verification.status ?? "unknown"),
++        updated_at: new Date().toISOString(),
++      })
+       .eq("id", txn.id)
+       .eq("status", "pending");
+     return new Response(JSON.stringify({ ok: true }), {
+@@ -204,11 +301,20 @@ async function handleSubscriptionPayment(
+     });
+   }
+ 
++  if (
++    verification.remitaAmount !== undefined &&
++    Math.abs(verification.remitaAmount - Number(txn.amount)) > 0.01
++  ) {
++    console.warn(
++      `remita-webhook: amount mismatch on subscription txn ${txn.id} -- Remita reports ${verification.remitaAmount}, expected ${txn.amount}`
++    );
++  }
++
+   const { data: updated, error: updateError } = await admin
+     .from("subscription_payment_transactions")
+     .update({
+       status: "success",
+-      remita_transaction_id: remitaTransactionId ?? null,
++      remita_transaction_id: verification.remitaTransactionId ?? null,
+       updated_at: new Date().toISOString(),
+     })
+     .eq("id", txn.id)
+diff --git a/supabase/functions/set-staff-active-status/index.ts b/supabase/functions/set-staff-active-status/index.ts
+index f2e0732..89941ec 100644
+--- a/supabase/functions/set-staff-active-status/index.ts
++++ b/supabase/functions/set-staff-active-status/index.ts
+@@ -144,7 +144,17 @@ Deno.serve(async (req) => {
+         .update({ is_active: false, deactivated_at: new Date().toISOString() })
+         .eq("id", staff_id);
+       if (updateError) {
+-        return new Response(JSON.stringify({ error: updateError.message }), {
++        // The ban already went through -- if the profile update fails here,
++        // undo the ban so the account doesn't end up locked out while still
++        // showing as active everywhere in the UI/DB. If the rollback itself
++        // fails, surface both errors so this doesn't fail silently.
++        const { error: rollbackError } = await adminClient.auth.admin.updateUserById(staff_id, {
++          ban_duration: "none",
++        });
++        const message = rollbackError
++          ? `${updateError.message} (additionally, rolling back the account ban failed: ${rollbackError.message} — this account may be banned but still show as active; check manually)`
++          : updateError.message;
++        return new Response(JSON.stringify({ error: message }), {
+           status: 400,
+           headers: { ...corsHeaders, "Content-Type": "application/json" },
+         });
+@@ -174,7 +184,16 @@ Deno.serve(async (req) => {
+         .update({ is_active: true, deactivated_at: null })
+         .eq("id", staff_id);
+       if (updateError) {
+-        return new Response(JSON.stringify({ error: updateError.message }), {
++        // The unban already went through -- if the profile update fails
++        // here, re-ban so the account doesn't end up able to sign in while
++        // still showing as inactive everywhere in the UI/DB.
++        const { error: rollbackError } = await adminClient.auth.admin.updateUserById(staff_id, {
++          ban_duration: INDEFINITE_BAN,
++        });
++        const message = rollbackError
++          ? `${updateError.message} (additionally, rolling back the account unban failed: ${rollbackError.message} — this account may be able to sign in but still show as inactive; check manually)`
++          : updateError.message;
++        return new Response(JSON.stringify({ error: message }), {
+           status: 400,
+           headers: { ...corsHeaders, "Content-Type": "application/json" },
+         });

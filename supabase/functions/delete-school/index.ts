@@ -70,19 +70,46 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    const [{ count: studentCount }, { count: staffCount }, { data: school }] = await Promise.all([
+    const [{ count: studentCount }, { data: staffProfiles }, { data: school }] = await Promise.all([
       adminClient.from("students").select("id", { count: "exact", head: true }).eq("school_id", school_id),
-      adminClient.from("profiles").select("id", { count: "exact", head: true }).eq("school_id", school_id),
+      adminClient.from("profiles").select("id, role").eq("school_id", school_id),
       adminClient.from("schools").select("name").eq("id", school_id).single(),
     ]);
 
-    if ((studentCount ?? 0) > 0 || (staffCount ?? 0) > 0) {
+    const staffCount = staffProfiles?.length ?? 0;
+    // "Empty" means no students, and no staff beyond a single School Admin
+    // that never did anything else -- exactly the school-created-by-mistake
+    // case this function exists for. Any other staff composition (a second
+    // account, or a non-admin role) means real setup work happened, so it
+    // falls back to the normal block.
+    const isLoneUnusedAdmin = staffCount === 1 && staffProfiles?.[0]?.role === "school_admin";
+
+    if ((studentCount ?? 0) > 0 || (staffCount > 0 && !isLoneUnusedAdmin)) {
       return new Response(
         JSON.stringify({
-          error: `This school has ${studentCount ?? 0} student(s) and ${staffCount ?? 0} staff account(s). Deactivate it instead of deleting, or remove all students and staff first.`,
+          error: `This school has ${studentCount ?? 0} student(s) and ${staffCount} staff account(s). Deactivate it instead of deleting, or remove all students and staff first.`,
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // If there's a lone unused admin, delete their auth account BEFORE the
+    // school. Deleting the school cascades away their `profiles` row, but
+    // never touches `auth.users` -- leaving an orphaned auth account that
+    // silently blocks re-inviting that same email later (the exact bug
+    // already found and fixed in create-parent/create-student). Deleting
+    // the auth user first, and only proceeding to delete the school if that
+    // succeeds, avoids ever creating that orphan in the first place.
+    if (isLoneUnusedAdmin && staffProfiles?.[0]?.id) {
+      const { error: adminDeleteError } = await adminClient.auth.admin.deleteUser(staffProfiles[0].id);
+      if (adminDeleteError) {
+        return new Response(
+          JSON.stringify({
+            error: `Could not remove the school's admin account first: ${adminDeleteError.message}`,
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     const { error: deleteError } = await adminClient.from("schools").delete().eq("id", school_id);
