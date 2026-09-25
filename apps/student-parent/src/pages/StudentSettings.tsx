@@ -76,11 +76,11 @@ export default function StudentSettings() {
 
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !student) return;
+    if (!file || !student || !profile?.school_id) return;
     setPhotoUploading(true);
     setPhotoError(null);
     try {
-      const path = await uploadOwnStudentPhoto(student.id, file);
+      const path = await uploadOwnStudentPhoto(profile.school_id, student.id, file);
       const url = await getSignedStudentPhotoUrl(path);
       setPhotoUrl(url);
     } catch (err) {

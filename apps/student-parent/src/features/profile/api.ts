@@ -99,9 +99,13 @@ export async function advanceOnboardingStatus(
   if (error) throw new Error(error.message);
 }
 
-export async function uploadOwnStudentPhoto(studentId: string, file: File): Promise<string> {
+export async function uploadOwnStudentPhoto(schoolId: string, studentId: string, file: File): Promise<string> {
   const ext = file.name.split(".").pop() ?? "jpg";
-  const path = `${studentId}/${Date.now()}.${ext}`;
+  // Matches the ${schoolId}/${studentId}/... convention the staff app's
+  // own uploadStudentPhoto already uses -- storage RLS checks the school_id
+  // segment against the students table, so this has to stay consistent
+  // with that, not the old studentId-only path this used to write.
+  const path = `${schoolId}/${studentId}/${Date.now()}.${ext}`;
   const { error: uploadError } = await supabase.storage
     .from(STUDENT_PHOTO_BUCKET)
     .upload(path, file, { upsert: true });
