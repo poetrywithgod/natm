@@ -18,6 +18,7 @@ import {
   type RatingTableSection,
 } from "@natm/shared-types";
 import { fetchSubjectsForClassDay } from "../features/timetable/api";
+import { fetchClassActivities, createClassActivity, updateClassActivity, type ClassActivity } from "../features/activities/api";
 import SectionRenderer from "../features/observations/components/SectionRenderer";
 import { getFriendlyErrorMessage } from "@natm/supabase";
 
@@ -69,6 +70,15 @@ export default function ClassTeacherActivities() {
   const [history, setHistory] = useState<DailyTeacherObservation[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
+  const [classActivities, setClassActivities] = useState<ClassActivity[]>([]);
+  const [activitySubjectId, setActivitySubjectId] = useState("");
+  const [activityTopic, setActivityTopic] = useState("");
+  const [activityNotes, setActivityNotes] = useState("");
+  const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
+  const [savingActivity, setSavingActivity] = useState(false);
+  const [activityError, setActivityError] = useState<string | null>(null);
+  const [showActivityLog, setShowActivityLog] = useState(false);
+
   const [loadingClass, setLoadingClass] = useState(true);
   const [loadingForm, setLoadingForm] = useState(true);
   const [saving, setSaving] = useState<"draft" | "submitted" | null>(null);
@@ -82,12 +92,14 @@ export default function ClassTeacherActivities() {
       .then(async (cls) => {
         setMyClass(cls);
         if (cls) {
-          const [studs, term] = await Promise.all([
+          const [studs, term, activities] = await Promise.all([
             fetchClassStudents(cls.id),
             profile.school_id ? fetchCurrentTermNumber(profile.school_id) : Promise.resolve(null),
+            fetchClassActivities(cls.id),
           ]);
           setStudents(studs);
           setTermNumber(term);
+          setClassActivities(activities);
           if (studs.length > 0) {
             const preselected = searchParams.get("student");
             setStudentId(preselected && studs.some((s) => s.id === preselected) ? preselected : studs[0].id);
@@ -115,6 +127,11 @@ export default function ClassTeacherActivities() {
         setHistory(hist);
         setShadowTeacherName(shadowName);
         setScheduledSubjects(subjects);
+        if (!editingActivityId) {
+          setActivitySubjectId((prev) =>
+            prev && subjects.some((s) => s.id === prev) ? prev : subjects[0]?.id ?? ""
+          );
+        }
         const initial = initSections(CLASS_TEACHER_OBSERVATION_SECTIONS, existing?.sections);
         initial[SUBJECT_PERFORMANCE_SECTION_KEY] = existing?.sections?.[SUBJECT_PERFORMANCE_SECTION_KEY] ?? {
           ratings: {},
@@ -167,6 +184,58 @@ export default function ClassTeacherActivities() {
     }
   }
 
+  async function handleSaveActivity() {
+    if (!myClass || !profile?.school_id || !profile?.id || !activitySubjectId || !activityTopic.trim()) return;
+    setSavingActivity(true);
+    setActivityError(null);
+    try {
+      if (editingActivityId) {
+        await updateClassActivity(
+          editingActivityId,
+          activityTopic.trim(),
+          activityNotes.trim() || null,
+          profile.school_id,
+          myClass.id,
+          profile.id
+        );
+      } else {
+        await createClassActivity(
+          profile.school_id,
+          myClass.id,
+          activitySubjectId,
+          date,
+          activityTopic.trim(),
+          activityNotes.trim() || null,
+          profile.id
+        );
+      }
+      const updated = await fetchClassActivities(myClass.id);
+      setClassActivities(updated);
+      setActivityTopic("");
+      setActivityNotes("");
+      setEditingActivityId(null);
+    } catch (e) {
+      setActivityError(getFriendlyErrorMessage(e, "Failed to save activity"));
+    } finally {
+      setSavingActivity(false);
+    }
+  }
+
+  function startEditActivity(a: ClassActivity) {
+    setEditingActivityId(a.id);
+    setActivitySubjectId(a.subject_id);
+    setActivityTopic(a.topic);
+    setActivityNotes(a.notes ?? "");
+    setShowActivityLog(true);
+  }
+
+  function cancelEditActivity() {
+    setEditingActivityId(null);
+    setActivityTopic("");
+    setActivityNotes("");
+    setActivityError(null);
+  }
+
   if (loadingClass) return <div className="p-6 font-ui text-forest-100">Loading...</div>;
 
   if (!myClass) {
@@ -188,6 +257,111 @@ export default function ClassTeacherActivities() {
         <h1 className="font-display text-2xl text-forest-100">Daily Teacher Observation Form</h1>
         <p className="font-ui text-xs text-forest-300">{myClass.name} · 8:00 AM – 3:00 PM</p>
       </div>
+
+      <section className="bg-forest-900 rounded-lg p-4 space-y-3">
+        <button
+          onClick={() => setShowActivityLog((s) => !s)}
+          className="w-full flex items-center justify-between font-ui text-sm font-semibold text-forest-100"
+        >
+          <span>
+            Class Activity Log
+            {classActivities.length > 0 && (
+              <span className="ml-2 font-normal text-forest-300">({classActivities.length} logged)</span>
+            )}
+          </span>
+          <span className="text-forest-300 text-xs">{showActivityLog ? "Hide" : "Show"}</span>
+        </button>
+
+        {showActivityLog && (
+          <div className="space-y-3">
+            {activityError && <p className="text-error font-ui text-sm">{activityError}</p>}
+
+            <div className="space-y-2">
+              <div>
+                <label htmlFor="activity-subject" className="font-ui text-[11px] text-forest-300">
+                  Subject
+                </label>
+                <select
+                  id="activity-subject"
+                  value={activitySubjectId}
+                  onChange={(e) => setActivitySubjectId(e.target.value)}
+                  className={inputCls}
+                >
+                  {scheduledSubjects.length === 0 && <option value="">No subjects timetabled for {date}</option>}
+                  {scheduledSubjects.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="activity-topic" className="font-ui text-[11px] text-forest-300">
+                  Topic
+                </label>
+                <input
+                  id="activity-topic"
+                  type="text"
+                  value={activityTopic}
+                  onChange={(e) => setActivityTopic(e.target.value)}
+                  placeholder="What did the class cover?"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label htmlFor="activity-notes" className="font-ui text-[11px] text-forest-300">
+                  Notes (optional)
+                </label>
+                <textarea
+                  id="activity-notes"
+                  value={activityNotes}
+                  onChange={(e) => setActivityNotes(e.target.value)}
+                  rows={2}
+                  className={inputCls}
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveActivity}
+                  disabled={savingActivity || !activitySubjectId || !activityTopic.trim()}
+                  className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui text-sm font-semibold disabled:opacity-50"
+                >
+                  {savingActivity ? "Saving..." : editingActivityId ? "Update Activity" : "Log Activity"}
+                </button>
+                {editingActivityId && (
+                  <button
+                    onClick={cancelEditActivity}
+                    disabled={savingActivity}
+                    className="px-4 py-2 rounded bg-forest-700 text-forest-100 font-ui text-sm font-semibold disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {classActivities.length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-forest-700">
+                {classActivities.map((a) => (
+                  <button
+                    key={a.id}
+                    onClick={() => startEditActivity(a)}
+                    className="w-full text-left bg-forest-950 rounded-lg p-3 hover:bg-forest-800"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-ui text-xs text-forest-300">
+                        {a.date} · {a.subject_name}
+                      </span>
+                    </div>
+                    <p className="font-ui text-sm text-forest-100 mt-1">{a.topic}</p>
+                    {a.notes && <p className="font-ui text-xs text-forest-300 mt-1">{a.notes}</p>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       {error && <p className="text-error font-ui text-sm">{error}</p>}
       {successMessage && <p className="font-ui text-sm text-forest-300">{successMessage}</p>}
