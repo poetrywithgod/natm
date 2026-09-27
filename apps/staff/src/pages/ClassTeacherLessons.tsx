@@ -9,11 +9,12 @@ import {
   getSignedPdfUrl,
   requestVideoUploadUrl,
   uploadVideoFile,
-  getStreamThumbnailUrl,
-  getStreamPlayerUrl,
+  pollVideoUploadStatus,
+  getMuxThumbnailUrl,
   type Lesson,
   type LessonContentType,
 } from "../features/lessons/api";
+import MuxPlayer from "@mux/mux-player-react";
 import { extractPdfText } from "../features/lessons/pdfText";
 import {
   generateQuiz,
@@ -129,9 +130,10 @@ export default function ClassTeacherLessons() {
     setVideoUploading(true);
     setVideoUploadProgress(0);
     try {
-      const { uploadURL, uid } = await requestVideoUploadUrl();
+      const { uploadURL, uploadId } = await requestVideoUploadUrl();
       await uploadVideoFile(uploadURL, file, setVideoUploadProgress);
-      setVideoUid(uid);
+      const playbackId = await pollVideoUploadStatus(uploadId);
+      setVideoUid(playbackId);
     } catch (err) {
       setError(getFriendlyErrorMessage(err, "Failed to upload video"));
       setVideoFile(null);
@@ -384,7 +386,7 @@ export default function ClassTeacherLessons() {
                     className="flex items-center gap-2"
                   >
                     <img
-                      src={getStreamThumbnailUrl(l.video_id)}
+                      src={getMuxThumbnailUrl(l.video_id)}
                       alt=""
                       className="w-20 h-12 object-cover rounded bg-forest-800"
                     />
@@ -394,13 +396,7 @@ export default function ClassTeacherLessons() {
                   </button>
                   {previewingLessonId === l.id && (
                     <div className="aspect-video w-full max-w-sm rounded-lg overflow-hidden">
-                      <iframe
-                        src={getStreamPlayerUrl(l.video_id)}
-                        className="w-full h-full"
-                        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-                        allowFullScreen
-                        title={l.title}
-                      />
+                      <MuxPlayer playbackId={l.video_id} className="w-full h-full" />
                     </div>
                   )}
                 </div>

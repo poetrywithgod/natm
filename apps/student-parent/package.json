@@ -11,6 +11,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@mux/mux-player-react": "^3.13.4",
     "@natm/shared-types": "workspace:^",
     "@natm/supabase": "workspace:^",
     "@sentry/react": "^10.73.0",

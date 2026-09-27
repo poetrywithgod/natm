@@ -11,6 +11,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@mux/mux-player-react": "^3.13.4",
     "@natm/shared-types": "workspace:^",
     "@natm/supabase": "workspace:^",
     "@sentry/react": "^10.73.0",
@@ -21,7 +22,8 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.2",
-    "recharts": "^3.10.1"
+    "recharts": "^3.10.1",
+    "tus-js-client": "^4.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

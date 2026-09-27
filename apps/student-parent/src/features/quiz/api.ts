@@ -15,16 +15,13 @@ export async function getSignedLessonPdfUrl(path: string): Promise<string | null
   return data.signedUrl;
 }
 
-// Videos live entirely in Cloudflare Stream -- the app only ever stores
-// and reads the video UID, then builds these URLs to fetch playback
-// straight from Cloudflare's CDN. See apps/staff/src/features/lessons/api.ts
-// for the matching upload-side helpers.
-export function getStreamThumbnailUrl(videoId: string): string {
-  return `https://videodelivery.net/${videoId}/thumbnails/thumbnail.jpg`;
-}
-
-export function getStreamPlayerUrl(videoId: string): string {
-  return `https://iframe.videodelivery.net/${videoId}`;
+// Videos live entirely in Mux -- the app only ever stores and reads the
+// video's Mux playback id, then either builds this thumbnail URL or hands
+// the id straight to <MuxPlayer playbackId={...} /> for playback. See
+// apps/staff/src/features/lessons/api.ts for the matching upload-side
+// helpers.
+export function getMuxThumbnailUrl(playbackId: string): string {
+  return `https://image.mux.com/${playbackId}/thumbnail.jpg`;
 }
 
 export interface QuizQuestion {

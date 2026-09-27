@@ -9,10 +9,10 @@ import {
   fetchExistingAnswers,
   submitQuizAttempt,
   getSignedLessonPdfUrl,
-  getStreamThumbnailUrl,
-  getStreamPlayerUrl,
+  getMuxThumbnailUrl,
   type QuizWithQuestions,
 } from "../features/quiz/api";
+import MuxPlayer from "@mux/mux-player-react";
 import { checkAndAwardBadges, type BadgeDefinition } from "../features/gamification/api";
 import { getBadgeIcon } from "../features/gamification/icons";
 import { getFriendlyErrorMessage } from "@natm/supabase";
@@ -177,7 +177,7 @@ export default function StudentQuiz() {
               className="relative w-full max-w-sm rounded-lg overflow-hidden aspect-video"
             >
               <img
-                src={getStreamThumbnailUrl(quiz.lessonVideoId)}
+                src={getMuxThumbnailUrl(quiz.lessonVideoId)}
                 alt=""
                 className="w-full h-full object-cover"
               />
@@ -187,12 +187,10 @@ export default function StudentQuiz() {
             </button>
           ) : (
             <div className="aspect-video w-full max-w-sm rounded-lg overflow-hidden">
-              <iframe
-                src={getStreamPlayerUrl(quiz.lessonVideoId)}
+              <MuxPlayer
+                playbackId={quiz.lessonVideoId}
                 className="w-full h-full"
-                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-                allowFullScreen
-                title={quiz.lessonTitle}
+                autoPlay
               />
             </div>
           )}

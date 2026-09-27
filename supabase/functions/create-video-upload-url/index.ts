@@ -12,12 +12,13 @@ function jsonResponse(body: unknown, status: number) {
   });
 }
 
-// Requests a one-time Cloudflare Stream direct-upload URL so the browser can
-// upload the video file straight to Cloudflare -- the file itself never
-// passes through this function or Supabase storage, only this short-lived
-// URL + video UID do. See apps/staff/src/features/lessons/api.ts for the
-// client side of this (uploadVideoFile posts the file to the returned
-// uploadURL, then createVideoLesson saves the returned uid as video_id).
+// Requests a one-time Mux direct-upload URL so the browser can upload the
+// video file straight to Mux via TUS -- the file itself never passes
+// through this function or Supabase storage, only this short-lived URL +
+// upload id do. See apps/staff/src/features/lessons/api.ts for the client
+// side (uploadVideoFile TUS-uploads to the returned uploadURL, then
+// pollVideoUploadStatus polls get-video-upload-status for the resulting
+// playback id, which createVideoLesson saves as video_id).
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -29,12 +30,12 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const cloudflareAccountId = Deno.env.get("CLOUDFLARE_ACCOUNT_ID");
-    const cloudflareApiToken = Deno.env.get("CLOUDFLARE_API_TOKEN");
+    const muxTokenId = Deno.env.get("MUX_TOKEN_ID");
+    const muxTokenSecret = Deno.env.get("MUX_TOKEN_SECRET");
 
-    if (!cloudflareAccountId || !cloudflareApiToken) {
+    if (!muxTokenId || !muxTokenSecret) {
       return jsonResponse(
-        { error: "Video upload isn't configured yet -- ask your Super Admin to finish Cloudflare setup." },
+        { error: "Video upload isn't configured yet -- ask your Super Admin to finish Mux setup." },
         503
       );
     }
@@ -61,28 +62,27 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Forbidden -- class_teacher only" }, 403);
     }
 
-    const cfResponse = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${cloudflareAccountId}/stream/direct_upload`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${cloudflareApiToken}`,
-          "Content-Type": "application/json",
-        },
-        // 1 hour cap -- generous for a classroom lesson recording, short
-        // enough to keep runaway/mistaken uploads from racking up storage.
-        body: JSON.stringify({ maxDurationSeconds: 3600 }),
-      }
-    );
+    const muxAuth = `Basic ${btoa(`${muxTokenId}:${muxTokenSecret}`)}`;
+    const muxResponse = await fetch("https://api.mux.com/video/v1/uploads", {
+      method: "POST",
+      headers: {
+        Authorization: muxAuth,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        cors_origin: "*",
+        new_asset_settings: { playback_policy: ["public"] },
+      }),
+    });
 
-    const cfBody = await cfResponse.json();
-    if (!cfResponse.ok || !cfBody.success) {
-      const message = cfBody?.errors?.[0]?.message || "Cloudflare rejected the upload request";
+    const muxBody = await muxResponse.json();
+    if (!muxResponse.ok) {
+      const message = muxBody?.error?.messages?.[0] || "Mux rejected the upload request";
       return jsonResponse({ error: message }, 502);
     }
 
     return jsonResponse(
-      { uploadURL: cfBody.result.uploadURL, uid: cfBody.result.uid },
+      { uploadURL: muxBody.data.url, uploadId: muxBody.data.id },
       200
     );
   } catch (e) {

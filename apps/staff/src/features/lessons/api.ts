@@ -1,3 +1,4 @@
+import * as tus from "tus-js-client";
 import { supabase } from "../../lib/supabase";
 import { logAuditEvent } from "../audit/api";
 
@@ -86,12 +87,9 @@ export async function createPdfLesson(
   return { ...(data as any), subject_name: (data as any).subject?.name ?? "Unknown subject" };
 }
 
-// videoId is the Cloudflare Stream UID returned by requestVideoUploadUrl()
-// after uploadVideoFile() finishes (see ClassTeacherLessons.tsx). Still
-// unexercised end-to-end until a real Cloudflare account + API token are
-// configured (CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN secrets on
-// create-video-upload-url). summaryText is the manual-fallback extraction
-// source until real captions are wired up.
+// videoId is the Mux playback id returned by pollVideoUploadStatus() after
+// uploadVideoFile() finishes (see ClassTeacherLessons.tsx). summaryText is
+// the manual-fallback extraction source until real captions are wired up.
 export async function createVideoLesson(
   schoolId: string,
   classId: string,
@@ -135,20 +133,22 @@ export async function getSignedPdfUrl(path: string): Promise<string | null> {
   return data.signedUrl;
 }
 
-// -- Cloudflare Stream upload -------------------------------------------
+// -- Mux upload ------------------------------------------------------------
 //
-// Videos never touch Supabase: the browser gets a one-time upload URL from
-// Cloudflare (via the create-video-upload-url edge function, which is the
-// only place the Cloudflare API token is used) and uploads the file
-// straight to Cloudflare. Only the resulting video UID and a couple of
-// derived Cloudflare URLs get saved in our own database.
+// Videos never touch Supabase: the browser gets a one-time direct-upload URL
+// from Mux (via the create-video-upload-url edge function, which is the
+// only place the Mux API token is used) and TUS-uploads the file straight
+// to Mux. Once the upload finishes, Mux still needs a few seconds to turn
+// it into an asset and assign a playback id -- pollVideoUploadStatus waits
+// for that. Only the resulting playback id and a derived thumbnail URL get
+// saved in our own database.
 
-export interface StreamUploadTarget {
+export interface MuxUploadTarget {
   uploadURL: string;
-  uid: string;
+  uploadId: string;
 }
 
-export async function requestVideoUploadUrl(): Promise<StreamUploadTarget> {
+export async function requestVideoUploadUrl(): Promise<MuxUploadTarget> {
   const { data, error } = await supabase.functions.invoke("create-video-upload-url", {
     method: "POST",
   });
@@ -159,39 +159,71 @@ export async function requestVideoUploadUrl(): Promise<StreamUploadTarget> {
       "Failed to start video upload";
     throw new Error(message);
   }
-  return data as StreamUploadTarget;
+  return data as MuxUploadTarget;
 }
 
-// Cloudflare's direct-upload endpoint accepts a plain multipart POST for
-// files under 200MB (the common case for a single lesson recording) --
-// no TUS client needed. Uses XHR rather than fetch so upload progress can
-// be reported back to the UI.
+// Mux's direct-upload URL is a pre-created TUS resource -- pass uploadUrl
+// (not endpoint) so tus-js-client PATCHes straight to it instead of trying
+// to create a new one.
 export function uploadVideoFile(
   uploadURL: string,
   file: File,
   onProgress?: (percent: number) => void
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", uploadURL);
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
-    };
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) resolve();
-      else reject(new Error(`Video upload failed (status ${xhr.status})`));
-    };
-    xhr.onerror = () => reject(new Error("Video upload failed -- check your connection and try again"));
-    const formData = new FormData();
-    formData.append("file", file);
-    xhr.send(formData);
+    const upload = new tus.Upload(file, {
+      uploadUrl: uploadURL,
+      retryDelays: [0, 1000, 3000, 5000],
+      onError: (error) =>
+        reject(new Error(error.message || "Video upload failed -- check your connection and try again")),
+      onProgress: (bytesUploaded, bytesTotal) => {
+        if (onProgress) onProgress(Math.round((bytesUploaded / bytesTotal) * 100));
+      },
+      onSuccess: () => resolve(),
+    });
+    upload.start();
   });
 }
 
-export function getStreamThumbnailUrl(videoId: string): string {
-  return `https://videodelivery.net/${videoId}/thumbnails/thumbnail.jpg`;
+interface VideoUploadStatus {
+  uploadStatus: string;
+  assetStatus: string | null;
+  playbackId: string | null;
 }
 
-export function getStreamPlayerUrl(videoId: string): string {
-  return `https://iframe.videodelivery.net/${videoId}`;
+async function fetchVideoUploadStatus(uploadId: string): Promise<VideoUploadStatus> {
+  const { data, error } = await supabase.functions.invoke("get-video-upload-status", {
+    method: "POST",
+    body: { uploadId },
+  });
+  if (error) {
+    const message =
+      (error as { context?: { error?: string } }).context?.error ??
+      error.message ??
+      "Failed to check video processing status";
+    throw new Error(message);
+  }
+  return data as VideoUploadStatus;
+}
+
+// Mux needs a few seconds after the TUS upload finishes to turn it into an
+// asset and hand back a playback id -- polls every 2s for up to 2 minutes,
+// generous for a normal lesson recording. The playback id is assigned as
+// soon as the asset exists; the video itself finishes processing shortly
+// after and simply isn't watchable until then.
+export async function pollVideoUploadStatus(uploadId: string): Promise<string> {
+  const maxAttempts = 60;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const status = await fetchVideoUploadStatus(uploadId);
+    if (["errored", "cancelled", "timed_out"].includes(status.uploadStatus)) {
+      throw new Error("Mux couldn't process that video -- please try uploading it again.");
+    }
+    if (status.playbackId) return status.playbackId;
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+  throw new Error("Video is taking longer than expected to process -- please try again in a moment.");
+}
+
+export function getMuxThumbnailUrl(playbackId: string): string {
+  return `https://image.mux.com/${playbackId}/thumbnail.jpg`;
 }
