@@ -1,13 +1,17 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { passwordProblem } from "@natm/shared-types";
+import PasswordChecklist from "../components/PasswordChecklist";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
+import { useFamily } from "../features/family/FamilyContext";
 import { supabase } from "../lib/supabase";
 import { fetchOwnStudentRecord, advanceOnboardingStatus } from "../features/profile/api";
 import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function StudentSetPassword() {
   const { profile } = useAuth();
+  const { activeStudentId } = useFamily();
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -20,7 +24,7 @@ export default function StudentSetPassword() {
   useEffect(() => {
     if (!profile?.id) return;
     let cancelled = false;
-    fetchOwnStudentRecord(profile.id).then((rec) => {
+    fetchOwnStudentRecord(profile.id, activeStudentId).then((rec) => {
       if (cancelled) return;
       if (rec && rec.onboarding_status !== "pending_password_reset") {
         navigate("/student", { replace: true });
@@ -31,13 +35,14 @@ export default function StudentSetPassword() {
     return () => {
       cancelled = true;
     };
-  }, [profile?.id, navigate]);
+  }, [profile?.id, activeStudentId, navigate]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    const passwordIssue = passwordProblem(password);
+    if (passwordIssue) {
+      setError(passwordIssue);
       return;
     }
     if (password !== confirm) {
@@ -54,7 +59,7 @@ export default function StudentSetPassword() {
         setSubmitting(false);
         return;
       }
-      const rec = await fetchOwnStudentRecord(profile.id);
+      const rec = await fetchOwnStudentRecord(profile.id, activeStudentId);
       if (rec) {
         await advanceOnboardingStatus(rec.id, "pending_intake_form");
       }
@@ -101,6 +106,8 @@ export default function StudentSetPassword() {
             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
+        <PasswordChecklist password={password} />
+
         <div className="relative">
           <label htmlFor="student-confirm-password" className="sr-only">Confirm password</label>
           <input

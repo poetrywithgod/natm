@@ -25,14 +25,22 @@ export interface StudentRecord {
   emergency_contact_phone_alt: string | null;
 }
 
-export async function fetchOwnStudentRecord(profileId: string): Promise<StudentRecord | null> {
-  const { data, error } = await supabase
+/**
+ * Resolves the student record the app is acting for. Family (parent-role)
+ * accounts pass the active child's id; legacy student logins omit it and are
+ * found by their own profile.
+ */
+export async function fetchOwnStudentRecord(
+  profileId: string,
+  studentId?: string | null
+): Promise<StudentRecord | null> {
+  const query = supabase
     .from("students")
     .select(
       "id, class_id, full_name, unique_student_id, photo_url, onboarding_status, phone, address, bio, emergency_contact_name, emergency_contact_phone, emergency_contact_phone_alt, classes(name)"
     )
-    .eq("profile_id", profileId)
-    .single();
+    ;
+  const { data, error } = await (studentId ? query.eq("id", studentId) : query.eq("profile_id", profileId)).single();
   if (error) return null;
 
   const classInfo = Array.isArray(data.classes) ? data.classes[0] : data.classes;

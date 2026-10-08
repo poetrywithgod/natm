@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
+import { useFamily } from "../features/family/FamilyContext";
 import { fetchOwnStudentRecord } from "../features/profile/api";
 import { getOrCreateDraftEpisode, saveFormDraft, submitForm1, type DraftEpisode } from "../features/intake/api";
 import { PART_A_STEPS } from "../features/intake/formConfigA";
@@ -13,6 +14,7 @@ type Phase = "a" | "b";
 
 export default function StudentIntakeForm() {
   const { profile } = useAuth();
+  const { activeStudentId } = useFamily();
 
   const [draft, setDraft] = useState<DraftEpisode | null>(null);
   const [studentId, setStudentId] = useState<string | null>(null);
@@ -31,7 +33,7 @@ export default function StudentIntakeForm() {
 
     (async () => {
       try {
-        const rec = await fetchOwnStudentRecord(profile.id);
+        const rec = await fetchOwnStudentRecord(profile.id, activeStudentId);
         if (cancelled || !rec) return;
         setStudentId(rec.id);
         const d = await getOrCreateDraftEpisode(profile.school_id!, rec.id);
@@ -51,7 +53,7 @@ export default function StudentIntakeForm() {
     return () => {
       cancelled = true;
     };
-  }, [profile?.id, profile?.school_id]);
+  }, [profile?.id, profile?.school_id, activeStudentId]);
 
   const totalSteps = PART_A_STEPS.length + FORM_B_DOMAINS.length;
   const overallStep = phase === "a" ? stepIndex : PART_A_STEPS.length + stepIndex;

@@ -17,12 +17,15 @@ export interface CurriculumDocView {
 // fetchCurriculumForShadowTeacher -- student's own class, only the
 // subjects assigned to it, only the current term. Changes automatically
 // when the school advances to the next term.
-export async function fetchCurriculumForStudent(profileId: string, schoolId: string): Promise<CurriculumDocView[]> {
-  const { data: student, error: studentError } = await supabase
-    .from("students")
-    .select("class_id")
-    .eq("profile_id", profileId)
-    .single();
+export async function fetchCurriculumForStudent(
+  profileId: string,
+  schoolId: string,
+  studentId?: string | null
+): Promise<CurriculumDocView[]> {
+  const studentQuery = supabase.from("students").select("class_id");
+  const { data: student, error: studentError } = await (
+    studentId ? studentQuery.eq("id", studentId) : studentQuery.eq("profile_id", profileId)
+  ).single();
   if (studentError || !student.class_id) return [];
 
   const { data: cls, error: classError } = await supabase

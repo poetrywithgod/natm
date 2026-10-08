@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { TrendingUp, Flame } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
+import { useFamily } from "../features/family/FamilyContext";
 import { fetchOwnStudentRecord } from "../features/profile/api";
 import { fetchQuizHistory, type QuizHistoryEntry } from "../features/quiz/api";
 import {
@@ -34,6 +35,7 @@ function scoreColorClass(score: number): string {
 
 export default function StudentProgress() {
   const { profile } = useAuth();
+  const { activeStudentId } = useFamily();
   const [history, setHistory] = useState<QuizHistoryEntry[]>([]);
   const [stats, setStats] = useState<GamificationStats | null>(null);
   const [earnedKeys, setEarnedKeys] = useState<Set<string>>(new Set());
@@ -51,7 +53,7 @@ export default function StudentProgress() {
 
     (async () => {
       try {
-        const record = await fetchOwnStudentRecord(profile.id);
+        const record = await fetchOwnStudentRecord(profile.id, activeStudentId);
         if (!record) return;
         // Harmless catch-all: covers any badge that should have been
         // awarded but wasn't (e.g. a past submission before this system
@@ -87,7 +89,7 @@ export default function StudentProgress() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.id, profile?.school_id]);
+  }, [profile?.id, profile?.school_id, activeStudentId]);
 
   const handleRangeChange = async (days: number | null) => {
     if (!studentRecordId || days === rangeDays) {

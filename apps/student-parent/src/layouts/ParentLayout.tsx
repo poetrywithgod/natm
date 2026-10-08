@@ -4,6 +4,7 @@ import { Home, CreditCard, MessageCircle, Settings, Bell } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchSchoolInfo, type SchoolInfo } from "../features/schools/api";
 import { fetchUnreadCount } from "../features/notifications/api";
+import ModeToggle from "../components/ModeToggle";
 
 function navItems(feesLabel: string) {
   return [
@@ -65,6 +66,7 @@ export default function ParentLayout() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <ModeToggle />
           <button
             onClick={() => navigate("/parent/notifications")}
             className="relative p-1.5 rounded bg-abyssal-700 text-abyssal-100"

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BookOpen, ArrowRight, Flame } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
+import { useFamily } from "../features/family/FamilyContext";
 import { fetchOwnStudentRecord, type StudentRecord } from "../features/profile/api";
 import { fetchStudentAssignments, type StudentAssignment } from "../features/assignments/api";
 import { fetchGamificationStats } from "../features/gamification/api";
@@ -14,6 +15,7 @@ const DIFFICULTY_LABEL: Record<string, string> = {
 
 export default function StudentHome() {
   const { profile } = useAuth();
+  const { activeStudentId } = useFamily();
   const navigate = useNavigate();
   const [record, setRecord] = useState<StudentRecord | null>(null);
   const [assignments, setAssignments] = useState<StudentAssignment[]>([]);
@@ -23,7 +25,7 @@ export default function StudentHome() {
   useEffect(() => {
     if (!profile?.id) return;
     let cancelled = false;
-    fetchOwnStudentRecord(profile.id).then(async (rec) => {
+    fetchOwnStudentRecord(profile.id, activeStudentId).then(async (rec) => {
       if (cancelled) return;
       setRecord(rec);
       if (rec?.class_id) {
@@ -39,7 +41,7 @@ export default function StudentHome() {
     return () => {
       cancelled = true;
     };
-  }, [profile?.id]);
+  }, [profile?.id, activeStudentId]);
 
   const pending = assignments.filter((a) => a.attemptStatus !== "submitted").slice(0, 3);
 

@@ -1,22 +1,24 @@
 import { useEffect, useState } from "react";
 import { FileText, ExternalLink, Download } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
+import { useFamily } from "../features/family/FamilyContext";
 import { fetchCurriculumForStudent, CLASS_LEVEL_LABELS, type CurriculumDocView } from "../features/curriculum/api";
 import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function StudentCurriculum() {
   const { profile } = useAuth();
+  const { activeStudentId } = useFamily();
   const [docs, setDocs] = useState<CurriculumDocView[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!profile?.id || !profile.school_id) return;
-    fetchCurriculumForStudent(profile.id, profile.school_id)
+    fetchCurriculumForStudent(profile.id, profile.school_id, activeStudentId)
       .then(setDocs)
       .catch((e) => setError(getFriendlyErrorMessage(e, "Failed to load curriculum")))
       .finally(() => setLoading(false));
-  }, [profile?.id, profile?.school_id]);
+  }, [profile?.id, profile?.school_id, activeStudentId]);
 
   return (
     <div className="p-4 space-y-4 pb-24">

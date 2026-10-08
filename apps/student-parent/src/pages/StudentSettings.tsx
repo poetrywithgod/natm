@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import { passwordProblem } from "@natm/shared-types";
+import PasswordChecklist from "../components/PasswordChecklist";
 import { Camera, Eye, EyeOff, User } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
+import { useFamily } from "../features/family/FamilyContext";
 import {
   fetchOwnStudentRecord,
   getSignedStudentPhotoUrl,
@@ -15,6 +18,7 @@ import { getFriendlyErrorMessage } from "@natm/supabase";
 
 export default function StudentSettings() {
   const { profile, session, signOut } = useAuth();
+  const { activeStudentId } = useFamily();
 
   const [student, setStudent] = useState<StudentRecord | null>(null);
   const [school, setSchool] = useState<SchoolInfo | null>(null);
@@ -48,7 +52,7 @@ export default function StudentSettings() {
     let cancelled = false;
 
     (async () => {
-      const record = await fetchOwnStudentRecord(profile.id);
+      const record = await fetchOwnStudentRecord(profile.id, activeStudentId);
       if (cancelled || !record) return;
       setStudent(record);
       setPhone(record.phone ?? "");
@@ -66,7 +70,7 @@ export default function StudentSettings() {
     return () => {
       cancelled = true;
     };
-  }, [profile?.id]);
+  }, [profile?.id, activeStudentId]);
 
   useEffect(() => {
     if (profile?.school_id) {
@@ -118,8 +122,9 @@ export default function StudentSettings() {
       setPasswordError("New passwords don't match.");
       return;
     }
-    if (newPassword.length < 8) {
-      setPasswordError("New password must be at least 8 characters.");
+    const passwordIssue = passwordProblem(newPassword);
+    if (passwordIssue) {
+      setPasswordError(passwordIssue);
       return;
     }
     setPasswordSaving(true);
@@ -328,6 +333,9 @@ export default function StudentSettings() {
             {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
+
+        <PasswordChecklist password={newPassword} />
+
 
         <div className="relative">
           <label htmlFor="confirm-password" className="sr-only">Confirm new password</label>

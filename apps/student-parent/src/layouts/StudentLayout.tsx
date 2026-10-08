@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { Home, BookOpen, TrendingUp, Bell, Settings, Library } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
+import { useFamily } from "../features/family/FamilyContext";
 import { fetchUnreadCount } from "../features/notifications/api";
 import { fetchSchoolInfo, type SchoolInfo } from "../features/schools/api";
 import { fetchOwnStudentRecord, getSignedStudentPhotoUrl } from "../features/profile/api";
+import ModeToggle from "../components/ModeToggle";
 
 const NAV_ITEMS = [
   { to: "/student", label: "Home", icon: Home, end: true },
@@ -17,10 +19,12 @@ const NAV_ITEMS = [
 
 export default function StudentLayout() {
   const { profile, session, signOut } = useAuth();
+  const { activeStudentId } = useFamily();
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
   const [schoolInfo, setSchoolInfo] = useState<SchoolInfo | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [childName, setChildName] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile?.school_id) {
@@ -31,8 +35,10 @@ export default function StudentLayout() {
   useEffect(() => {
     if (!profile?.id) return;
     let cancelled = false;
-    fetchOwnStudentRecord(profile.id).then((record) => {
-      if (cancelled || !record?.photo_url) return;
+    fetchOwnStudentRecord(profile.id, activeStudentId).then((record) => {
+      if (cancelled) return;
+      setChildName(record?.full_name ?? null);
+      if (!record?.photo_url) return;
       getSignedStudentPhotoUrl(record.photo_url).then((url) => {
         if (!cancelled) setPhotoUrl(url);
       });
@@ -40,7 +46,7 @@ export default function StudentLayout() {
     return () => {
       cancelled = true;
     };
-  }, [profile?.id]);
+  }, [profile?.id, activeStudentId]);
 
   useEffect(() => {
     const userId = session?.user?.id;
@@ -79,11 +85,12 @@ export default function StudentLayout() {
               {photoUrl && (
                 <img src={photoUrl} alt="" className="w-4 h-4 rounded-full object-cover" />
               )}
-              <p className="font-ui text-xs text-abyssal-300">{profile?.full_name}</p>
+              <p className="font-ui text-xs text-abyssal-300">{childName ?? profile?.full_name}</p>
             </div>
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <ModeToggle />
           <button
             onClick={() => navigate("/student/notifications")}
             className="relative p-1.5 rounded bg-abyssal-700 text-abyssal-100"

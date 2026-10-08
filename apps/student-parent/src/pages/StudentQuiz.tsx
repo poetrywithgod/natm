@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, CheckCircle2, XCircle, PlayCircle } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
+import { useFamily } from "../features/family/FamilyContext";
 import { fetchOwnStudentRecord } from "../features/profile/api";
 import {
   fetchQuizWithQuestions,
@@ -20,6 +21,7 @@ import { getFriendlyErrorMessage } from "@natm/supabase";
 export default function StudentQuiz() {
   const { quizId } = useParams<{ quizId: string }>();
   const { profile } = useAuth();
+  const { activeStudentId } = useFamily();
   const navigate = useNavigate();
 
   const [quiz, setQuiz] = useState<QuizWithQuestions | null>(null);
@@ -39,7 +41,7 @@ export default function StudentQuiz() {
 
     (async () => {
       try {
-        const record = await fetchOwnStudentRecord(profile.id);
+        const record = await fetchOwnStudentRecord(profile.id, activeStudentId);
         if (!record) throw new Error("Student record not found");
         if (cancelled) return;
         setStudentId(record.id);
@@ -70,7 +72,7 @@ export default function StudentQuiz() {
     return () => {
       cancelled = true;
     };
-  }, [quizId, profile?.id]);
+  }, [quizId, profile?.id, activeStudentId]);
 
   async function handleSubmit() {
     if (!attemptId || !quiz || !studentId || !profile?.school_id) return;

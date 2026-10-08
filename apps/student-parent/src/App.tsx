@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./features/auth/AuthContext";
 import { ToastProvider } from "./features/toast/ToastContext";
 import { RequireRole } from "./guards/RequireRole";
+import { RequireMode } from "./guards/RequireMode";
+import { FamilyProvider } from "./features/family/FamilyContext";
 import { RedirectIfAuthed } from "./guards/RedirectIfAuthed";
 import { StudentOnboardingGate } from "./guards/StudentOnboardingGate";
 import { ParentOnboardingGate } from "./guards/ParentOnboardingGate";
@@ -35,6 +37,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <FamilyProvider>
         <ToastProvider>
           <MaintenanceBanner />
           <Suspense fallback={<PageSkeleton />}>
@@ -52,8 +55,10 @@ export default function App() {
               <Route
                 path="/student/set-password"
                 element={
-                  <RequireRole allow={["student"]}>
-                    <StudentSetPassword />
+                  <RequireRole allow={["student", "parent"]}>
+                    <RequireMode mode="student">
+                      <StudentSetPassword />
+                    </RequireMode>
                   </RequireRole>
                 }
               />
@@ -61,8 +66,10 @@ export default function App() {
               <Route
                 path="/student/intake-form"
                 element={
-                  <RequireRole allow={["student"]}>
-                    <StudentIntakeForm />
+                  <RequireRole allow={["student", "parent"]}>
+                    <RequireMode mode="student">
+                      <StudentIntakeForm />
+                    </RequireMode>
                   </RequireRole>
                 }
               />
@@ -70,10 +77,12 @@ export default function App() {
               <Route
                 path="/student"
                 element={
-                  <RequireRole allow={["student"]}>
-                    <StudentOnboardingGate>
-                      <StudentLayout />
-                    </StudentOnboardingGate>
+                  <RequireRole allow={["student", "parent"]}>
+                    <RequireMode mode="student">
+                      <StudentOnboardingGate>
+                        <StudentLayout />
+                      </StudentOnboardingGate>
+                    </RequireMode>
                   </RequireRole>
                 }
               >
@@ -100,7 +109,9 @@ export default function App() {
                 element={
                   <RequireRole allow={["parent"]}>
                     <ParentOnboardingGate>
-                      <ParentLayout />
+                      <RequireMode mode="parent">
+                        <ParentLayout />
+                      </RequireMode>
                     </ParentOnboardingGate>
                   </RequireRole>
                 }
@@ -119,6 +130,7 @@ export default function App() {
             </Routes>
           </Suspense>
         </ToastProvider>
+        </FamilyProvider>
       </AuthProvider>
     </BrowserRouter>
   );

@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from "react";
+import { passwordProblem } from "@natm/shared-types";
+import PasswordChecklist from "../components/PasswordChecklist";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { getFriendlyErrorMessage } from "@natm/supabase";
@@ -35,8 +37,9 @@ export default function ResetPassword() {
     e.preventDefault();
     setError(null);
 
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    const passwordIssue = passwordProblem(password);
+    if (passwordIssue) {
+      setError(passwordIssue);
       return;
     }
     if (password !== confirmPassword) {
@@ -102,6 +105,7 @@ export default function ResetPassword() {
             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
+        <PasswordChecklist password={password} />
         <div className="relative">
           <input
             type={showConfirm ? "text" : "password"}

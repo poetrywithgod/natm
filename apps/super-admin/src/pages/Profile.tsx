@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { passwordProblem } from "@natm/shared-types";
+import PasswordChecklist from "../components/PasswordChecklist";
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { getFriendlyErrorMessage } from "@natm/supabase";
@@ -85,8 +87,9 @@ export default function Profile() {
       setPasswordError("Enter your current password.");
       return;
     }
-    if (newPassword.length < 6) {
-      setPasswordError("New password must be at least 6 characters.");
+    const passwordIssue = passwordProblem(newPassword);
+    if (passwordIssue) {
+      setPasswordError(passwordIssue);
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -231,6 +234,7 @@ export default function Profile() {
             {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
+        <PasswordChecklist password={newPassword} />
         <div className="relative">
           <label htmlFor="super-admin-confirm-password" className="sr-only">
             Confirm new password

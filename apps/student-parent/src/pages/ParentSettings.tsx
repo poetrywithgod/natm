@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { passwordProblem } from "@natm/shared-types";
+import PasswordChecklist from "../components/PasswordChecklist";
 import { Eye, EyeOff, Camera } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import {
@@ -126,8 +128,9 @@ export default function ParentSettings() {
     if (!session?.user?.email) return;
     setPasswordError(null);
     setPasswordSaved(false);
-    if (newPassword.length < 8) {
-      setPasswordError("New password must be at least 8 characters.");
+    const passwordIssue = passwordProblem(newPassword);
+    if (passwordIssue) {
+      setPasswordError(passwordIssue);
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -301,6 +304,9 @@ export default function ParentSettings() {
             {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
+
+        <PasswordChecklist password={newPassword} />
+
 
         <div className="relative">
           <label htmlFor="parent-confirm-password" className="sr-only">Confirm new password</label>

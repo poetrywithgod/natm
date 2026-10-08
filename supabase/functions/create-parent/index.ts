@@ -1,16 +1,10 @@
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { generateTemporaryPassword } from "../_shared/temporaryPassword.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-function generatePassword(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-  let out = "";
-  for (let i = 0; i < 10; i++) out += chars[Math.floor(Math.random() * chars.length)];
-  return out;
-}
 
 function isDuplicateKeyError(error: { code?: string; message?: string } | null): boolean {
   if (!error) return false;
@@ -152,7 +146,7 @@ Deno.serve(async (req) => {
     }
 
     // ---------- Try creating a brand-new account first ----------
-    const temporaryPassword = generatePassword();
+    const temporaryPassword = generateTemporaryPassword();
     const { data: created, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password: temporaryPassword,

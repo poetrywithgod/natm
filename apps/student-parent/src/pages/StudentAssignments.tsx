@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2, PlayCircle } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
+import { useFamily } from "../features/family/FamilyContext";
 import { fetchOwnStudentRecord } from "../features/profile/api";
 import { fetchStudentAssignments, type StudentAssignment } from "../features/assignments/api";
 
@@ -26,6 +27,7 @@ function isToday(dateStr: string | null): boolean {
 
 export default function StudentAssignments() {
   const { profile } = useAuth();
+  const { activeStudentId } = useFamily();
   const navigate = useNavigate();
   const [assignments, setAssignments] = useState<StudentAssignment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +36,7 @@ export default function StudentAssignments() {
   useEffect(() => {
     if (!profile?.id) return;
     let cancelled = false;
-    fetchOwnStudentRecord(profile.id).then(async (rec) => {
+    fetchOwnStudentRecord(profile.id, activeStudentId).then(async (rec) => {
       if (cancelled || !rec?.class_id) {
         if (!cancelled) setLoading(false);
         return;
@@ -48,7 +50,7 @@ export default function StudentAssignments() {
     return () => {
       cancelled = true;
     };
-  }, [profile?.id]);
+  }, [profile?.id, activeStudentId]);
 
   const filtered = useMemo(() => {
     if (tab === "completed") return assignments.filter((a) => a.attemptStatus === "submitted");

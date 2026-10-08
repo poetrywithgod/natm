@@ -26,6 +26,11 @@ const PATTERNS: FriendlyPattern[] = [
     friendly: "Your session has expired. Please log out and log back in.",
   },
   {
+    test: /weak_password|password should (contain|be at least)|password is known to be weak|password.*(pwned|breach)/i,
+    friendly:
+      "That password isn't strong enough. Use at least 8 characters, with an uppercase letter, a lowercase letter, a number and a special character (for example ! @ # $ %).",
+  },
+  {
     test: /row-level security|permission denied|not authorized|forbidden/i,
     friendly: "You don't have permission to do that.",
   },

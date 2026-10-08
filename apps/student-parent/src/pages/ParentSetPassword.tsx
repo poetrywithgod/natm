@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from "react";
+import { passwordProblem } from "@natm/shared-types";
+import PasswordChecklist from "../components/PasswordChecklist";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
@@ -18,8 +20,9 @@ export default function ParentSetPassword() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    const passwordIssue = passwordProblem(password);
+    if (passwordIssue) {
+      setError(passwordIssue);
       return;
     }
     if (password !== confirm) {
@@ -85,6 +88,9 @@ export default function ParentSetPassword() {
             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
+
+        <PasswordChecklist password={password} />
+
 
         <div className="relative">
           <label htmlFor="confirm-parent-password" className="sr-only">Confirm password</label>
