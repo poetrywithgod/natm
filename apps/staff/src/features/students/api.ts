@@ -172,3 +172,70 @@ export async function createStudentAccount(
   if (data?.error) throw new Error(data.error);
   return data as CreateStudentAccountResult;
 }
+
+export interface StudentGuardian {
+  parent_id: string;
+  full_name: string;
+  relationship: string | null;
+  phone: string | null;
+  address: string | null;
+  photo_url: string | null;
+  email: string | null;
+}
+
+// Guardian details for one student. Server-enforced: the RPC only returns
+// rows for the school admin, the child's class teacher, or an active shadow
+// teacher assigned to the child.
+export async function fetchStudentGuardians(studentId: string): Promise<StudentGuardian[]> {
+  // The generated DB types predate this RPC, so the call is loosely typed.
+  const rpc = supabase.rpc as unknown as (
+    fn: string,
+    args: Record<string, unknown>
+  ) => Promise<{ data: StudentGuardian[] | null; error: { message: string } | null }>;
+  const { data, error } = await rpc.call(supabase, "get_student_guardians", { target_student_id: studentId });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export interface FamilyAdmissionInput {
+  child: { full_name: string; class_id: string | null };
+  guardian: {
+    email: string;
+    full_name: string;
+    relationship: string;
+    phone?: string;
+    address?: string;
+  };
+}
+
+export interface FamilyAdmissionResult {
+  success: boolean;
+  outcome: "created" | "linked_existing";
+  student_id: string;
+  unique_student_id: string;
+  parent_id: string;
+  guardian_email: string;
+  temporary_password: string | null; // null when an existing family account was reused (sibling)
+  password_email_sent: boolean;
+}
+
+// Admits a child AND their guardian together (one shared family email) via
+// the create-family-admission Edge Function.
+export async function createFamilyAdmission(input: FamilyAdmissionInput): Promise<FamilyAdmissionResult> {
+  const { data, error } = await supabase.functions.invoke("create-family-admission", { body: input });
+  if (error) {
+    // Edge Function errors carry the JSON body in error.context
+    const ctx = (error as { context?: Response }).context;
+    if (ctx && typeof ctx.json === "function") {
+      try {
+        const body = await ctx.json();
+        if (body?.error) throw new Error(body.error);
+      } catch (e) {
+        if (e instanceof Error && e.message !== "Unexpected end of JSON input") throw e;
+      }
+    }
+    throw new Error(error.message);
+  }
+  if (data?.error) throw new Error(data.error);
+  return data as FamilyAdmissionResult;
+}

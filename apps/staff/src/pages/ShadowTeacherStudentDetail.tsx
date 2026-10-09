@@ -17,6 +17,7 @@ import {
   type ActivityFeedItem,
 } from "../features/shadowteacher/api";
 import { getSignedPhotoUrl } from "../features/students/api";
+import GuardianPanel from "../features/students/components/GuardianPanel";
 import DailyLogTab from "../features/dailyLog/components/DailyLogTab";
 import CollapsibleSection from "../components/CollapsibleSection";
 import { getFriendlyErrorMessage } from "@natm/supabase";
@@ -38,7 +39,7 @@ export default function ShadowTeacherStudentDetail() {
 
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"overview" | "daily-log">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "daily-log" | "parent">("overview");
 
   useEffect(() => {
     if (!id) return;
@@ -171,7 +172,17 @@ export default function ShadowTeacherStudentDetail() {
         >
           Daily Log
         </button>
+        <button
+          onClick={() => setActiveTab("parent")}
+          className={`px-3 py-2 font-ui text-sm font-semibold border-b-2 -mb-px ${
+            activeTab === "parent" ? "border-forest-500 text-forest-100" : "border-transparent text-forest-300"
+          }`}
+        >
+          Parent data
+        </button>
       </div>
+
+      {activeTab === "parent" && <GuardianPanel key={id} studentId={id ?? ""} />}
 
       {activeTab === "daily-log" && (
         <DailyLogTab studentId={id ?? ""} studentFirstName={student.full_name.split(" ")[0]} />

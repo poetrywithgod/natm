@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
-import { ClipboardList, Megaphone, UserCircle, ChevronRight, LogOut, BookOpen } from "lucide-react";
+import { ClipboardList, Megaphone, UserCircle, ChevronRight, LogOut, BookOpen, Users } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 
 const MORE_ITEMS = [
+  { to: "/class-teacher/students", label: "My Students & Parent Data", icon: Users },
   { to: "/class-teacher/assign-work", label: "Assign Work", icon: ClipboardList },
   { to: "/class-teacher/curriculum", label: "Curriculum", icon: BookOpen },
   { to: "/class-teacher/announcements", label: "Announcements", icon: Megaphone },

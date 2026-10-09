@@ -20,6 +20,7 @@ const SchoolAdminDashboard = lazy(() => import("./pages/SchoolAdminDashboard"));
 const ClassTeacherAttendance = lazy(() => import("./pages/ClassTeacherAttendance"));
 const ClassTeacherDashboard = lazy(() => import("./pages/ClassTeacherDashboard"));
 const ClassTeacherMore = lazy(() => import("./pages/ClassTeacherMore"));
+const ClassTeacherStudents = lazy(() => import("./pages/ClassTeacherStudents"));
 const ClassTeacherProfile = lazy(() => import("./pages/ClassTeacherProfile"));
 const ClassTeacherActivities = lazy(() => import("./pages/ClassTeacherActivities"));
 const ClassTeacherLessons = lazy(() => import("./pages/ClassTeacherLessons"));
@@ -120,6 +121,7 @@ function AppRoutes() {
         >
           <Route index element={<ClassTeacherDashboard />} />
           <Route path="attendance" element={<ClassTeacherAttendance />} />
+          <Route path="students" element={<ClassTeacherStudents />} />
           <Route path="activities" element={<ClassTeacherActivities />} />
           <Route path="lessons" element={<ClassTeacherLessons />} />
           <Route path="assign-work" element={<ClassTeacherAssignWork />} />

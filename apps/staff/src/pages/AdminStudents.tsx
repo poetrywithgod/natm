@@ -5,17 +5,19 @@ import { useAuth } from "../features/auth/AuthContext";
 import {
   fetchStudents,
   fetchClassOptions,
-  createStudentAccount,
+  createFamilyAdmission,
   assignStudentClass,
   renameStudent,
   uploadStudentPhoto,
   getSignedPhotoUrl,
   type Student,
   type ClassOption,
-  type CreateStudentAccountResult,
+  type FamilyAdmissionResult,
 } from "../features/students/api";
 import { classLevelRank } from "../features/classes/api";
 import { getFriendlyErrorMessage } from "@natm/supabase";
+
+const RELATIONSHIPS = ["Mother", "Father", "Guardian", "Other"];
 
 const UNASSIGNED_GROUP_KEY = "unassigned";
 
@@ -64,9 +66,13 @@ export default function AdminStudents() {
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [newName, setNewName] = useState("");
   const [newClassId, setNewClassId] = useState("");
-  const [newEmail, setNewEmail] = useState("");
+  const [guardianName, setGuardianName] = useState("");
+  const [guardianEmail, setGuardianEmail] = useState("");
+  const [guardianRelationship, setGuardianRelationship] = useState("");
+  const [guardianPhone, setGuardianPhone] = useState("");
+  const [guardianAddress, setGuardianAddress] = useState("");
   const [creating, setCreating] = useState(false);
-  const [newCredentials, setNewCredentials] = useState<CreateStudentAccountResult | null>(null);
+  const [newCredentials, setNewCredentials] = useState<FamilyAdmissionResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -112,21 +118,34 @@ export default function AdminStudents() {
   }, [schoolId]);
 
   async function handleCreateStudent() {
-    if (!newName.trim() || !newEmail.trim()) {
-      setError("Name and email are required.");
+    if (!newName.trim() || !guardianName.trim() || !guardianEmail.trim() || !guardianRelationship) {
+      setError("Student name, and the guardian's name, email and relationship are required.");
       return;
     }
     setCreating(true);
     setError(null);
     try {
-      const result = await createStudentAccount(newEmail.trim(), newName.trim(), newClassId || null);
+      const result = await createFamilyAdmission({
+        child: { full_name: newName.trim(), class_id: newClassId || null },
+        guardian: {
+          email: guardianEmail.trim(),
+          full_name: guardianName.trim(),
+          relationship: guardianRelationship,
+          phone: guardianPhone.trim() || undefined,
+          address: guardianAddress.trim() || undefined,
+        },
+      });
       setNewCredentials(result);
       setNewName("");
       setNewClassId("");
-      setNewEmail("");
+      setGuardianName("");
+      setGuardianEmail("");
+      setGuardianRelationship("");
+      setGuardianPhone("");
+      setGuardianAddress("");
       await loadAll();
     } catch (e) {
-      setError(getFriendlyErrorMessage(e, "Failed to create student account"));
+      setError(getFriendlyErrorMessage(e, "Failed to admit student"));
     } finally {
       setCreating(false);
     }
@@ -178,43 +197,64 @@ export default function AdminStudents() {
 
       {error && <p className="text-error font-ui text-sm">{error}</p>}
 
-      <div className="bg-forest-900 rounded-lg p-4 flex flex-col sm:flex-row gap-2">
-        <input
-          type="text"
-          placeholder="Full name"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          className="p-2 rounded bg-forest-700 text-forest-100 font-ui placeholder:text-forest-300/60 flex-1"
-        />
-        <input
-          type="email"
-          placeholder="Email"
-          value={newEmail}
-          onChange={(e) => setNewEmail(e.target.value)}
-          className="p-2 rounded bg-forest-700 text-forest-100 font-ui placeholder:text-forest-300/60 flex-1"
-        />
-        <select
-          value={newClassId}
-          onChange={(e) => setNewClassId(e.target.value)}
-          className="p-2 rounded bg-forest-700 text-forest-100 font-ui"
-        >
-          <option value="">No class yet (pending assessment)</option>
-          {classOptions.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+      <div className="bg-forest-900 rounded-lg p-4 space-y-4">
+        <div className="space-y-2">
+          <h2 className="font-display text-sm text-forest-300 uppercase tracking-wide">Student</h2>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              placeholder="Student full name"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="flex-1 p-2 rounded bg-forest-700 text-forest-100 font-ui placeholder:text-forest-300/60"
+            />
+            <select
+              value={newClassId}
+              onChange={(e) => setNewClassId(e.target.value)}
+              className="p-2 rounded bg-forest-700 text-forest-100 font-ui"
+            >
+              <option value="">No class yet (pending assessment)</option>
+              {classOptions.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <h2 className="font-display text-sm text-forest-300 uppercase tracking-wide">Parent / Guardian (required)</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <input type="text" placeholder="Guardian full name" value={guardianName} onChange={(e) => setGuardianName(e.target.value)} className="p-2 rounded bg-forest-700 text-forest-100 font-ui placeholder:text-forest-300/60" />
+            <input type="email" placeholder="Family email (shared login)" value={guardianEmail} onChange={(e) => setGuardianEmail(e.target.value)} className="p-2 rounded bg-forest-700 text-forest-100 font-ui placeholder:text-forest-300/60" />
+            <select
+              value={guardianRelationship}
+              onChange={(e) => setGuardianRelationship(e.target.value)}
+              className="p-2 rounded bg-forest-700 text-forest-100 font-ui"
+            >
+              <option value="">Relationship to student</option>
+              {RELATIONSHIPS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+            <input type="tel" placeholder="Phone (optional)" value={guardianPhone} onChange={(e) => setGuardianPhone(e.target.value)} className="p-2 rounded bg-forest-700 text-forest-100 font-ui placeholder:text-forest-300/60" />
+            <input type="text" placeholder="Address (optional)" value={guardianAddress} onChange={(e) => setGuardianAddress(e.target.value)} className="sm:col-span-2 p-2 rounded bg-forest-700 text-forest-100 font-ui placeholder:text-forest-300/60" />
+          </div>
+        </div>
+
         <button
           onClick={handleCreateStudent}
           disabled={creating}
           className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui font-semibold whitespace-nowrap disabled:opacity-50"
         >
-          {creating ? "Creating..." : "Add Student"}
+          {creating ? "Admitting..." : "Admit Student"}
         </button>
       </div>
       <p className="font-ui text-xs text-forest-300 -mt-4">
-        A login account, temporary password, and Student ID are all generated automatically once added. Class/level is assigned later, after the assessment process.
+        One shared family email is used for the parent and the student: the family signs in once and switches between Parent view and Student view. A Student ID and a temporary password are generated automatically, and the family must set their own password on first login. Class/level is assigned later, after assessment.
       </p>
 
       {newCredentials && (
@@ -227,15 +267,30 @@ export default function AdminStudents() {
             >
               <X size={18} />
             </button>
-            <h2 className="font-display text-lg text-forest-100">Student Account Created</h2>
-            <p className="font-ui text-xs text-forest-300">
-              Share these credentials with the family. The student will be required to set a new password on first login.
-            </p>
+            <h2 className="font-display text-lg text-forest-100">Student Admitted</h2>
+            {newCredentials.temporary_password ? (
+              <p className="font-ui text-xs text-forest-300">
+                Share these details with the family now — the temporary password is shown only once. They must set a new password on first login.
+              </p>
+            ) : (
+              <p className="font-ui text-xs text-forest-300">
+                This family already has an account, so the child was added to it. No new password was created — they sign in with their existing one and will see the new child.
+              </p>
+            )}
             <div className="bg-forest-700 rounded p-3 space-y-1 font-ui text-sm text-forest-100">
               <p><span className="text-forest-300">Student ID:</span> {newCredentials.unique_student_id}</p>
-              <p><span className="text-forest-300">Email:</span> {newCredentials.email}</p>
-              <p><span className="text-forest-300">Temporary Password:</span> {newCredentials.temporary_password}</p>
+              <p><span className="text-forest-300">Family email:</span> {newCredentials.guardian_email}</p>
+              {newCredentials.temporary_password && (
+                <p><span className="text-forest-300">Temporary Password:</span> {newCredentials.temporary_password}</p>
+              )}
             </div>
+            {newCredentials.temporary_password && (
+              <p className="font-ui text-xs text-forest-300">
+                {newCredentials.password_email_sent
+                  ? "A password-setup email was also sent to the guardian."
+                  : "The automatic email could not be sent, so please share the password directly."}
+              </p>
+            )}
             <button
               onClick={() => setNewCredentials(null)}
               className="w-full py-2 rounded bg-forest-500 text-forest-950 font-ui font-semibold"

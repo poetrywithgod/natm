@@ -26,6 +26,7 @@ import {
   type LinkedParent,
   type CreateParentAccountResult,
 } from "../features/parents/api";
+import GuardianPanel from "../features/students/components/GuardianPanel";
 import DailyLogTab from "../features/dailyLog/components/DailyLogTab";
 import CollapsibleSection from "../components/CollapsibleSection";
 import { getFriendlyErrorMessage } from "@natm/supabase";
@@ -62,7 +63,7 @@ export default function AdminStudentProfile() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"overview" | "daily-log">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "daily-log" | "guardian">("overview");
   const [exportingPdf, setExportingPdf] = useState(false);
 
   async function handleExportPdf() {
@@ -269,6 +270,14 @@ export default function AdminStudentProfile() {
           >
             Daily Log
           </button>
+          <button
+            onClick={() => setActiveTab("guardian")}
+            className={`px-3 py-2 font-ui text-sm font-semibold border-b-2 -mb-px ${
+              activeTab === "guardian" ? "border-forest-500 text-forest-100" : "border-transparent text-forest-300"
+            }`}
+          >
+            Parent / Guardian
+          </button>
         </div>
         <button
           onClick={handleExportPdf}
@@ -282,6 +291,16 @@ export default function AdminStudentProfile() {
 
       {activeTab === "daily-log" && (
         <DailyLogTab studentId={student.id} studentFirstName={student.full_name.split(" ")[0]} />
+      )}
+
+      {activeTab === "guardian" && (
+        <div className="space-y-2">
+          <GuardianPanel key={linkedParents.length} studentId={student.id} adminLinks />
+          <p className="font-ui text-xs text-forest-300">
+            To add another guardian, use "Linked Parents" on the Overview tab. Guardians update their own phone
+            and address from their profile.
+          </p>
+        </div>
       )}
 
       {activeTab === "overview" && (
