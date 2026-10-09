@@ -5,6 +5,15 @@ import { fetchLinkedChildren, type LinkedChild } from "../parent/api";
 
 export type AppMode = "parent" | "student";
 
+// The generated database types predate the family-account RPCs, so they are
+// called through a loosely typed wrapper.
+type LooseRpc = (
+  fn: string,
+  args?: Record<string, unknown>
+) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
+const callRpc: LooseRpc = (fn, args) =>
+  (supabase.rpc as unknown as LooseRpc).call(supabase, fn, args);
+
 interface FamilyContextValue {
   /** False until the mode and linked children have been loaded for the signed-in account. */
   ready: boolean;
@@ -64,7 +73,7 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
     if (authLoading || !profileId || role !== "parent") return;
 
     let cancelled = false;
-    Promise.all([supabase.rpc("app_session_mode"), fetchLinkedChildren(profileId)])
+    Promise.all([callRpc("app_session_mode"), fetchLinkedChildren(profileId)])
       .then(([modeRes, kids]) => {
         if (cancelled) return;
         // Anything other than an explicit "student" is parent mode (the safe default).
@@ -95,7 +104,7 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
   );
 
   const switchMode = useCallback(async (next: AppMode) => {
-    const { error } = await supabase.rpc("set_session_mode", { new_mode: next });
+    const { error } = await callRpc("set_session_mode", { new_mode: next });
     if (error) return { error: error.message };
     setState((s) => ({ ...s, mode: next }));
     return { error: null };
