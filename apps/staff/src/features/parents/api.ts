@@ -1,5 +1,6 @@
 import { supabase } from "../../lib/supabase";
 import { classLevelRank } from "../classes/api";
+import { logAuditEvent } from "../audit/api";
 
 const PARENT_PHOTO_BUCKET = "parent-photos";
 const SIGNED_URL_TTL_SECONDS = 3600;
@@ -231,4 +232,47 @@ export async function createParentAccount(
   if (error) throw new Error(await extractFunctionErrorMessage(error, "Failed to create parent account."));
   if (data?.error) throw new Error(data.error);
   return data as CreateParentAccountResult;
+}
+
+export interface LinkGuardianInput {
+  studentId: string;
+  schoolId: string;
+  actorId: string;
+  fullName: string;
+  relationship: string;
+  phone?: string;
+  address?: string;
+}
+
+export interface LinkGuardianResult {
+  outcome: "converted" | "updated";
+  parent_id: string;
+}
+
+// Links a guardian to a student who ALREADY has a login. No email: the
+// student's login email is the family's email, so that same login becomes
+// the family account (see link_guardian_to_student_login). The generated DB
+// types predate this function, so the call is loosely typed.
+export async function linkGuardianToStudentLogin(input: LinkGuardianInput): Promise<LinkGuardianResult> {
+  const rpc = supabase.rpc as unknown as (
+    fn: string,
+    args: Record<string, unknown>
+  ) => Promise<{ data: LinkGuardianResult | null; error: { message: string } | null }>;
+  const { data, error } = await rpc.call(supabase, "link_guardian_to_student_login", {
+    target_student_id: input.studentId,
+    guardian_name: input.fullName,
+    rel: input.relationship,
+    guardian_phone: input.phone ?? null,
+    guardian_address: input.address ?? null,
+  });
+  if (error || !data) throw new Error(error?.message ?? "Failed to link guardian");
+  logAuditEvent({
+    school_id: input.schoolId,
+    actor_id: input.actorId,
+    action: "guardian.linked_to_login",
+    entity_type: "student",
+    entity_id: input.studentId,
+    details: { relationship: input.relationship, outcome: data.outcome },
+  });
+  return data;
 }

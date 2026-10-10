@@ -23,6 +23,7 @@ import { fetchSubjectProgress, type SubjectProgress } from "../features/grading/
 import {
   fetchLinkedParents,
   createParentAccount,
+  linkGuardianToStudentLogin,
   type LinkedParent,
   type CreateParentAccountResult,
 } from "../features/parents/api";
@@ -52,6 +53,9 @@ export default function AdminStudentProfile() {
   const [newParentName, setNewParentName] = useState("");
   const [newParentEmail, setNewParentEmail] = useState("");
   const [newParentRelationship, setNewParentRelationship] = useState("");
+  const [newParentPhone, setNewParentPhone] = useState("");
+  const [newParentAddress, setNewParentAddress] = useState("");
+  const [linkedNotice, setLinkedNotice] = useState<string | null>(null);
   const [creatingParent, setCreatingParent] = useState(false);
   const [newParentCredentials, setNewParentCredentials] = useState<CreateParentAccountResult | null>(null);
 
@@ -140,6 +144,45 @@ export default function AdminStudentProfile() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, schoolId]);
 
+  // Student already has a login (its email IS the family's email): no email
+  // is asked for. The same login becomes the family account.
+  async function handleLinkGuardian() {
+    if (!id || !schoolId || !profile) return;
+    if (!newParentName.trim() || !newParentRelationship) {
+      setError("Guardian name and relationship are required.");
+      return;
+    }
+    setCreatingParent(true);
+    setError(null);
+    setLinkedNotice(null);
+    try {
+      const result = await linkGuardianToStudentLogin({
+        studentId: id,
+        schoolId,
+        actorId: profile.id,
+        fullName: newParentName.trim(),
+        relationship: newParentRelationship,
+        phone: newParentPhone.trim() || undefined,
+        address: newParentAddress.trim() || undefined,
+      });
+      setLinkedNotice(
+        result.outcome === "converted"
+          ? "Guardian linked. This student's existing login is now the family account: the family signs in with the same email and password and can switch between Parent view and Student view."
+          : "Guardian details updated."
+      );
+      setNewParentName("");
+      setNewParentRelationship("");
+      setNewParentPhone("");
+      setNewParentAddress("");
+      await loadAll();
+    } catch (e) {
+      setError(getFriendlyErrorMessage(e, "Failed to link guardian"));
+    } finally {
+      setCreatingParent(false);
+    }
+  }
+
+  // Student has NO login yet: a family email is needed to create one.
   async function handleCreateParent() {
     if (!id || !newParentName.trim() || !newParentEmail.trim()) {
       setError("Parent name and email are required.");
@@ -413,38 +456,93 @@ export default function AdminStudentProfile() {
           </div>
         )}
 
+        {linkedNotice && <p className="font-ui text-xs text-forest-500">{linkedNotice}</p>}
+
+        {student.profile_id ? (
+          <div className="space-y-2">
+            <p className="font-ui text-xs text-forest-300">
+              This student already has a login, and that email is the family's email, so no email is needed
+              here. Saving turns the existing login into the family account.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input
+                value={newParentName}
+                onChange={(e) => setNewParentName(e.target.value)}
+                placeholder="Guardian full name"
+                className="rounded-md border border-forest-700 bg-forest-950 px-3 py-2 font-ui text-sm text-forest-100"
+              />
+              <select
+                value={newParentRelationship}
+                onChange={(e) => setNewParentRelationship(e.target.value)}
+                className="rounded-md border border-forest-700 bg-forest-950 px-3 py-2 font-ui text-sm text-forest-100"
+              >
+                <option value="">Relationship</option>
+                <option value="Mother">Mother</option>
+                <option value="Father">Father</option>
+                <option value="Guardian">Guardian</option>
+                <option value="Other">Other</option>
+              </select>
+              <input
+                value={newParentPhone}
+                onChange={(e) => setNewParentPhone(e.target.value)}
+                placeholder="Phone (optional)"
+                className="rounded-md border border-forest-700 bg-forest-950 px-3 py-2 font-ui text-sm text-forest-100"
+              />
+              <input
+                value={newParentAddress}
+                onChange={(e) => setNewParentAddress(e.target.value)}
+                placeholder="Address (optional)"
+                className="rounded-md border border-forest-700 bg-forest-950 px-3 py-2 font-ui text-sm text-forest-100"
+              />
+            </div>
+            <button
+              onClick={handleLinkGuardian}
+              disabled={creatingParent}
+              className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui text-sm font-semibold disabled:opacity-50 whitespace-nowrap"
+            >
+              {creatingParent ? "Saving..." : linkedParents.length > 0 ? "Update Guardian" : "Link Guardian"}
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="font-ui text-xs text-forest-300">
+              This student has no login yet. Enter the family's email to create one shared by the guardian and
+              the student.
+            </p>
         <div className="flex flex-col sm:flex-row gap-2">
-          <input
-            value={newParentName}
-            onChange={(e) => setNewParentName(e.target.value)}
-            placeholder="Parent full name"
-            className="flex-1 rounded-md border border-forest-700 bg-forest-950 px-3 py-2 font-ui text-sm text-forest-100"
-          />
-          <input
-            value={newParentEmail}
-            onChange={(e) => setNewParentEmail(e.target.value)}
-            placeholder="Parent email"
-            className="flex-1 rounded-md border border-forest-700 bg-forest-950 px-3 py-2 font-ui text-sm text-forest-100"
-          />
-          <select
-            value={newParentRelationship}
-            onChange={(e) => setNewParentRelationship(e.target.value)}
-            className="rounded-md border border-forest-700 bg-forest-950 px-3 py-2 font-ui text-sm text-forest-100"
-          >
-            <option value="">Relationship</option>
-            <option value="Mother">Mother</option>
-            <option value="Father">Father</option>
-            <option value="Guardian">Guardian</option>
-            <option value="Other">Other</option>
-          </select>
-          <button
-            onClick={handleCreateParent}
-            disabled={creatingParent}
-            className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui text-sm font-semibold disabled:opacity-50 whitespace-nowrap"
-          >
-            {creatingParent ? "Adding..." : "Add Parent"}
-          </button>
-        </div>
+            <input
+              value={newParentName}
+              onChange={(e) => setNewParentName(e.target.value)}
+              placeholder="Parent full name"
+              className="flex-1 rounded-md border border-forest-700 bg-forest-950 px-3 py-2 font-ui text-sm text-forest-100"
+            />
+            <input
+              value={newParentEmail}
+              onChange={(e) => setNewParentEmail(e.target.value)}
+              placeholder="Parent email"
+              className="flex-1 rounded-md border border-forest-700 bg-forest-950 px-3 py-2 font-ui text-sm text-forest-100"
+            />
+            <select
+              value={newParentRelationship}
+              onChange={(e) => setNewParentRelationship(e.target.value)}
+              className="rounded-md border border-forest-700 bg-forest-950 px-3 py-2 font-ui text-sm text-forest-100"
+            >
+              <option value="">Relationship</option>
+              <option value="Mother">Mother</option>
+              <option value="Father">Father</option>
+              <option value="Guardian">Guardian</option>
+              <option value="Other">Other</option>
+            </select>
+            <button
+              onClick={handleCreateParent}
+              disabled={creatingParent}
+              className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui text-sm font-semibold disabled:opacity-50 whitespace-nowrap"
+            >
+              {creatingParent ? "Adding..." : "Add Parent"}
+            </button>
+          </div>
+          </>
+        )}
       </CollapsibleSection>
 
       {/* Promotion */}

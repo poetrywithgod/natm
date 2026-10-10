@@ -8,6 +8,7 @@ export interface Student {
   full_name: string;
   unique_student_id: string | null;
   photo_url: string | null; // storage path, not a public URL — bucket is private
+  profile_id: string | null; // the student's own login (shared with the family), if any
   created_at: string;
   phone: string | null; // student-editable, from Student Settings > Profile
   address: string | null; // student-editable, from Student Settings > Profile
