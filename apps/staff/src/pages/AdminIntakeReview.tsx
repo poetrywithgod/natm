@@ -10,12 +10,18 @@ import {
   fetchShadowTeacherOptions,
   assignClass,
   assignShadowTeacher,
+  fetchSchoolName,
+  logFormExport,
   type EpisodeDetail,
   type SuggestedSubject,
   type ClassOption,
   type ShadowTeacherOption,
 } from "../features/assessments/api";
 import { ALL_CLASS_LEVELS, type ClassLevel } from "@natm/shared-types";
+import { fetchForm2Record } from "../features/observation/api";
+import { buildForm1Document, buildForm2Document, type Form2Record } from "../features/intakePdf/model";
+import { downloadIntakePdf } from "../features/intakePdf/renderPdf";
+import DocView from "../features/intakePdf/DocView";
 import { getFriendlyErrorMessage } from "@natm/supabase";
 
 const CLASS_LEVELS = ALL_CLASS_LEVELS.map((l) => l.value);
@@ -31,56 +37,6 @@ function levelLabel(level: string): string {
   return level;
 }
 
-function prettyLabel(key: string): string {
-  return key
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function JsonValue({ value }: { value: unknown }) {
-  if (value === null || value === undefined || value === "") {
-    return <span className="text-forest-300 italic">—</span>;
-  }
-  if (Array.isArray(value)) {
-    if (value.length === 0) return <span className="text-forest-300 italic">—</span>;
-    return <span className="text-forest-100">{value.map(String).join(", ")}</span>;
-  }
-  if (typeof value === "object") {
-    return (
-      <div className="pl-3 border-l border-forest-700 space-y-1 mt-1">
-        {Object.entries(value as Record<string, unknown>).map(([k, v]) => (
-          <div key={k}>
-            <span className="text-forest-300 font-ui text-xs">{prettyLabel(k)}: </span>
-            <JsonValue value={v} />
-          </div>
-        ))}
-      </div>
-    );
-  }
-  return <span className="text-forest-100">{String(value)}</span>;
-}
-
-function JsonSection({ title, data }: { title: string; data: Record<string, unknown> }) {
-  const entries = Object.entries(data);
-  return (
-    <div className="bg-forest-900 rounded-lg p-4 space-y-3">
-      <h2 className="font-display text-lg text-forest-100">{title}</h2>
-      {entries.length === 0 ? (
-        <p className="text-forest-300 font-ui text-sm">No data recorded.</p>
-      ) : (
-        <div className="space-y-2">
-          {entries.map(([key, value]) => (
-            <div key={key}>
-              <p className="font-ui text-sm text-forest-100 font-semibold">{prettyLabel(key)}</p>
-              <JsonValue value={value} />
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function AdminIntakeReview() {
   const { id } = useParams<{ id: string }>();
   const { profile } = useAuth();
@@ -91,6 +47,9 @@ export default function AdminIntakeReview() {
   const [generating, setGenerating] = useState(false);
   const [approvingRec, setApprovingRec] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [form2, setForm2] = useState<Form2Record | null>(null);
+  const [schoolName, setSchoolName] = useState("School");
+  const [downloading, setDownloading] = useState<"form1" | "form2" | null>(null);
 
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<Set<string>>(new Set());
   const [selectedLevel, setSelectedLevel] = useState<string>("");
@@ -107,6 +66,20 @@ export default function AdminIntakeReview() {
     try {
       const d = await fetchEpisodeDetail(id);
       setDetail(d);
+      // Form 2 is read-only context from here on; a failure to load it must
+      // not take down the whole review page.
+      if (["form2_submitted", "ai_suggested", "completed"].includes(d.status)) {
+        fetchForm2Record(id)
+          .then(setForm2)
+          .catch(() => setForm2(null));
+      } else {
+        setForm2(null);
+      }
+      if (profile?.school_id) {
+        fetchSchoolName(profile.school_id)
+          .then(setSchoolName)
+          .catch(() => undefined);
+      }
       if (d.status === "ai_suggested" || d.status === "completed") {
         const subjects = d.approvedSubjects ?? d.suggestedSubjects;
         setSelectedSubjectIds(new Set(subjects.map((s) => s.subject_id)));
@@ -228,6 +201,26 @@ export default function AdminIntakeReview() {
       setError(getFriendlyErrorMessage(e, "Failed to assign shadow teacher"));
     } finally {
       setAssigningShadowTeacher(false);
+    }
+  }
+
+  function handleDownload(which: "form1" | "form2") {
+    if (!detail) return;
+    setError(null);
+    setDownloading(which);
+    try {
+      if (which === "form1") {
+        downloadIntakePdf(buildForm1Document({ detail, schoolName }));
+      } else if (form2) {
+        downloadIntakePdf(buildForm2Document({ detail, form2, schoolName }));
+      }
+      if (profile?.id && profile.school_id) {
+        logFormExport(which, detail.episodeId, detail.studentId, profile.school_id, profile.id);
+      }
+    } catch (e) {
+      setError(getFriendlyErrorMessage(e, "Failed to create the PDF"));
+    } finally {
+      setDownloading(null);
     }
   }
 
@@ -446,9 +439,33 @@ export default function AdminIntakeReview() {
         </div>
       )}
 
-      <JsonSection title="Part A — Intake & Consent" data={detail.partA} />
-      <JsonSection title="Part B — Functional Domains" data={detail.partB} />
-      <JsonSection title="Consents" data={detail.consents} />
+      {detail.form1SubmittedAt ? (
+        <DocView
+          doc={buildForm1Document({ detail, schoolName })}
+          heading="Form 1 — Family Intake & Consent"
+          subtitle="Review exactly what the family submitted, or download it as a PDF."
+          onDownload={() => handleDownload("form1")}
+          downloading={downloading === "form1"}
+          defaultOpen={detail.status === "form1_submitted"}
+        />
+      ) : (
+        <div className="bg-forest-900 rounded-lg p-4">
+          <p className="font-display text-lg text-forest-100">Form 1 — Family Intake & Consent</p>
+          <p className="font-ui text-xs text-forest-300 mt-0.5">
+            The family hasn't submitted Form 1 yet. It can be reviewed and downloaded once they do.
+          </p>
+        </div>
+      )}
+
+      {form2 && form2.submittedAt && (
+        <DocView
+          doc={buildForm2Document({ detail, form2, schoolName })}
+          heading="Form 2 — Observation & Functional Assessment"
+          subtitle="The completed observation, including the processing outcome once approved."
+          onDownload={() => handleDownload("form2")}
+          downloading={downloading === "form2"}
+        />
+      )}
     </div>
   );
 }

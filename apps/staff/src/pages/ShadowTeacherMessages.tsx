@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { MessageCircle } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchConversationsForShadowTeacher, type ConversationSummary } from "../features/messaging/api";
+import PtaCard from "../features/messaging/PtaCard";
 
 export default function ShadowTeacherMessages() {
   const { profile } = useAuth();
@@ -29,6 +30,8 @@ export default function ShadowTeacherMessages() {
   return (
     <div className="p-4 space-y-3">
       <h1 className="font-display text-xl text-forest-100">Messages</h1>
+
+      <PtaCard to="/shadow-teacher/pta" />
 
       {loading ? (
         <div className="space-y-2 animate-pulse">

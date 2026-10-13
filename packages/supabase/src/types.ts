@@ -685,39 +685,55 @@ export type Database = {
       }
       conversations: {
         Row: {
+          class_teacher_id: string | null
+          class_teacher_last_read_at: string | null
           created_at: string
           id: string
           last_message_at: string
           parent_id: string
           parent_last_read_at: string | null
           school_id: string
-          shadow_teacher_id: string
+          shadow_teacher_id: string | null
           shadow_teacher_last_read_at: string | null
           student_id: string
+          teacher_kind: string
         }
         Insert: {
+          class_teacher_id?: string | null
+          class_teacher_last_read_at?: string | null
           created_at?: string
           id?: string
           last_message_at?: string
           parent_id: string
           parent_last_read_at?: string | null
           school_id: string
-          shadow_teacher_id: string
+          shadow_teacher_id?: string | null
           shadow_teacher_last_read_at?: string | null
           student_id: string
+          teacher_kind?: string
         }
         Update: {
+          class_teacher_id?: string | null
+          class_teacher_last_read_at?: string | null
           created_at?: string
           id?: string
           last_message_at?: string
           parent_id?: string
           parent_last_read_at?: string | null
           school_id?: string
-          shadow_teacher_id?: string
+          shadow_teacher_id?: string | null
           shadow_teacher_last_read_at?: string | null
           student_id?: string
+          teacher_kind?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "conversations_class_teacher_id_fkey"
+            columns: ["class_teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "conversations_parent_id_fkey"
             columns: ["parent_id"]
@@ -1220,7 +1236,10 @@ export type Database = {
       }
       messages: {
         Row: {
-          body: string
+          audio_deleted_at: string | null
+          audio_duration_ms: number | null
+          audio_path: string | null
+          body: string | null
           conversation_id: string
           created_at: string
           id: string
@@ -1228,7 +1247,10 @@ export type Database = {
           sender_role: string
         }
         Insert: {
-          body: string
+          audio_deleted_at?: string | null
+          audio_duration_ms?: number | null
+          audio_path?: string | null
+          body?: string | null
           conversation_id: string
           created_at?: string
           id?: string
@@ -1236,7 +1258,10 @@ export type Database = {
           sender_role: string
         }
         Update: {
-          body?: string
+          audio_deleted_at?: string | null
+          audio_duration_ms?: number | null
+          audio_path?: string | null
+          body?: string | null
           conversation_id?: string
           created_at?: string
           id?: string
@@ -1613,6 +1638,132 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      pta_groups: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          school_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string
+          school_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          school_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pta_groups_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: true
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pta_messages: {
+        Row: {
+          audio_deleted_at: string | null
+          audio_duration_ms: number | null
+          audio_path: string | null
+          body: string | null
+          created_at: string
+          group_id: string
+          id: string
+          school_id: string
+          sender_id: string | null
+          sender_name: string
+          sender_role: string
+        }
+        Insert: {
+          audio_deleted_at?: string | null
+          audio_duration_ms?: number | null
+          audio_path?: string | null
+          body?: string | null
+          created_at?: string
+          group_id: string
+          id?: string
+          school_id?: string
+          sender_id?: string | null
+          sender_name?: string
+          sender_role?: string
+        }
+        Update: {
+          audio_deleted_at?: string | null
+          audio_duration_ms?: number | null
+          audio_path?: string | null
+          body?: string | null
+          created_at?: string
+          group_id?: string
+          id?: string
+          school_id?: string
+          sender_id?: string | null
+          sender_name?: string
+          sender_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pta_messages_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "pta_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pta_messages_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pta_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pta_read_state: {
+        Row: {
+          group_id: string
+          last_read_at: string
+          profile_id: string
+        }
+        Insert: {
+          group_id: string
+          last_read_at?: string
+          profile_id: string
+        }
+        Update: {
+          group_id?: string
+          last_read_at?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pta_read_state_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "pta_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pta_read_state_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -2945,7 +3096,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_pta_members: {
+        Args: { p_group: string }
+        Returns: {
+          full_name: string
+          profile_id: string
+          role: Database["public"]["Enums"]["staff_role"]
+        }[]
+      }
+      get_pta_overview: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          group_id: string
+          last_message_at: string | null
+          last_message_preview: string | null
+          member_count: number
+          name: string
+          unread_count: number
+        }[]
+      }
     }
     Enums: {
       assessment_episode_status:

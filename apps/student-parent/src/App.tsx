@@ -30,6 +30,7 @@ const ParentChildProgress = lazy(() => import("./pages/ParentChildProgress"));
 const ParentFees = lazy(() => import("./pages/ParentFees"));
 const ParentMessages = lazy(() => import("./pages/ParentMessages"));
 const ParentChat = lazy(() => import("./pages/ParentChat"));
+const ParentPtaChat = lazy(() => import("./pages/ParentPtaChat"));
 const ParentNotifications = lazy(() => import("./pages/ParentNotifications"));
 const ParentSettings = lazy(() => import("./pages/ParentSettings"));
 
@@ -120,7 +121,9 @@ export default function App() {
                 <Route path="progress/:studentId" element={<ParentChildProgress />} />
                 <Route path="fees" element={<ParentFees />} />
                 <Route path="messages" element={<ParentMessages />} />
+                <Route path="messages/pta" element={<ParentPtaChat />} />
                 <Route path="messages/:studentId" element={<ParentChat />} />
+                <Route path="messages/:studentId/:kind" element={<ParentChat />} />
                 <Route path="notifications" element={<ParentNotifications />} />
                 <Route path="settings" element={<ParentSettings />} />
               </Route>

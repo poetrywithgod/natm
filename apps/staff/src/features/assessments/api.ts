@@ -375,3 +375,27 @@ export async function approveForm1(episodeId: string, approvedBy: string, school
     entity_id: episodeId,
   });
 }
+
+export async function fetchSchoolName(schoolId: string): Promise<string> {
+  const { data } = await supabase.from("schools").select("name").eq("id", schoolId).maybeSingle();
+  return data?.name ?? "School";
+}
+
+// Exporting a child's assessment is a disclosure of sensitive data, so it is
+// recorded in the audit log. Never blocks the download itself.
+export function logFormExport(
+  form: "form1" | "form2",
+  episodeId: string,
+  studentId: string,
+  schoolId: string,
+  actorId: string
+): void {
+  void logAuditEvent({
+    school_id: schoolId,
+    actor_id: actorId,
+    action: form === "form1" ? "iep.form1_exported" : "iep.form2_exported",
+    entity_type: "assessment_episode",
+    entity_id: episodeId,
+    details: { student_id: studentId },
+  }).catch(() => undefined);
+}

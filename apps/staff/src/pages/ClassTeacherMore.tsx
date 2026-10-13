@@ -1,8 +1,20 @@
 import { Link } from "react-router-dom";
-import { ClipboardList, Megaphone, UserCircle, ChevronRight, LogOut, BookOpen, Users } from "lucide-react";
+import {
+  ClipboardList,
+  Megaphone,
+  UserCircle,
+  ChevronRight,
+  LogOut,
+  BookOpen,
+  Users,
+  MessageCircle,
+  MessagesSquare,
+} from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 
 const MORE_ITEMS = [
+  { to: "/class-teacher/messages", label: "Messages", icon: MessageCircle },
+  { to: "/class-teacher/pta", label: "PTA Group", icon: MessagesSquare },
   { to: "/class-teacher/students", label: "My Students & Parent Data", icon: Users },
   { to: "/class-teacher/assign-work", label: "Assign Work", icon: ClipboardList },
   { to: "/class-teacher/curriculum", label: "Curriculum", icon: BookOpen },

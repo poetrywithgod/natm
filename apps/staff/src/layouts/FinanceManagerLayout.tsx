@@ -1,6 +1,15 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import { LayoutDashboard, Wallet, Megaphone, Bell, UserCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  LayoutDashboard,
+  Wallet,
+  Megaphone,
+  MessagesSquare,
+  Bell,
+  UserCircle,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchSchoolInfo, type SchoolInfo } from "../features/schools/api";
 
@@ -9,6 +18,7 @@ function navItems(feesLabel: string) {
     { to: "/finance-manager", label: "Dashboard", icon: LayoutDashboard, end: true },
     { to: "/finance-manager/fees", label: feesLabel, icon: Wallet, end: false },
     { to: "/finance-manager/announcements", label: "Announcements", icon: Megaphone, end: false },
+    { to: "/finance-manager/pta", label: "PTA Group", icon: MessagesSquare, end: false },
     { to: "/finance-manager/notifications", label: "Notifications", icon: Bell, end: false },
     { to: "/finance-manager/profile", label: "Profile", icon: UserCircle, end: false },
   ];

@@ -12,6 +12,12 @@ webpush.setVapidDetails(
   VAPID_PRIVATE_KEY
 );
 
+const BATCH_SIZE = 50;
+// A single PTA-group message can notify an entire school (hundreds of
+// people), so one 50-row pass is not enough -- keep draining, bounded so
+// one invocation can't run away.
+const MAX_BATCHES = 10;
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
@@ -19,68 +25,78 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-  const { data: notifications, error: notifError } = await supabase
-    .from('notifications')
-    .select('id, recipient_id, title, body')
-    .is('pushed_at', null)
-    .limit(50);
-
-  if (notifError) {
-    return new Response(JSON.stringify({ error: notifError.message }), { status: 500 });
-  }
-
-  if (!notifications || notifications.length === 0) {
-    return new Response(JSON.stringify({ sent: 0 }), { status: 200 });
-  }
-
   let sentCount = 0;
-  const processedIds: string[] = [];
+  let processedCount = 0;
 
-  for (const notif of notifications) {
-    const { data: subs, error: subError } = await supabase
-      .from('push_subscriptions')
-      .select('id, endpoint, p256dh, auth')
-      .eq('user_id', notif.recipient_id);
+  for (let batch = 0; batch < MAX_BATCHES; batch++) {
+    const { data: notifications, error: notifError } = await supabase
+      .from('notifications')
+      .select('id, recipient_id, title, body')
+      .is('pushed_at', null)
+      .limit(BATCH_SIZE);
 
-    if (subError || !subs || subs.length === 0) {
-      processedIds.push(notif.id);
-      continue;
+    if (notifError) {
+      return new Response(JSON.stringify({ error: notifError.message }), { status: 500 });
     }
 
-    for (const sub of subs) {
-      try {
-        await webpush.sendNotification(
-          {
-            endpoint: sub.endpoint,
-            keys: { p256dh: sub.p256dh, auth: sub.auth },
-          },
-          JSON.stringify({
-            title: notif.title,
-            body: notif.body || '',
-            url: '/',
-          })
-        );
-        sentCount++;
-      } catch (err: any) {
-        if (err.statusCode === 404 || err.statusCode === 410) {
-          await supabase.from('push_subscriptions').delete().eq('id', sub.id);
-        } else {
-          console.error('Push send failed for sub', sub.id, err.message);
+    if (!notifications || notifications.length === 0) {
+      break;
+    }
+
+    const processedIds: string[] = [];
+
+    for (const notif of notifications) {
+      const { data: subs, error: subError } = await supabase
+        .from('push_subscriptions')
+        .select('id, endpoint, p256dh, auth')
+        .eq('user_id', notif.recipient_id);
+
+      if (subError || !subs || subs.length === 0) {
+        processedIds.push(notif.id);
+        continue;
+      }
+
+      for (const sub of subs) {
+        try {
+          await webpush.sendNotification(
+            {
+              endpoint: sub.endpoint,
+              keys: { p256dh: sub.p256dh, auth: sub.auth },
+            },
+            JSON.stringify({
+              title: notif.title,
+              body: notif.body || '',
+              url: '/',
+            })
+          );
+          sentCount++;
+        } catch (err: any) {
+          if (err.statusCode === 404 || err.statusCode === 410) {
+            await supabase.from('push_subscriptions').delete().eq('id', sub.id);
+          } else {
+            console.error('Push send failed for sub', sub.id, err.message);
+          }
         }
       }
+
+      processedIds.push(notif.id);
     }
 
-    processedIds.push(notif.id);
+    if (processedIds.length > 0) {
+      await supabase
+        .from('notifications')
+        .update({ pushed_at: new Date().toISOString() })
+        .in('id', processedIds);
+    }
+
+    processedCount += processedIds.length;
+
+    if (notifications.length < BATCH_SIZE) {
+      break;
+    }
   }
 
-  if (processedIds.length > 0) {
-    await supabase
-      .from('notifications')
-      .update({ pushed_at: new Date().toISOString() })
-      .in('id', processedIds);
-  }
-
-  return new Response(JSON.stringify({ sent: sentCount, processed: processedIds.length }), {
+  return new Response(JSON.stringify({ sent: sentCount, processed: processedCount }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
   });

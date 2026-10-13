@@ -52,7 +52,9 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   // IEP
   "iep.class_assigned": "assigned an IEP class",
   "iep.form1_approved": "approved an IEP Form 1",
+  "iep.form1_exported": "downloaded an IEP Form 1 as PDF",
   "iep.form2_submitted": "submitted an IEP Form 2",
+  "iep.form2_exported": "downloaded an IEP Form 2 as PDF",
   "iep.recommendation_approved": "approved an IEP recommendation",
   "iep.recommendation_generated": "generated an IEP recommendation",
   "iep.ai_recommendation_generated": "generated an AI IEP recommendation",

@@ -4,6 +4,7 @@ import { LayoutDashboard, Users, MessageCircle, MoreHorizontal, Bell, ClipboardL
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchUnreadCount } from "../features/notifications/api";
 import { fetchConversationsForShadowTeacher } from "../features/messaging/api";
+import { fetchPtaOverview } from "../features/messaging/pta";
 import { fetchSchoolInfo, type SchoolInfo } from "../features/schools/api";
 import { getSignedPhotoUrl } from "../features/profile/api";
 
@@ -65,9 +66,14 @@ export default function ShadowTeacherLayout() {
     if (!profile?.id) return;
     let cancelled = false;
     const load = () => {
-      fetchConversationsForShadowTeacher(profile.id)
-        .then((rows) => {
-          if (!cancelled) setUnreadMessages(rows.reduce((sum, r) => sum + r.unread_count, 0));
+      Promise.all([
+        fetchConversationsForShadowTeacher(profile.id),
+        fetchPtaOverview().catch(() => null),
+      ])
+        .then(([rows, pta]) => {
+          if (!cancelled) {
+            setUnreadMessages(rows.reduce((sum, r) => sum + r.unread_count, 0) + (pta?.unread_count ?? 0));
+          }
         })
         .catch((err) => console.error("Failed to load message unread count:", err));
     };

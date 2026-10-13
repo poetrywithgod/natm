@@ -34,6 +34,9 @@ const ShadowTeacherProfile = lazy(() => import("./pages/ShadowTeacherProfile"));
 const ShadowTeacherNotifications = lazy(() => import("./pages/ShadowTeacherNotifications"));
 const ShadowTeacherMessages = lazy(() => import("./pages/ShadowTeacherMessages"));
 const ShadowTeacherChat = lazy(() => import("./pages/ShadowTeacherChat"));
+const ClassTeacherMessages = lazy(() => import("./pages/ClassTeacherMessages"));
+const ClassTeacherChat = lazy(() => import("./pages/ClassTeacherChat"));
+const PtaChat = lazy(() => import("./pages/PtaChat"));
 const ShadowTeacherMore = lazy(() => import("./pages/ShadowTeacherMore"));
 const ShadowTeacherDailyRecord = lazy(() => import("./pages/ShadowTeacherDailyRecord"));
 const FinanceManagerDashboard = lazy(() => import("./pages/FinanceManagerDashboard"));
@@ -109,6 +112,7 @@ function AppRoutes() {
           <Route path="school-profile" element={<AdminSchoolProfile />} />
           <Route path="curriculum" element={<AdminCurriculum />} />
           <Route path="subscription" element={<AdminSubscription />} />
+          <Route path="pta" element={<PtaChat backTo="/admin" desktop />} />
         </Route>
 
         <Route
@@ -128,6 +132,9 @@ function AppRoutes() {
           <Route path="curriculum" element={<ClassTeacherCurriculum />} />
           <Route path="notifications" element={<ClassTeacherNotifications />} />
           <Route path="announcements" element={<ClassTeacherAnnouncements />} />
+          <Route path="messages" element={<ClassTeacherMessages />} />
+          <Route path="messages/:conversationId" element={<ClassTeacherChat />} />
+          <Route path="pta" element={<PtaChat backTo="/class-teacher/messages" />} />
           <Route path="profile" element={<ClassTeacherProfile />} />
           <Route path="more" element={<ClassTeacherMore />} />
         </Route>
@@ -148,6 +155,7 @@ function AppRoutes() {
           <Route path="notifications" element={<ShadowTeacherNotifications />} />
           <Route path="messages" element={<ShadowTeacherMessages />} />
           <Route path="messages/:conversationId" element={<ShadowTeacherChat />} />
+          <Route path="pta" element={<PtaChat backTo="/shadow-teacher/messages" />} />
           <Route path="curriculum" element={<ShadowTeacherCurriculum />} />
           <Route path="daily-record" element={<ShadowTeacherDailyRecord />} />
           <Route path="more" element={<ShadowTeacherMore />} />
@@ -164,6 +172,7 @@ function AppRoutes() {
           <Route path="fees" element={<FinanceManagerFees />} />
           <Route path="announcements" element={<FinanceManagerAnnouncements />} />
           <Route path="notifications" element={<FinanceManagerNotifications />} />
+          <Route path="pta" element={<PtaChat backTo="/finance-manager" desktop />} />
           <Route path="profile" element={<FinanceManagerProfile />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />

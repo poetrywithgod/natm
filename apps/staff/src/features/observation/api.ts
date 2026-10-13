@@ -1,5 +1,6 @@
 import { supabase } from "../../lib/supabase";
 import { logAuditEvent } from "../audit/api";
+import type { Form2Record } from "../intakePdf/model";
 
 export interface Form2ObservationInfo {
   [key: string]: unknown;
@@ -159,4 +160,34 @@ export async function submitForm2(
     entity_type: "assessment_episode",
     entity_id: episodeId,
   });
+}
+
+// Read-only fetch of a submitted Form 2 for review / PDF export. Unlike
+// fetchOrCreateForm2Draft this never creates a row.
+export async function fetchForm2Record(episodeId: string): Promise<Form2Record | null> {
+  const { data, error } = await supabase
+    .from("form2_submissions")
+    .select("id, observation_info, protocol_notes, domains, submitted_at, submitted_by")
+    .eq("episode_id", episodeId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+
+  let submittedByName: string | null = null;
+  if (data.submitted_by) {
+    const { data: who } = await supabase.from("profiles").select("full_name").eq("id", data.submitted_by).maybeSingle();
+    submittedByName = who?.full_name ?? null;
+  }
+
+  const asObject = (v: unknown): Record<string, unknown> =>
+    v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+
+  return {
+    id: data.id,
+    observationInfo: asObject(data.observation_info),
+    protocolNotes: asObject(data.protocol_notes),
+    domains: asObject(data.domains),
+    submittedAt: data.submitted_at,
+    submittedByName,
+  };
 }
