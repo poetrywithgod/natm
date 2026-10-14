@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ForumInviteNotice from "../features/messaging/ForumInviteNotice";
 import { useAuth } from "../features/auth/AuthContext";
 import {
   fetchNotifications,
@@ -69,6 +70,9 @@ export default function ShadowTeacherNotifications() {
             </span>
           </div>
           {item.body && <p className="font-ui text-xs text-forest-300 mt-1">{item.body}</p>}
+              {item.type === "forum_invite" && item.related_entity_id && session?.user?.id && (
+                <ForumInviteNotice groupId={item.related_entity_id} userId={session?.user?.id} />
+              )}
         </div>
       ))}
     </div>

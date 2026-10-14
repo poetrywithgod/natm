@@ -18,7 +18,7 @@ function navItems(feesLabel: string) {
     { to: "/finance-manager", label: "Dashboard", icon: LayoutDashboard, end: true },
     { to: "/finance-manager/fees", label: feesLabel, icon: Wallet, end: false },
     { to: "/finance-manager/announcements", label: "Announcements", icon: Megaphone, end: false },
-    { to: "/finance-manager/pta", label: "PTA Group", icon: MessagesSquare, end: false },
+    { to: "/finance-manager/pta", label: "Parent Model Forum", icon: MessagesSquare, end: false },
     { to: "/finance-manager/notifications", label: "Notifications", icon: Bell, end: false },
     { to: "/finance-manager/profile", label: "Profile", icon: UserCircle, end: false },
   ];

@@ -1,8 +1,9 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-// Deletes voice-note audio files older than the retention window and marks
-// their messages (audio_deleted_at). The message rows stay -- only the audio
-// goes. Meant to run once a day from a scheduler; it is not called by the
+// Deletes voice-note audio files older than the retention window -- and the
+// audio of messages that were deleted by their sender / the school admin --
+// and marks those messages (audio_deleted_at). The message rows stay -- only
+// the audio goes. Meant to run once a day from a scheduler; it is not called by the
 // apps. Protected by a shared secret header, not a user JWT, so deploy it
 // with --no-verify-jwt.
 
@@ -40,43 +41,51 @@ Deno.serve(async (req) => {
   const purged: Record<string, number> = { messages: 0, pta_messages: 0 };
   const errors: string[] = [];
 
+  // Two reasons an audio file goes: it is past the retention window, or the
+  // message it belonged to was deleted.
+  const REASONS = ['expired', 'deleted'] as const;
+
   for (const table of TABLES) {
-    for (let batch = 0; batch < MAX_BATCHES_PER_TABLE; batch++) {
-      const { data: rows, error: selectError } = await supabase
-        .from(table)
-        .select('id, audio_path')
-        .not('audio_path', 'is', null)
-        .is('audio_deleted_at', null)
-        .lt('created_at', cutoff)
-        .order('created_at', { ascending: true })
-        .limit(BATCH_SIZE);
+    for (const reason of REASONS) {
+      for (let batch = 0; batch < MAX_BATCHES_PER_TABLE; batch++) {
+        let query = supabase
+          .from(table)
+          .select('id, audio_path')
+          .not('audio_path', 'is', null)
+          .is('audio_deleted_at', null);
+        query =
+          reason === 'expired'
+            ? query.lt('created_at', cutoff).order('created_at', { ascending: true })
+            : query.not('deleted_at', 'is', null).order('deleted_at', { ascending: true });
+        const { data: rows, error: selectError } = await query.limit(BATCH_SIZE);
 
-      if (selectError) {
-        errors.push(`${table}: ${selectError.message}`);
-        break;
+        if (selectError) {
+          errors.push(`${table}: ${selectError.message}`);
+          break;
+        }
+        if (!rows || rows.length === 0) break;
+
+        // Remove the files first. Only mark messages as purged once the files
+        // are really gone, so a failed run is simply retried tomorrow.
+        const paths = rows.map((r) => r.audio_path as string);
+        const { error: removeError } = await supabase.storage.from(BUCKET).remove(paths);
+        if (removeError) {
+          errors.push(`${table}: could not remove files: ${removeError.message}`);
+          break;
+        }
+
+        const { error: updateError } = await supabase
+          .from(table)
+          .update({ audio_deleted_at: new Date().toISOString() })
+          .in('id', rows.map((r) => r.id));
+        if (updateError) {
+          errors.push(`${table}: could not mark messages: ${updateError.message}`);
+          break;
+        }
+
+        purged[table] += rows.length;
+        if (rows.length < BATCH_SIZE) break;
       }
-      if (!rows || rows.length === 0) break;
-
-      // Remove the files first. Only mark messages as purged once the files
-      // are really gone, so a failed run is simply retried tomorrow.
-      const paths = rows.map((r) => r.audio_path as string);
-      const { error: removeError } = await supabase.storage.from(BUCKET).remove(paths);
-      if (removeError) {
-        errors.push(`${table}: could not remove files: ${removeError.message}`);
-        break;
-      }
-
-      const { error: updateError } = await supabase
-        .from(table)
-        .update({ audio_deleted_at: new Date().toISOString() })
-        .in('id', rows.map((r) => r.id));
-      if (updateError) {
-        errors.push(`${table}: could not mark messages: ${updateError.message}`);
-        break;
-      }
-
-      purged[table] += rows.length;
-      if (rows.length < BATCH_SIZE) break;
     }
   }
 

@@ -1236,6 +1236,10 @@ export type Database = {
       }
       messages: {
         Row: {
+          deleted_at: string | null
+          deleted_by: string | null
+          edited_at: string | null
+          reply_to_id: string | null
           audio_deleted_at: string | null
           audio_duration_ms: number | null
           audio_path: string | null
@@ -1247,6 +1251,10 @@ export type Database = {
           sender_role: string
         }
         Insert: {
+          deleted_at?: string | null
+          deleted_by?: string | null
+          edited_at?: string | null
+          reply_to_id?: string | null
           audio_deleted_at?: string | null
           audio_duration_ms?: number | null
           audio_path?: string | null
@@ -1258,6 +1266,10 @@ export type Database = {
           sender_role: string
         }
         Update: {
+          deleted_at?: string | null
+          deleted_by?: string | null
+          edited_at?: string | null
+          reply_to_id?: string | null
           audio_deleted_at?: string | null
           audio_duration_ms?: number | null
           audio_path?: string | null
@@ -1670,6 +1682,13 @@ export type Database = {
       }
       pta_messages: {
         Row: {
+          deleted_at: string | null
+          deleted_by: string | null
+          edited_at: string | null
+          reply_to_id: string | null
+          event: string | null
+          kind: string
+          subject_id: string | null
           audio_deleted_at: string | null
           audio_duration_ms: number | null
           audio_path: string | null
@@ -1683,6 +1702,13 @@ export type Database = {
           sender_role: string
         }
         Insert: {
+          deleted_at?: string | null
+          deleted_by?: string | null
+          edited_at?: string | null
+          reply_to_id?: string | null
+          event?: string | null
+          kind?: string
+          subject_id?: string | null
           audio_deleted_at?: string | null
           audio_duration_ms?: number | null
           audio_path?: string | null
@@ -1696,6 +1722,13 @@ export type Database = {
           sender_role?: string
         }
         Update: {
+          deleted_at?: string | null
+          deleted_by?: string | null
+          edited_at?: string | null
+          reply_to_id?: string | null
+          event?: string | null
+          kind?: string
+          subject_id?: string | null
           audio_deleted_at?: string | null
           audio_duration_ms?: number | null
           audio_path?: string | null
@@ -1764,6 +1797,81 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pta_members: {
+        Row: {
+          group_id: string
+          invited_at: string | null
+          invited_by: string | null
+          joined_at: string | null
+          profile_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          group_id: string
+          invited_at?: string | null
+          invited_by?: string | null
+          joined_at?: string | null
+          profile_id: string
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          group_id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          joined_at?: string | null
+          profile_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      chat_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          kind: string
+          message_id: string
+          profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          kind: string
+          message_id: string
+          profile_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          kind?: string
+          message_id?: string
+          profile_id?: string
+        }
+        Relationships: []
+      }
+      chat_clears: {
+        Row: {
+          cleared_at: string
+          kind: string
+          profile_id: string
+          target_id: string
+        }
+        Insert: {
+          cleared_at?: string
+          kind: string
+          profile_id: string
+          target_id: string
+        }
+        Update: {
+          cleared_at?: string
+          kind?: string
+          profile_id?: string
+          target_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -3100,6 +3208,20 @@ export type Database = {
         Args: { p_group: string }
         Returns: {
           full_name: string
+          joined_at: string | null
+          photo_url: string | null
+          profile_id: string
+          role: Database["public"]["Enums"]["staff_role"]
+          status: string
+        }[]
+      }
+      get_forum_invitable: {
+        Args: { p_group: string }
+        Returns: {
+          detail: string | null
+          full_name: string
+          photo_url: string | null
+          previous_status: string | null
           profile_id: string
           role: Database["public"]["Enums"]["staff_role"]
         }[]
@@ -3108,12 +3230,43 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: {
           group_id: string
+          invited_by_name: string | null
+          is_admin: boolean
           last_message_at: string | null
           last_message_preview: string | null
           member_count: number
+          my_status: string
           name: string
           unread_count: number
         }[]
+      }
+      invite_to_forum: {
+        Args: { p_group: string; p_profiles: string[] }
+        Returns: number
+      }
+      respond_to_forum_invite: {
+        Args: { p_accept: boolean; p_group: string }
+        Returns: undefined
+      }
+      leave_forum: {
+        Args: { p_group: string }
+        Returns: undefined
+      }
+      remove_from_forum: {
+        Args: { p_group: string; p_profile: string }
+        Returns: undefined
+      }
+      react_chat_message: {
+        Args: { p_emoji: string | null; p_id: string; p_kind: string }
+        Returns: undefined
+      }
+      edit_chat_message: {
+        Args: { p_body: string; p_id: string; p_kind: string }
+        Returns: undefined
+      }
+      delete_chat_message: {
+        Args: { p_id: string; p_kind: string }
+        Returns: undefined
       }
     }
     Enums: {

@@ -7,7 +7,7 @@ import {
   type VoiceNoteUpload,
 } from "@natm/supabase";
 
-export type RecorderState = "idle" | "starting" | "recording";
+export type RecorderState = "idle" | "starting" | "recording" | "paused";
 
 function friendlyMicError(err: unknown): string {
   const name = err instanceof DOMException ? err.name : "";
@@ -23,6 +23,7 @@ function friendlyMicError(err: unknown): string {
 /**
  * Records one voice note at a time.
  *  - start()  asks for the mic and begins recording
+ *  - pause() / resume() hold and continue the same recording
  *  - stop()   finishes and resolves with the recording (null if it was
  *             too short to be intentional)
  *  - cancel() throws the recording away
@@ -37,7 +38,10 @@ export function useVoiceRecorder(onLimit?: () => void) {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const startedAtRef = useRef(0);
+  // Recorded time = time banked from earlier stretches + the stretch now running
+  // (segmentStartRef is 0 while paused).
+  const bankedMsRef = useRef(0);
+  const segmentStartRef = useRef(0);
   const timerRef = useRef<number | null>(null);
   const limitFiredRef = useRef(false);
   const onLimitRef = useRef(onLimit);
@@ -45,6 +49,11 @@ export function useVoiceRecorder(onLimit?: () => void) {
   useEffect(() => {
     onLimitRef.current = onLimit;
   }, [onLimit]);
+
+  const elapsedNow = useCallback(
+    () => Math.min(bankedMsRef.current + (segmentStartRef.current ? Date.now() - segmentStartRef.current : 0), VOICE_NOTE_MAX_MS),
+    []
+  );
 
   const release = useCallback(() => {
     if (timerRef.current !== null) {
@@ -71,13 +80,15 @@ export function useVoiceRecorder(onLimit?: () => void) {
       };
       recorder.start();
       recorderRef.current = recorder;
-      startedAtRef.current = Date.now();
+      bankedMsRef.current = 0;
+      segmentStartRef.current = Date.now();
       limitFiredRef.current = false;
       setElapsedMs(0);
       setState("recording");
       timerRef.current = window.setInterval(() => {
-        const elapsed = Date.now() - startedAtRef.current;
-        setElapsedMs(Math.min(elapsed, VOICE_NOTE_MAX_MS));
+        if (!segmentStartRef.current) return; // paused
+        const elapsed = elapsedNow();
+        setElapsedMs(elapsed);
         if (elapsed >= VOICE_NOTE_MAX_MS && !limitFiredRef.current) {
           limitFiredRef.current = true;
           onLimitRef.current?.();
@@ -88,7 +99,25 @@ export function useVoiceRecorder(onLimit?: () => void) {
       setState("idle");
       setError(friendlyMicError(err));
     }
-  }, [release]);
+  }, [release, elapsedNow]);
+
+  const pause = useCallback(() => {
+    const recorder = recorderRef.current;
+    if (!recorder || recorder.state !== "recording") return;
+    recorder.pause();
+    bankedMsRef.current = elapsedNow();
+    segmentStartRef.current = 0;
+    setElapsedMs(bankedMsRef.current);
+    setState("paused");
+  }, [elapsedNow]);
+
+  const resume = useCallback(() => {
+    const recorder = recorderRef.current;
+    if (!recorder || recorder.state !== "paused") return;
+    recorder.resume();
+    segmentStartRef.current = Date.now();
+    setState("recording");
+  }, []);
 
   const stop = useCallback((): Promise<VoiceNoteUpload | null> => {
     return new Promise((resolve) => {
@@ -99,7 +128,7 @@ export function useVoiceRecorder(onLimit?: () => void) {
         resolve(null);
         return;
       }
-      const durationMs = Math.min(Date.now() - startedAtRef.current, VOICE_NOTE_MAX_MS);
+      const durationMs = elapsedNow();
       recorder.onstop = () => {
         const format = formatFromMime(recorder.mimeType);
         const blob = new Blob(chunksRef.current, { type: format.base });
@@ -114,7 +143,7 @@ export function useVoiceRecorder(onLimit?: () => void) {
       };
       recorder.stop();
     });
-  }, [release]);
+  }, [release, elapsedNow]);
 
   const cancel = useCallback(() => {
     const recorder = recorderRef.current;
@@ -131,5 +160,5 @@ export function useVoiceRecorder(onLimit?: () => void) {
   // Leaving the screen mid-recording must release the microphone.
   useEffect(() => cancel, [cancel]);
 
-  return { state, elapsedMs, error, start, stop, cancel };
+  return { state, elapsedMs, error, start, pause, resume, stop, cancel };
 }

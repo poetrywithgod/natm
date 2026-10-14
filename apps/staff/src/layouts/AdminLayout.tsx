@@ -36,7 +36,7 @@ const NAV_ITEMS = [
   { to: "/admin/curriculum", label: "Curriculum", icon: BookOpen, end: false },
   { to: "/admin/promotion", label: "Promotion", icon: ArrowUpCircle, end: false },
   { to: "/admin/announcements", label: "Announcements", icon: Megaphone, end: false },
-  { to: "/admin/pta", label: "PTA Group", icon: MessagesSquare, end: false },
+  { to: "/admin/pta", label: "Parent Model Forum", icon: MessagesSquare, end: false },
   { to: "/admin/news", label: "News", icon: Newspaper, end: false },
   { to: "/admin/intake", label: "Intake Review", icon: ClipboardList, end: false },
   { to: "/admin/audit-log", label: "Audit Log", icon: FileClock, end: false },

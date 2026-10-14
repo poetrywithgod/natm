@@ -1,26 +1,37 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, Users } from "lucide-react";
+import ForumInviteCard from "./ForumInvite";
 import { fetchPtaOverview, type PtaOverview } from "./pta";
 
-// The PTA group entry shown at the top of a staff member's message list.
+// The Parent Model Forum entry shown at the top of a staff member's message list:
+// the forum itself once joined, or the invitation while it's waiting for an answer.
 export default function PtaCard({ to }: { to: string }) {
   const navigate = useNavigate();
   const [pta, setPta] = useState<PtaOverview | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchPtaOverview()
-      .then((overview) => {
-        if (!cancelled) setPta(overview);
-      })
-      .catch((err) => console.error("Failed to load PTA group:", err));
-    return () => {
-      cancelled = true;
-    };
+  const load = useCallback(() => {
+    return fetchPtaOverview()
+      .then((overview) => setPta(overview))
+      .catch((err) => console.error("Failed to load Parent Model Forum:", err));
   }, []);
 
+  useEffect(() => {
+    void load();
+  }, [load]);
+
   if (!pta) return null;
+
+  if (pta.my_status === "invited") {
+    return (
+      <ForumInviteCard
+        groupId={pta.group_id}
+        name={pta.name}
+        invitedBy={pta.invited_by_name}
+        onDone={() => void load()}
+      />
+    );
+  }
 
   return (
     <button

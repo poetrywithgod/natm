@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getFriendlyErrorMessage } from "@natm/supabase";
 import { useAuth } from "../features/auth/AuthContext";
+import Avatar from "../features/messaging/Avatar";
 import ChatThread from "../features/messaging/ChatThread";
+import { clearChat, fetchPerson } from "../features/messaging/chatActions";
+import type { Person } from "../features/messaging/types";
 import {
   fetchConversationHeader,
   fetchMessages,
@@ -21,6 +24,7 @@ export default function TeacherChat({ kind, listPath }: { kind: TeacherKind; lis
   const { profile } = useAuth();
   const navigate = useNavigate();
   const [header, setHeader] = useState<ConversationHeader | null>(null);
+  const [parent, setParent] = useState<Person | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -29,6 +33,12 @@ export default function TeacherChat({ kind, listPath }: { kind: TeacherKind; lis
     fetchConversationHeader(conversationId)
       .then((h) => {
         if (!cancelled) setHeader(h);
+        // The parent's photo is a nicety -- the chat works without it.
+        fetchPerson(h.parent_id)
+          .then((person) => {
+            if (!cancelled) setParent(person);
+          })
+          .catch(() => undefined);
       })
       .catch((err) => {
         if (!cancelled) setError(getFriendlyErrorMessage(err, "Failed to load conversation"));
@@ -57,16 +67,20 @@ export default function TeacherChat({ kind, listPath }: { kind: TeacherKind; lis
   return (
     <ChatThread
       key={conversationId}
+      kind="dm"
       title={header.parent_name}
       subtitle={`re: ${header.student_name}`}
       onBack={() => navigate(listPath)}
       meId={profile.id}
       prefetchAudio
-      load={() => fetchMessages(conversationId)}
-      sendText={(body) => sendMessage(conversationId, sender, kind, { body })}
-      sendVoice={(voice) => sendMessage(conversationId, sender, kind, { voice })}
-      subscribe={(onInsert) => subscribeToMessages(conversationId, onInsert)}
+      headerAvatar={<Avatar name={header.parent_name} role="parent" photoPath={parent?.photoPath} />}
+      people={parent ? { [parent.id]: parent } : undefined}
+      load={() => fetchMessages(conversationId, profile.id)}
+      sendText={(body, replyToId) => sendMessage(conversationId, sender, kind, { body, replyToId })}
+      sendVoice={(voice, replyToId) => sendMessage(conversationId, sender, kind, { voice, replyToId })}
+      subscribe={(onInsert, onChange) => subscribeToMessages(conversationId, onInsert, onChange)}
       markRead={() => markConversationRead(conversationId, kind)}
+      clearChat={() => clearChat("dm", conversationId, profile.id)}
     />
   );
 }

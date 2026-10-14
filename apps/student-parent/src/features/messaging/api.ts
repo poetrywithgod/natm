@@ -1,6 +1,7 @@
 import { uploadVoiceNote, type VoiceNoteUpload } from "@natm/supabase";
 import { supabase } from "../../lib/supabase";
-import { messagePreview, type ChatMessage } from "./types";
+import { attachReactions, fetchClearedAt, subscribeToChat } from "./chatActions";
+import { MESSAGE_COLUMNS, messagePreview, type ChatMessage } from "./types";
 
 // A child can have two direct threads with the parent: one with their
 // class teacher and one with their shadow teacher.
@@ -90,7 +91,7 @@ async function fetchThread(parentId: string, studentId: string, kind: TeacherKin
   if (conversation) {
     const { data: lastMsg } = await supabase
       .from("messages")
-      .select("body, audio_path")
+      .select("body, audio_path, deleted_at")
       .eq("conversation_id", conversation.id)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -191,19 +192,20 @@ export async function getOrCreateConversation(
   return created.id;
 }
 
-export async function fetchMessages(conversationId: string): Promise<ChatMessage[]> {
-  const { data, error } = await supabase
-    .from("messages")
-    .select("id, sender_id, sender_role, body, audio_path, audio_duration_ms, audio_deleted_at, created_at")
-    .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: true });
+export async function fetchMessages(conversationId: string, meId: string): Promise<ChatMessage[]> {
+  // "Clear chat" hides everything up to the moment it was pressed, for this person only.
+  const clearedAt = await fetchClearedAt("dm", conversationId, meId);
+  let query = supabase.from("messages").select(MESSAGE_COLUMNS).eq("conversation_id", conversationId);
+  if (clearedAt) query = query.gt("created_at", clearedAt);
+  const { data, error } = await query.order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
-  return (data ?? []) as ChatMessage[];
+  return attachReactions("dm", (data ?? []) as ChatMessage[], meId);
 }
 
 export interface OutgoingMessage {
   body?: string;
   voice?: VoiceNoteUpload;
+  replyToId?: string | null;
 }
 
 export async function sendMessage(
@@ -231,6 +233,7 @@ export async function sendMessage(
     body,
     audio_path: audioPath,
     audio_duration_ms: content.voice ? Math.round(content.voice.durationMs) : null,
+    reply_to_id: content.replyToId ?? null,
   });
   if (insertError) throw new Error(insertError.message);
 
@@ -295,16 +298,12 @@ export async function markConversationRead(conversationId: string, role: "parent
   await supabase.from("conversations").update(patch).eq("id", conversationId);
 }
 
-export function subscribeToMessages(conversationId: string, onInsert: (msg: ChatMessage) => void) {
-  const channel = supabase
-    .channel(`messages:${conversationId}`)
-    .on(
-      "postgres_changes",
-      { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` },
-      (payload) => onInsert(payload.new as ChatMessage)
-    )
-    .subscribe();
-  return () => {
-    supabase.removeChannel(channel);
-  };
+export function subscribeToMessages(conversationId: string, onInsert: (msg: ChatMessage) => void, onChange: () => void) {
+  return subscribeToChat({
+    channel: `messages:${conversationId}`,
+    table: "messages",
+    filter: `conversation_id=eq.${conversationId}`,
+    onInsert,
+    onChange,
+  });
 }

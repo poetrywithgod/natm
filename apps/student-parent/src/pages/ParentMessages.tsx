@@ -9,6 +9,7 @@ import {
   type ChildThreads,
   type TeacherThread,
 } from "../features/messaging/api";
+import ForumInviteCard from "../features/messaging/ForumInvite";
 import { fetchPtaOverview, type PtaOverview } from "../features/messaging/pta";
 
 function UnreadBadge({ count }: { count: number }) {
@@ -61,7 +62,7 @@ export default function ParentMessages() {
     Promise.all([
       fetchChildThreads(profile.id),
       fetchPtaOverview().catch((err) => {
-        console.error("Failed to load PTA group:", err);
+        console.error("Failed to load Parent Model Forum:", err);
         return null;
       }),
     ])
@@ -91,7 +92,20 @@ export default function ParentMessages() {
         </div>
       ) : (
         <>
-          {pta && (
+          {pta && pta.my_status === "invited" && (
+            <ForumInviteCard
+              groupId={pta.group_id}
+              name={pta.name}
+              invitedBy={pta.invited_by_name}
+              onDone={() => {
+                fetchPtaOverview()
+                  .then(setPta)
+                  .catch((err) => console.error("Failed to load Parent Model Forum:", err));
+              }}
+            />
+          )}
+
+          {pta && pta.my_status === "active" && (
             <button
               onClick={() => navigate("/parent/messages/pta")}
               className="w-full text-left bg-abyssal-900 rounded-lg p-4 flex items-center gap-3"

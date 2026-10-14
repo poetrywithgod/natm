@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Bell } from "lucide-react";
+import ForumInviteNotice from "../features/messaging/ForumInviteNotice";
 import { useAuth } from "../features/auth/AuthContext";
 import {
   fetchNotifications,
@@ -76,6 +77,9 @@ export default function ParentNotifications() {
                 </span>
               </div>
               {item.body && <p className="font-ui text-xs text-abyssal-300 mt-1">{item.body}</p>}
+              {item.type === "forum_invite" && item.related_entity_id && profile?.id && (
+                <ForumInviteNotice groupId={item.related_entity_id} userId={profile?.id} />
+              )}
             </div>
           ))}
         </div>
