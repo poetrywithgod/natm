@@ -110,7 +110,7 @@ export default function ParentMessages() {
               onClick={() => navigate("/parent/messages/pta")}
               className="w-full text-left bg-abyssal-900 rounded-lg p-4 flex items-center gap-3"
             >
-              <div className="shrink-0 w-10 h-10 rounded-full bg-abyssal-800 flex items-center justify-center">
+              <div className="shrink-0 w-10 h-10 rounded-full bg-abyssal-700 flex items-center justify-center">
                 <Users size={20} className="text-lime" />
               </div>
               <div className="min-w-0 flex-1">

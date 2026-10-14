@@ -16,7 +16,7 @@ export const T = {
   mineFill: "bg-abyssal-950",
   mineBtn: "bg-abyssal-950 text-lime",
   mineQuote: "bg-abyssal-950/15 border-abyssal-950/60",
-  theirs: "bg-abyssal-800 text-abyssal-100",
+  theirs: "bg-abyssal-700 text-abyssal-100",
   theirTime: "text-abyssal-300",
   theirTrack: "bg-abyssal-100/20",
   theirFill: "bg-lime",
@@ -34,15 +34,15 @@ export const T = {
   // avatars, sheets, menus, chips
   avatar: "bg-abyssal-700 text-abyssal-100",
   sheet: "bg-abyssal-900 text-abyssal-100",
-  sheetBorder: "border-abyssal-800",
-  sheetHover: "hover:bg-abyssal-800",
+  sheetBorder: "border-abyssal-700",
+  sheetHover: "hover:bg-abyssal-700",
   heading: "text-lime",
   chip: "bg-abyssal-900 border-abyssal-700 text-abyssal-100",
   chipMine: "bg-abyssal-700 border-lime text-abyssal-100",
   outlineBtn: "border border-abyssal-700 text-abyssal-100",
   primaryBtn: "bg-lime text-abyssal-950",
   card: "bg-abyssal-900",
-  cardIcon: "bg-abyssal-800",
+  cardIcon: "bg-abyssal-700",
 } as const;
 
 export type ChatTheme = typeof T;

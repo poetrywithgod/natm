@@ -38,8 +38,8 @@ export default function PtaCard({ to }: { to: string }) {
       onClick={() => navigate(to)}
       className="w-full text-left bg-forest-900 rounded-lg p-4 flex items-center gap-3"
     >
-      <div className="shrink-0 w-10 h-10 rounded-full bg-forest-800 flex items-center justify-center">
-        <Users size={20} className="text-forest-400" />
+      <div className="shrink-0 w-10 h-10 rounded-full bg-forest-700 flex items-center justify-center">
+        <Users size={20} className="text-forest-300" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="font-display text-forest-100">{pta.name}</p>
