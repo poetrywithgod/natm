@@ -2370,6 +2370,7 @@ export type Database = {
           phone_1: string | null
           phone_2: string | null
           principal_name: string | null
+          school_type: string
           subscription_fee: number | null
           website: string | null
           year_established: number | null
@@ -2387,6 +2388,7 @@ export type Database = {
           phone_1?: string | null
           phone_2?: string | null
           principal_name?: string | null
+          school_type?: string
           subscription_fee?: number | null
           website?: string | null
           year_established?: number | null
@@ -2404,6 +2406,7 @@ export type Database = {
           phone_1?: string | null
           phone_2?: string | null
           principal_name?: string | null
+          school_type?: string
           subscription_fee?: number | null
           website?: string | null
           year_established?: number | null

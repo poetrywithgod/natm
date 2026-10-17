@@ -282,6 +282,11 @@ export default function SchoolDetail() {
             >
               {school.is_active ? "Active" : "Inactive"}
             </span>
+            {school.school_type === "homeschool" && (
+              <span className="ml-2 font-ui text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500">
+                Homeschool
+              </span>
+            )}
           </div>
         </div>
         <button

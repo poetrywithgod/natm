@@ -51,14 +51,24 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { name, contact_email, admin_name, admin_email } = body as {
+    const { name, contact_email, admin_name, admin_email, school_type } = body as {
       name?: string;
       contact_email?: string | null;
       admin_name?: string;
       admin_email?: string;
+      school_type?: string;
     };
     if (!name || !name.trim()) {
       return new Response(JSON.stringify({ error: "School name is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // Omitted = institution, so older clients that never send this keep
+    // working unchanged.
+    const resolvedType = school_type ?? "institution";
+    if (resolvedType !== "institution" && resolvedType !== "homeschool") {
+      return new Response(JSON.stringify({ error: "school_type must be 'institution' or 'homeschool'" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -76,7 +86,7 @@ Deno.serve(async (req) => {
 
     const { data: school, error: schoolError } = await adminClient
       .from("schools")
-      .insert({ name: name.trim(), contact_email: contact_email || null })
+      .insert({ name: name.trim(), contact_email: contact_email || null, school_type: resolvedType })
       .select()
       .single();
     if (schoolError) {
@@ -92,7 +102,7 @@ Deno.serve(async (req) => {
       action: "school.created",
       entity_type: "school",
       entity_id: school.id,
-      details: { name: school.name },
+      details: { name: school.name, school_type: resolvedType },
     });
 
     // Pre-fill the new school's Term 1/2/3 rate card from Platform

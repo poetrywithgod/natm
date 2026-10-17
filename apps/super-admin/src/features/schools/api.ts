@@ -24,6 +24,7 @@ export interface SchoolRow {
   contact_email: string | null;
   is_active: boolean;
   financial_model: string;
+  school_type: string;
   created_at: string;
   student_count: number;
   staff_count: number;
@@ -32,7 +33,7 @@ export interface SchoolRow {
 export async function fetchSchools(): Promise<SchoolRow[]> {
   const { data: schools, error } = await supabase
     .from("schools")
-    .select("id, name, contact_email, is_active, financial_model, created_at")
+    .select("id, name, contact_email, is_active, financial_model, school_type, created_at")
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   if (!schools || schools.length === 0) return [];
@@ -66,7 +67,7 @@ export async function fetchSchools(): Promise<SchoolRow[]> {
 export async function fetchSchool(schoolId: string): Promise<SchoolRow | null> {
   const { data, error } = await supabase
     .from("schools")
-    .select("id, name, contact_email, is_active, financial_model, created_at")
+    .select("id, name, contact_email, is_active, financial_model, school_type, created_at")
     .eq("id", schoolId)
     .single();
   if (error) return null;
@@ -102,7 +103,8 @@ export async function createSchool(
   name: string,
   contactEmail: string,
   adminName: string,
-  adminEmail: string
+  adminEmail: string,
+  schoolType: "institution" | "homeschool" = "institution"
 ): Promise<CreateSchoolResult> {
   const { data, error } = await supabase.functions.invoke("create-school", {
     body: {
@@ -110,6 +112,7 @@ export async function createSchool(
       contact_email: contactEmail || null,
       admin_name: adminName || undefined,
       admin_email: adminEmail || undefined,
+      school_type: schoolType,
     },
   });
   if (error) throw await parseFunctionError(error, "Failed to create school");

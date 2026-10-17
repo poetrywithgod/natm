@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Building2, Search } from "lucide-react";
+import { Plus, Building2, Home, Search } from "lucide-react";
 import { fetchSchools, createSchool, type SchoolRow } from "../features/schools/api";
 import { getFriendlyErrorMessage } from "@natm/supabase";
 
@@ -9,6 +9,7 @@ export default function Schools() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"all" | "institution" | "homeschool">("all");
   const [showCreate, setShowCreate] = useState(false);
 
   async function load() {
@@ -26,7 +27,10 @@ export default function Schools() {
     load();
   }, []);
 
-  const filtered = schools.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = schools.filter(
+    (s) =>
+      s.name.toLowerCase().includes(search.toLowerCase()) && (typeFilter === "all" || s.school_type === typeFilter)
+  );
 
   return (
     <div className="p-6 space-y-6 max-w-6xl">
@@ -53,6 +57,20 @@ export default function Schools() {
         />
       </div>
 
+      <div className="flex gap-2">
+        {(["all", "institution", "homeschool"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTypeFilter(t)}
+            className={`px-3 py-1 rounded-full font-ui text-xs ${
+              typeFilter === t ? "bg-amber-500 text-slate-950 font-semibold" : "bg-slate-800 text-slate-300"
+            }`}
+          >
+            {t === "all" ? "All" : t === "institution" ? "Schools" : "Homeschool"}
+          </button>
+        ))}
+      </div>
+
       {error && <p className="font-ui text-sm text-error">{error}</p>}
 
       {loading ? (
@@ -74,7 +92,11 @@ export default function Schools() {
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="h-9 w-9 rounded-lg bg-slate-800 flex items-center justify-center">
-                  <Building2 size={16} className="text-amber-500" />
+                  {s.school_type === "homeschool" ? (
+                    <Home size={16} className="text-amber-500" />
+                  ) : (
+                    <Building2 size={16} className="text-amber-500" />
+                  )}
                 </div>
                 <span
                   className={`font-ui text-xs px-2 py-0.5 rounded-full ${
@@ -85,6 +107,11 @@ export default function Schools() {
                 </span>
               </div>
               <h3 className="font-display font-bold text-slate-100 mb-1">{s.name}</h3>
+              {s.school_type === "homeschool" && (
+                <span className="inline-block mb-1 font-ui text-[11px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500">
+                  Homeschool
+                </span>
+              )}
               <p className="font-ui text-xs text-slate-400">
                 {s.student_count} student{s.student_count === 1 ? "" : "s"} · {s.staff_count} staff
               </p>
@@ -111,6 +138,7 @@ function CreateSchoolModal({ onClose, onCreated }: { onClose: () => void; onCrea
   const [contactEmail, setContactEmail] = useState("");
   const [adminName, setAdminName] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
+  const [schoolType, setSchoolType] = useState<"institution" | "homeschool">("institution");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -123,7 +151,13 @@ function CreateSchoolModal({ onClose, onCreated }: { onClose: () => void; onCrea
     setSubmitting(true);
     setError(null);
     try {
-      const result = await createSchool(name.trim(), contactEmail.trim(), adminName.trim(), adminEmail.trim());
+      const result = await createSchool(
+        name.trim(),
+        contactEmail.trim(),
+        adminName.trim(),
+        adminEmail.trim(),
+        schoolType
+      );
       if (result.admin_invite_error) {
         // The school itself was created successfully -- this is a
         // partial-success case, not a failure, so it closes the modal
@@ -146,7 +180,28 @@ function CreateSchoolModal({ onClose, onCreated }: { onClose: () => void; onCrea
 
         <div className="space-y-3">
           <div>
-            <label className="font-ui text-xs text-slate-400">School name</label>
+            <label className="font-ui text-xs text-slate-400">Type</label>
+            <div className="mt-1 grid grid-cols-2 gap-2">
+              {(["institution", "homeschool"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setSchoolType(t)}
+                  className={`p-2 rounded border font-ui text-sm ${
+                    schoolType === t
+                      ? "border-amber-500 bg-amber-500/10 text-amber-500"
+                      : "border-slate-700 bg-slate-800 text-slate-300"
+                  }`}
+                >
+                  {t === "institution" ? "School" : "Homeschool family"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="font-ui text-xs text-slate-400">
+              {schoolType === "homeschool" ? "Family / tenant name" : "School name"}
+            </label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
