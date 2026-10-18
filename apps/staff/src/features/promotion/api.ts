@@ -1,6 +1,11 @@
 import { supabase } from "../../lib/supabase";
 import { CLASS_LEVELS } from "../classes/api";
 import { logAuditEvent } from "../audit/api";
+import {
+  CLASS_TEACHER_OBSERVATION_SECTIONS,
+  termCompositeScore,
+  type DailyRecordLike,
+} from "@natm/shared-types";
 
 export interface AttendanceRecord {
   id: string;
@@ -175,4 +180,53 @@ export async function removeCarryover(id: string, schoolId: string, actorId: str
     entity_type: "student_subject_carryover",
     entity_id: id,
   });
+}
+
+// The current term's number and end date, for the homeschool Promotion page
+// to say whether the term is over yet.
+export async function fetchCurrentTermInfo(
+  schoolId: string
+): Promise<{ termNumber: number; endDate: string | null } | null> {
+  const { data: session } = await supabase
+    .from("academic_sessions")
+    .select("id")
+    .eq("school_id", schoolId)
+    .eq("is_current", true)
+    .maybeSingle();
+  if (!session) return null;
+  const { data: term } = await supabase
+    .from("terms")
+    .select("term_number, end_date")
+    .eq("session_id", session.id)
+    .eq("is_current", true)
+    .maybeSingle();
+  if (!term) return null;
+  return { termNumber: term.term_number, endDate: term.end_date };
+}
+
+// Term score per student in one query (instead of one per child), using the
+// same composite the school Promotion review shows. Students with no
+// observations this term are simply absent from the result.
+export async function fetchTermScores(
+  studentIds: string[],
+  termNumber: number
+): Promise<Record<string, number>> {
+  if (studentIds.length === 0) return {};
+  const { data, error } = await supabase
+    .from("daily_teacher_observations")
+    .select("*")
+    .in("student_id", studentIds)
+    .eq("term_number", termNumber);
+  if (error) throw new Error(error.message);
+  const byStudent = new Map<string, DailyRecordLike[]>();
+  for (const row of (data ?? []) as unknown as (DailyRecordLike & { student_id: string })[]) {
+    if (!byStudent.has(row.student_id)) byStudent.set(row.student_id, []);
+    byStudent.get(row.student_id)!.push(row);
+  }
+  const scores: Record<string, number> = {};
+  for (const [id, rows] of byStudent) {
+    const score = termCompositeScore(CLASS_TEACHER_OBSERVATION_SECTIONS, rows);
+    if (score !== null) scores[id] = score;
+  }
+  return scores;
 }

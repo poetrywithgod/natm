@@ -1,6 +1,6 @@
 import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./features/auth/AuthContext";
+import { AuthProvider, useAuth } from "./features/auth/AuthContext";
 import { ToastProvider } from "./features/toast/ToastContext";
 import { RequireRole } from "./guards/RequireRole";
 import { RedirectIfAuthed } from "./guards/RedirectIfAuthed";
@@ -56,6 +56,7 @@ const AdminStaffManagement = lazy(() => import("./pages/AdminStaffManagement"));
 const AdminAttendance = lazy(() => import("./pages/AdminAttendance"));
 const AdminTimetable = lazy(() => import("./pages/AdminTimetable"));
 const AdminPromotion = lazy(() => import("./pages/AdminPromotion"));
+const HomeschoolPromotion = lazy(() => import("./pages/HomeschoolPromotion"));
 const AdminAnnouncements = lazy(() => import("./pages/AdminAnnouncements"));
 const AdminNews = lazy(() => import("./pages/AdminNews"));
 const AdminIntake = lazy(() => import("./pages/AdminIntake"));
@@ -113,7 +114,7 @@ function AppRoutes() {
           <Route path="staff" element={<AdminStaffManagement />} />
           <Route path="attendance" element={<AdminAttendance />} />
           <Route path="timetable" element={<AdminTimetable />} />
-          <Route path="promotion" element={<AdminPromotion />} />
+          <Route path="promotion" element={<PromotionPage />} />
           <Route path="announcements" element={<AdminAnnouncements />} />
           <Route path="news" element={<AdminNews />} />
           <Route path="intake" element={<AdminIntake />} />
@@ -201,6 +202,13 @@ function AppRoutes() {
       </Routes>
     </Suspense>
   );
+}
+
+// A homeschool teacher gets the suggestion-first promotion flow; school
+// admins keep the decide-per-student one unchanged.
+function PromotionPage() {
+  const { profile } = useAuth();
+  return profile?.role === "homeschool_teacher" ? <HomeschoolPromotion /> : <AdminPromotion />;
 }
 
 export default function App() {
