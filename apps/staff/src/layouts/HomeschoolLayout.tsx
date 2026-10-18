@@ -60,8 +60,8 @@ const NAV_SECTIONS: { title: string | null; items: NavItem[] }[] = [
     items: [
       { to: "/class-teacher/lessons", label: "Lessons", icon: FileText },
       { to: "/class-teacher/assign-work", label: "Assign work", icon: Send },
-      { to: "/class-teacher/activities", label: "Daily activities", icon: BookOpen },
-      { to: "/shadow-teacher/daily-record", label: "Daily log", icon: NotebookPen },
+      { to: "/class-teacher/activities", label: "Daily log", icon: NotebookPen },
+      { to: "/shadow-teacher/daily-record", label: "Support record", icon: BookOpen },
       { to: "/admin/curriculum", label: "Curriculum", icon: Library },
       { to: "/shadow-teacher/messages", label: "Messages", icon: MessagesSquare },
     ],

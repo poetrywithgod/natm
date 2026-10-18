@@ -9,7 +9,7 @@ import { fetchMyClasses, type MyClass } from "../features/attendance/api";
 import { getFriendlyErrorMessage } from "@natm/supabase";
 
 const QUICK_ACTIONS = [
-  { to: "/shadow-teacher/daily-record", label: "Daily log", hint: "Record today's session", icon: NotebookPen },
+  { to: "/class-teacher/activities", label: "Daily log", hint: "Record today's session and attendance", icon: NotebookPen },
   { to: "/class-teacher/lessons", label: "Lessons", hint: "Plan and upload lessons", icon: FileText },
   { to: "/class-teacher/assign-work", label: "Assign work", hint: "Set work and quizzes", icon: Send },
   { to: "/admin/curriculum", label: "Curriculum", hint: "Browse by level and term", icon: Library },

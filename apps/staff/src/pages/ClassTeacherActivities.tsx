@@ -1,7 +1,15 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../features/auth/AuthContext";
-import { fetchMyClass, fetchClassStudents, type MyClass, type ClassStudent } from "../features/attendance/api";
+import {
+  fetchMyClass,
+  fetchClassStudents,
+  fetchStudentAttendanceOnDate,
+  markStudentAttendance,
+  type AttendanceStatus,
+  type MyClass,
+  type ClassStudent,
+} from "../features/attendance/api";
 import {
   fetchObservation,
   fetchObservationHistory,
@@ -79,6 +87,12 @@ export default function ClassTeacherActivities() {
   const [activityError, setActivityError] = useState<string | null>(null);
   const [showActivityLog, setShowActivityLog] = useState(false);
 
+  // Homeschool only: attendance sits beside the day's entry instead of on a
+  // separate register. null = not marked yet.
+  const isHomeschool = profile?.role === "homeschool_teacher";
+  const [attendance, setAttendance] = useState<AttendanceStatus | null>(null);
+  const [attendanceError, setAttendanceError] = useState<string | null>(null);
+
   const [loadingClass, setLoadingClass] = useState(true);
   const [loadingForm, setLoadingForm] = useState(true);
   const [saving, setSaving] = useState<"draft" | "submitted" | null>(null);
@@ -121,8 +135,11 @@ export default function ClassTeacherActivities() {
       fetchObservationHistory(studentId),
       fetchShadowTeacherNameForStudent(studentId),
       myClass ? fetchSubjectsForClassDay(myClass.id, dayOfWeekNumber(date)) : Promise.resolve([]),
+      isHomeschool ? fetchStudentAttendanceOnDate(studentId, date) : Promise.resolve(null),
     ])
-      .then(([existing, hist, shadowName, subjects]) => {
+      .then(([existing, hist, shadowName, subjects, att]) => {
+        setAttendance(att);
+        setAttendanceError(null);
         setRecord(existing);
         setHistory(hist);
         setShadowTeacherName(shadowName);
@@ -151,6 +168,26 @@ export default function ClassTeacherActivities() {
     setSections((prev) => ({ ...prev, [key]: value }));
   }
 
+  async function handleAttendance(status: AttendanceStatus) {
+    if (!myClass || !profile?.school_id || !profile?.id || !studentId) return;
+    setAttendanceError(null);
+    const previous = attendance;
+    setAttendance(status);
+    try {
+      await markStudentAttendance({
+        schoolId: profile.school_id,
+        classId: myClass.id,
+        studentId,
+        date,
+        status,
+        markedBy: profile.id,
+      });
+    } catch (e) {
+      setAttendance(previous);
+      setAttendanceError(getFriendlyErrorMessage(e, "Failed to save attendance"));
+    }
+  }
+
   async function handleSave(status: "draft" | "submitted") {
     if (!myClass || !profile?.school_id || !profile?.id || !studentId) return;
     setSaving(status);
@@ -174,6 +211,23 @@ export default function ClassTeacherActivities() {
         signedDate: status === "submitted" ? date : record?.signed_date ?? null,
       });
       setRecord(saved);
+      // Writing up a day means the child was there: if attendance hasn't
+      // been marked, record them present. An explicit absent/late stays.
+      if (isHomeschool && attendance === null) {
+        try {
+          await markStudentAttendance({
+            schoolId: profile.school_id,
+            classId: myClass.id,
+            studentId,
+            date,
+            status: "present",
+            markedBy: profile.id,
+          });
+          setAttendance("present");
+        } catch (e) {
+          setAttendanceError(getFriendlyErrorMessage(e, "Saved the entry, but could not record attendance"));
+        }
+      }
       setSuccessMessage(status === "submitted" ? "Form submitted." : "Draft saved.");
       const hist = await fetchObservationHistory(studentId);
       setHistory(hist);
@@ -413,10 +467,12 @@ export default function ClassTeacherActivities() {
                 <span className="font-ui text-[11px] text-forest-300">Teacher</span>
                 <p className="font-ui text-sm text-forest-100 p-2">{profile?.full_name}</p>
               </div>
-              <div>
-                <span className="font-ui text-[11px] text-forest-300">Shadow Teacher</span>
-                <p className="font-ui text-sm text-forest-100 p-2">{shadowTeacherName ?? "Not assigned"}</p>
-              </div>
+              {!isHomeschool && (
+                <div>
+                  <span className="font-ui text-[11px] text-forest-300">Shadow Teacher</span>
+                  <p className="font-ui text-sm text-forest-100 p-2">{shadowTeacherName ?? "Not assigned"}</p>
+                </div>
+              )}
               <div>
                 <span className="font-ui text-[11px] text-forest-300">Term</span>
                 <p className="font-ui text-sm text-forest-100 p-2">
@@ -441,6 +497,30 @@ export default function ClassTeacherActivities() {
                 <p className="font-ui text-sm text-forest-100 p-2">{dayLabelFor(date)}</p>
               </div>
             </div>
+
+            {isHomeschool && (
+              <div className="pt-2 border-t border-forest-800 space-y-2" data-testid="attendance-block">
+                <p className="font-ui text-[11px] text-forest-300">
+                  Attendance for {selectedStudent?.full_name ?? "this child"} on {date}
+                  {attendance === null && " (saving a log entry marks them present)"}
+                </p>
+                <div className="flex gap-2">
+                  {(["present", "late", "absent"] as const).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => handleAttendance(s)}
+                      aria-pressed={attendance === s}
+                      className={`flex-1 py-2 rounded font-ui text-sm capitalize ${
+                        attendance === s ? "bg-forest-500 text-forest-950 font-semibold" : "bg-forest-800 text-forest-300"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+                {attendanceError && <p className="font-ui text-xs text-error">{attendanceError}</p>}
+              </div>
+            )}
           </section>
 
           {loadingForm ? (

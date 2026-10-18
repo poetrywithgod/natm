@@ -9,6 +9,37 @@ export interface MyStudent {
 }
 
 export async function fetchMyStudents(shadowTeacherId: string): Promise<MyStudent[]> {
+  // A homeschool teacher is her own shadow teacher: there are no shadow
+  // assignments to follow, so every child in the family is hers.
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("role, school_id")
+    .eq("id", shadowTeacherId)
+    .maybeSingle();
+  if (me?.role === "homeschool_teacher" && me.school_id) {
+    const { data: kids, error: kidsError } = await supabase
+      .from("students")
+      .select("id, full_name, photo_url, class_id, class:classes(name)")
+      .eq("school_id", me.school_id)
+      .not("class_id", "is", null)
+      .order("full_name", { ascending: true });
+    if (kidsError) throw new Error(kidsError.message);
+    type KidRow = {
+      id: string;
+      full_name: string;
+      photo_url: string | null;
+      class_id: string | null;
+      class: { name: string } | null;
+    };
+    return ((kids ?? []) as unknown as KidRow[]).map((s) => ({
+      id: s.id,
+      full_name: s.full_name,
+      photo_url: s.photo_url,
+      class_id: s.class_id,
+      class_name: s.class?.name ?? null,
+    }));
+  }
+
   const { data, error } = await supabase
     .from("shadow_teacher_assignments")
     .select("student:students(id, full_name, photo_url, class_id, class:classes(name))")

@@ -1,6 +1,7 @@
 import { supabase } from "../../lib/supabase";
 import { logAuditEvent } from "../audit/api";
 import { pickActiveClass } from "../classes/activeClass";
+import { fetchCurrentTerm } from "../fees/api";
 
 export type AttendanceStatus = "present" | "absent" | "late";
 
@@ -91,4 +92,42 @@ export async function saveAttendance(
     entity_id: classId,
     details: { date, student_count: entries.length },
   });
+}
+
+// One child's attendance for one day, or null when nothing has been marked.
+export async function fetchStudentAttendanceOnDate(
+  studentId: string,
+  date: string
+): Promise<AttendanceStatus | null> {
+  const { data, error } = await supabase
+    .from("attendance")
+    .select("status")
+    .eq("student_id", studentId)
+    .eq("date", date)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data?.status as AttendanceStatus | undefined) ?? null;
+}
+
+// Marks a single child for a day, for the homeschool Daily Log where
+// attendance is recorded next to the day's entry rather than on a separate
+// register screen. Same table and conflict rule as the class register.
+export async function markStudentAttendance(input: {
+  schoolId: string;
+  classId: string;
+  studentId: string;
+  date: string;
+  status: AttendanceStatus;
+  markedBy: string;
+}): Promise<void> {
+  const term = await fetchCurrentTerm(input.schoolId);
+  if (!term) throw new Error("No current session/term is set yet. Set one under Terms first.");
+  await saveAttendance(
+    input.classId,
+    term.id,
+    input.date,
+    input.markedBy,
+    [{ studentId: input.studentId, status: input.status }],
+    input.schoolId
+  );
 }
