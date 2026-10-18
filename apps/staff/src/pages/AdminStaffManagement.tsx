@@ -161,7 +161,8 @@ export default function AdminStaffManagement() {
         >
           <option value="class_teacher">Class Teacher</option>
           <option value="shadow_teacher">Shadow Teacher</option>
-          <option value="finance_manager">Finance Manager</option>
+          {/* Homeschool tenants have no internal fees, so no Finance Manager. */}
+          {profile?.role !== "homeschool_teacher" && <option value="finance_manager">Finance Manager</option>}
         </select>
         <button
           onClick={handleInvite}

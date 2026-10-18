@@ -30,6 +30,7 @@ export default function ResetPassword() {
     if (profile.role === "school_admin") navigate("/admin", { replace: true });
     else if (profile.role === "class_teacher") navigate("/class-teacher", { replace: true });
     else if (profile.role === "shadow_teacher") navigate("/shadow-teacher", { replace: true });
+    else if (profile.role === "homeschool_teacher") navigate("/homeschool", { replace: true });
     else navigate("/login", { replace: true });
   }
 

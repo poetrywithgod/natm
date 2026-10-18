@@ -17,6 +17,7 @@ const ROLE_LABELS: Record<string, string> = {
   school_admin: "School Admin",
   class_teacher: "Class Teacher",
   shadow_teacher: "Shadow Teacher",
+  homeschool_teacher: "Homeschool Teacher",
   super_admin: "Super Admin",
 };
 

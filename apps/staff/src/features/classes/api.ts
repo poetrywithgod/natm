@@ -44,7 +44,7 @@ export async function fetchClassTeacherOptions(schoolId: string): Promise<ClassT
     .from("profiles")
     .select("id, full_name")
     .eq("school_id", schoolId)
-    .eq("role", "class_teacher")
+    .in("role", ["class_teacher", "homeschool_teacher"])
     .eq("is_active", true)
     .order("full_name", { ascending: true });
   if (error) throw new Error(error.message);

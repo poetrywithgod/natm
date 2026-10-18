@@ -1,5 +1,6 @@
 import { supabase } from "../../lib/supabase";
 import { CLASS_LEVEL_LABELS, type ClassLevel } from "@natm/shared-types";
+import { pickActiveClass } from "../classes/activeClass";
 
 export type { ClassLevel };
 export { CLASS_LEVEL_LABELS };
@@ -79,13 +80,14 @@ export async function fetchCurriculumForClassTeacher(
   classTeacherId: string,
   schoolId: string
 ): Promise<CurriculumDocView[]> {
-  const { data: cls, error } = await supabase
+  const { data: ownedClasses, error } = await supabase
     .from("classes")
     .select("id, level")
     .eq("school_id", schoolId)
     .eq("class_teacher_id", classTeacherId)
-    .maybeSingle();
+    .order("name", { ascending: true });
   if (error) throw new Error(error.message);
+  const cls = pickActiveClass(ownedClasses ?? [], classTeacherId);
   if (!cls || !cls.level) return [];
 
   const [{ data: classSubjects }, termNumber] = await Promise.all([

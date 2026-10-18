@@ -1,5 +1,6 @@
 import { supabase } from "../../lib/supabase";
 import { logAuditEvent } from "../audit/api";
+import { pickActiveClass } from "../classes/activeClass";
 
 export type AttendanceStatus = "present" | "absent" | "late";
 
@@ -19,16 +20,24 @@ export interface AttendanceRecord {
   status: AttendanceStatus;
 }
 
-// Finds the single class this class_teacher is assigned to (a class
-// has at most one class_teacher_id, per the existing schema).
-export async function fetchMyClass(teacherId: string): Promise<MyClass | null> {
+// Every class this teacher is the class teacher of. A class has at most
+// one class_teacher_id, but a teacher can have several: an ordinary class
+// teacher has one, a homeschool teacher one per level in the family.
+export async function fetchMyClasses(teacherId: string): Promise<MyClass[]> {
   const { data, error } = await supabase
     .from("classes")
     .select("id, name")
     .eq("class_teacher_id", teacherId)
-    .maybeSingle();
+    .order("name", { ascending: true });
   if (error) throw new Error(error.message);
-  return data;
+  return data ?? [];
+}
+
+// "My class" for the class-teacher pages: the only class when there is one
+// (unchanged for ordinary class teachers), or the one the teacher has
+// switched to when she owns several.
+export async function fetchMyClass(teacherId: string): Promise<MyClass | null> {
+  return pickActiveClass(await fetchMyClasses(teacherId), teacherId);
 }
 
 export async function fetchClassStudents(classId: string): Promise<ClassStudent[]> {

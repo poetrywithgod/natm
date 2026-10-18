@@ -8,6 +8,8 @@ import AdminLayout from "./layouts/AdminLayout";
 import ClassTeacherLayout from "./layouts/ClassTeacherLayout";
 import ShadowTeacherLayout from "./layouts/ShadowTeacherLayout";
 import FinanceManagerLayout from "./layouts/FinanceManagerLayout";
+import HomeschoolLayout from "./layouts/HomeschoolLayout";
+import { withHomeschoolLayout, homeschoolRedirect } from "./layouts/RoleLayout";
 import PageSkeleton from "./components/PageSkeleton";
 import MaintenanceBanner from "./components/MaintenanceBanner";
 
@@ -67,6 +69,16 @@ const AdminCurriculum = lazy(() => import("./pages/AdminCurriculum"));
 const AdminSubscription = lazy(() => import("./pages/AdminSubscription"));
 const ClassTeacherCurriculum = lazy(() => import("./pages/ClassTeacherCurriculum"));
 const ShadowTeacherCurriculum = lazy(() => import("./pages/ShadowTeacherCurriculum"));
+const HomeschoolDashboard = lazy(() => import("./pages/HomeschoolDashboard"));
+
+// A homeschool teacher uses the admin / class-teacher / shadow-teacher pages
+// inside her own layout; everyone else keeps theirs.
+const AdminShell = withHomeschoolLayout(AdminLayout);
+const ClassTeacherShell = withHomeschoolLayout(ClassTeacherLayout);
+const ShadowTeacherShell = withHomeschoolLayout(ShadowTeacherLayout);
+const AdminHome = homeschoolRedirect(SchoolAdminDashboard);
+const ClassTeacherHome = homeschoolRedirect(ClassTeacherDashboard);
+const ShadowTeacherHome = homeschoolRedirect(ShadowTeacherDashboard);
 
 function AppRoutes() {
   return (
@@ -86,12 +98,12 @@ function AppRoutes() {
         <Route
           path="/admin"
           element={
-            <RequireRole allow={["school_admin"]}>
-              <AdminLayout />
+            <RequireRole allow={["school_admin", "homeschool_teacher"]}>
+              <AdminShell />
             </RequireRole>
           }
         >
-          <Route index element={<SchoolAdminDashboard />} />
+          <Route index element={<AdminHome />} />
           <Route path="sessions" element={<SessionsTerms />} />
           <Route path="classes" element={<AdminClasses />} />
           <Route path="students" element={<AdminStudents />} />
@@ -118,12 +130,12 @@ function AppRoutes() {
         <Route
           path="/class-teacher"
           element={
-            <RequireRole allow={["class_teacher"]}>
-              <ClassTeacherLayout />
+            <RequireRole allow={["class_teacher", "homeschool_teacher"]}>
+              <ClassTeacherShell />
             </RequireRole>
           }
         >
-          <Route index element={<ClassTeacherDashboard />} />
+          <Route index element={<ClassTeacherHome />} />
           <Route path="attendance" element={<ClassTeacherAttendance />} />
           <Route path="students" element={<ClassTeacherStudents />} />
           <Route path="activities" element={<ClassTeacherActivities />} />
@@ -142,12 +154,12 @@ function AppRoutes() {
         <Route
           path="/shadow-teacher"
           element={
-            <RequireRole allow={["shadow_teacher"]}>
-              <ShadowTeacherLayout />
+            <RequireRole allow={["shadow_teacher", "homeschool_teacher"]}>
+              <ShadowTeacherShell />
             </RequireRole>
           }
         >
-          <Route index element={<ShadowTeacherDashboard />} />
+          <Route index element={<ShadowTeacherHome />} />
           <Route path="students" element={<ShadowTeacherStudents />} />
           <Route path="students/:id" element={<ShadowTeacherStudentDetail />} />
           <Route path="announcements" element={<ShadowTeacherAnnouncements />} />
@@ -174,6 +186,16 @@ function AppRoutes() {
           <Route path="notifications" element={<FinanceManagerNotifications />} />
           <Route path="pta" element={<PtaChat backTo="/finance-manager" desktop />} />
           <Route path="profile" element={<FinanceManagerProfile />} />
+        </Route>
+        <Route
+          path="/homeschool"
+          element={
+            <RequireRole allow={["homeschool_teacher"]}>
+              <HomeschoolLayout />
+            </RequireRole>
+          }
+        >
+          <Route index element={<HomeschoolDashboard />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

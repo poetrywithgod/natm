@@ -4,7 +4,13 @@ import { getFriendlyErrorMessage } from "@natm/supabase";
 import { supabase } from "../../lib/supabase";
 import { registerPushSubscription } from "../push/subscribe";
 
-export type StaffRole = "school_admin" | "class_teacher" | "shadow_teacher" | "super_admin" | "finance_manager";
+export type StaffRole =
+  | "school_admin"
+  | "class_teacher"
+  | "shadow_teacher"
+  | "super_admin"
+  | "finance_manager"
+  | "homeschool_teacher";
 
 interface Profile {
   id: string;

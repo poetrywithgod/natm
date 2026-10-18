@@ -177,7 +177,7 @@ export async function fetchClassTeachers(schoolId: string): Promise<{ id: string
     .from("profiles")
     .select("id, full_name")
     .eq("school_id", schoolId)
-    .eq("role", "class_teacher")
+    .in("role", ["class_teacher", "homeschool_teacher"])
     .eq("is_active", true)
     .order("full_name");
   if (error) throw error;

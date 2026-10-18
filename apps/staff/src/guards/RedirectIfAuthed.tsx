@@ -8,6 +8,7 @@ const ROLE_HOME: Record<StaffRole, string> = {
   shadow_teacher: "/shadow-teacher",
   super_admin: "/admin",
   finance_manager: "/finance-manager",
+  homeschool_teacher: "/homeschool",
 };
 
 export function RedirectIfAuthed({ children }: { children: ReactNode }) {
