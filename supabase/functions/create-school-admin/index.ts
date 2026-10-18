@@ -9,7 +9,7 @@ const corsHeaders = {
 // this now invites any staff role on Super Admin's behalf, not just
 // School Admins -- role defaults to "school_admin" so the existing
 // SchoolDetail "Invite Admin" call keeps working unchanged.
-const VALID_ROLES = ["school_admin", "class_teacher", "shadow_teacher", "finance_manager"] as const;
+const VALID_ROLES = ["school_admin", "class_teacher", "shadow_teacher", "finance_manager", "homeschool_teacher"] as const;
 type StaffRole = (typeof VALID_ROLES)[number];
 
 Deno.serve(async (req) => {
@@ -71,8 +71,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const resolvedRole: StaffRole = role ?? "school_admin";
-    if (!VALID_ROLES.includes(resolvedRole)) {
+    if (role !== undefined && !VALID_ROLES.includes(role)) {
       return new Response(
         JSON.stringify({ error: `role must be one of: ${VALID_ROLES.join(", ")}` }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -83,7 +82,7 @@ Deno.serve(async (req) => {
 
     const { data: school, error: schoolError } = await adminClient
       .from("schools")
-      .select("id")
+      .select("id, school_type")
       .eq("id", school_id)
       .single();
     if (schoolError || !school) {
@@ -91,6 +90,19 @@ Deno.serve(async (req) => {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Omitted role: a homeschool tenant's first person in is its combined
+    // teacher; an institution's is a School Admin (unchanged behaviour).
+    const resolvedRole: StaffRole = role ?? (school.school_type === "homeschool" ? "homeschool_teacher" : "school_admin");
+    // Checked BEFORE the invite so a rejected role never leaves an orphaned
+    // auth account behind (the database enforces this too, but only after
+    // the invite has already created the login).
+    if (resolvedRole === "homeschool_teacher" && school.school_type !== "homeschool") {
+      return new Response(
+        JSON.stringify({ error: "The homeschool teacher role can only be used in a homeschool tenant." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const appUrl = (Deno.env.get("APP_URL") ?? "https://natm-staff-puce.vercel.app").replace(/\/$/, "");

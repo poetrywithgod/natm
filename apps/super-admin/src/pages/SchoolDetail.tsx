@@ -16,7 +16,7 @@ import {
   deleteStaffMember,
   impersonateStaff,
   DeactivationBlockedError,
-  STAFF_ROLES,
+  rolesForSchoolType,
   ROLE_LABELS,
   type StaffMember,
   type StaffRole,
@@ -50,6 +50,11 @@ export default function SchoolDetail() {
   const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<StaffRole>("class_teacher");
+  // Offer only the roles that make sense for this kind of tenant; if the
+  // remembered pick isn't one of them (e.g. "class_teacher" default on a
+  // homeschool tenant), fall back to that tenant's first role.
+  const inviteRoles = rolesForSchoolType(school?.school_type);
+  const effectiveInviteRole = inviteRoles.includes(inviteRole) ? inviteRole : inviteRoles[0];
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
 
@@ -154,7 +159,7 @@ export default function SchoolDetail() {
     setInviteSubmitting(true);
     setInviteError(null);
     try {
-      await inviteStaff(id, inviteName.trim(), inviteEmail.trim(), inviteRole);
+      await inviteStaff(id, inviteName.trim(), inviteEmail.trim(), effectiveInviteRole);
       setShowInvite(false);
       setInviteName("");
       setInviteEmail("");
@@ -461,11 +466,11 @@ export default function SchoolDetail() {
         {showInvite && (
           <div className="pt-3 border-t border-slate-800 space-y-3">
             <select
-              value={inviteRole}
+              value={effectiveInviteRole}
               onChange={(e) => setInviteRole(e.target.value as StaffRole)}
               className="w-full p-2 rounded bg-slate-800 border border-slate-700 text-slate-100 font-body text-sm"
             >
-              {STAFF_ROLES.map((r) => (
+              {inviteRoles.map((r) => (
                 <option key={r} value={r}>
                   {ROLE_LABELS[r]}
                 </option>

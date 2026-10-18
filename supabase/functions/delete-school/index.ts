@@ -82,7 +82,9 @@ Deno.serve(async (req) => {
     // case this function exists for. Any other staff composition (a second
     // account, or a non-admin role) means real setup work happened, so it
     // falls back to the normal block.
-    const isLoneUnusedAdmin = staffCount === 1 && staffProfiles?.[0]?.role === "school_admin";
+    const isLoneUnusedAdmin =
+      staffCount === 1 &&
+      (staffProfiles?.[0]?.role === "school_admin" || staffProfiles?.[0]?.role === "homeschool_teacher");
 
     if ((studentCount ?? 0) > 0 || (staffCount > 0 && !isLoneUnusedAdmin)) {
       return new Response(

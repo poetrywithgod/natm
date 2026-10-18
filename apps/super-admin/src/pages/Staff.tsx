@@ -10,6 +10,7 @@ import {
   impersonateStaff,
   DeactivationBlockedError,
   STAFF_ROLES,
+  rolesForSchoolType,
   ROLE_LABELS,
   type StaffRow,
   type StaffRole,
@@ -298,6 +299,9 @@ function InviteStaffModal({
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<StaffRole>("class_teacher");
+  const selectedSchool = schools.find((s) => s.id === schoolId);
+  const roleOptions = rolesForSchoolType(selectedSchool?.school_type);
+  const effectiveRole = roleOptions.includes(role) ? role : roleOptions[0];
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -309,7 +313,7 @@ function InviteStaffModal({
     setSubmitting(true);
     setError(null);
     try {
-      await inviteStaff(schoolId, fullName.trim(), email.trim(), role);
+      await inviteStaff(schoolId, fullName.trim(), email.trim(), effectiveRole);
       onInvited();
     } catch (e) {
       setError(getFriendlyErrorMessage(e, "Failed to invite staff member"));
@@ -341,11 +345,11 @@ function InviteStaffModal({
           <div>
             <label className="font-ui text-xs text-slate-400">Role</label>
             <select
-              value={role}
+              value={effectiveRole}
               onChange={(e) => setRole(e.target.value as StaffRole)}
               className="mt-1 w-full p-2 rounded bg-slate-800 border border-slate-700 text-slate-100 font-body text-sm"
             >
-              {STAFF_ROLES.map((r) => (
+              {roleOptions.map((r) => (
                 <option key={r} value={r}>
                   {ROLE_LABELS[r]}
                 </option>

@@ -221,18 +221,19 @@ function CreateSchoolModal({ onClose, onCreated }: { onClose: () => void; onCrea
 
           <div className="pt-2 border-t border-slate-800">
             <p className="font-ui text-xs text-slate-400 mb-2">
-              First School Admin (optional — can be added later from the school's page)
+              {schoolType === "homeschool" ? "Homeschool teacher" : "First School Admin"} (optional — can be added later
+              from the tenant's page)
             </p>
             <div className="space-y-3">
               <input
-                placeholder="Admin's full name"
+                placeholder={schoolType === "homeschool" ? "Teacher's full name" : "Admin's full name"}
                 value={adminName}
                 onChange={(e) => setAdminName(e.target.value)}
                 className="w-full p-2 rounded bg-slate-800 border border-slate-700 text-slate-100 font-body text-sm placeholder:text-slate-500"
               />
               <input
                 type="email"
-                placeholder="Admin's email"
+                placeholder={schoolType === "homeschool" ? "Teacher's email" : "Admin's email"}
                 value={adminEmail}
                 onChange={(e) => setAdminEmail(e.target.value)}
                 className="w-full p-2 rounded bg-slate-800 border border-slate-700 text-slate-100 font-body text-sm placeholder:text-slate-500"

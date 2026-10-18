@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
       .select("id, role, school_id, full_name")
       .eq("id", user.id)
       .single();
-    if (profileError || !callerProfile || callerProfile.role !== "school_admin" || !callerProfile.school_id) {
+    if (profileError || !callerProfile || !["school_admin", "homeschool_teacher"].includes(callerProfile.role) || !callerProfile.school_id) {
       return new Response(JSON.stringify({ error: "Forbidden — School Admin only" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

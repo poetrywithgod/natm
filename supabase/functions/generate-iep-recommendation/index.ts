@@ -48,8 +48,8 @@ Deno.serve(async (req) => {
       .eq("id", user.id)
       .single();
 
-    if (profileError || !callerProfile || callerProfile.role !== "school_admin") {
-      return jsonResponse({ error: "Forbidden -- school_admin only" }, 403);
+    if (profileError || !callerProfile || !["school_admin", "homeschool_teacher"].includes(callerProfile.role)) {
+      return jsonResponse({ error: "Forbidden -- school_admin or homeschool_teacher only" }, 403);
     }
 
     const body = await req.json();

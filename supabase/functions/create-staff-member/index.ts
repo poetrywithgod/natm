@@ -46,8 +46,8 @@ Deno.serve(async (req) => {
       .eq("id", user.id)
       .single();
 
-    if (profileError || !callerProfile || callerProfile.role !== "school_admin") {
-      return new Response(JSON.stringify({ error: "Forbidden — school_admin only" }), {
+    if (profileError || !callerProfile || !["school_admin", "homeschool_teacher"].includes(callerProfile.role)) {
+      return new Response(JSON.stringify({ error: "Forbidden — school_admin or homeschool_teacher only" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -67,8 +67,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!["class_teacher", "shadow_teacher", "finance_manager"].includes(role)) {
-      return new Response(JSON.stringify({ error: "role must be class_teacher, shadow_teacher, or finance_manager" }), {
+    // A homeschool teacher can add further teachers to their own family
+    // tenant (assignment then splits by class/subject), but homeschool
+    // tenants have no internal fees, so no Finance Manager.
+    const allowedRoles =
+      callerProfile.role === "homeschool_teacher"
+        ? ["class_teacher", "shadow_teacher"]
+        : ["class_teacher", "shadow_teacher", "finance_manager"];
+    if (!allowedRoles.includes(role)) {
+      return new Response(JSON.stringify({ error: `role must be one of: ${allowedRoles.join(", ")}` }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

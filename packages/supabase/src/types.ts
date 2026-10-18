@@ -3315,6 +3315,7 @@ export type Database = {
         | "parent"
         | "student"
         | "finance_manager"
+        | "homeschool_teacher"
       student_onboarding_status:
         | "pending_password_reset"
         | "pending_intake_form"
@@ -3494,6 +3495,7 @@ export const Constants = {
         "parent",
         "student",
         "finance_manager",
+        "homeschool_teacher",
       ],
       student_onboarding_status: [
         "pending_password_reset",

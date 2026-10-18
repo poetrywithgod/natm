@@ -12,7 +12,7 @@ function jsonResponse(body: unknown, status: number) {
   });
 }
 
-const STAFF_ROLES = ["school_admin", "class_teacher", "shadow_teacher", "finance_manager"];
+const STAFF_ROLES = ["school_admin", "class_teacher", "shadow_teacher", "finance_manager", "homeschool_teacher"];
 
 // Generates a real, single-use Supabase magic link into the staff app as
 // the target staff member -- this is Supabase's actual supported

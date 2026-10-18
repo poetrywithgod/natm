@@ -75,6 +75,7 @@ Deno.serve(async (req) => {
     }
     // Either provide both admin fields or neither -- a half-filled admin
     // invite would otherwise silently create a school with no way in.
+    const firstRole = resolvedType === "homeschool" ? "homeschool_teacher" : "school_admin";
     if ((admin_name && !admin_email) || (admin_email && !admin_name)) {
       return new Response(
         JSON.stringify({ error: "Provide both an admin name and email, or leave both blank" }),
@@ -150,7 +151,7 @@ Deno.serve(async (req) => {
           : `The school was created, but inviting the School Admin failed: ${raw}`;
       } else {
         const { error: upsertError } = await adminClient.from("profiles").upsert(
-          { id: invited.user.id, school_id: school.id, role: "school_admin", full_name: admin_name },
+          { id: invited.user.id, school_id: school.id, role: firstRole, full_name: admin_name },
           { onConflict: "id" }
         );
         if (upsertError) {
@@ -160,7 +161,7 @@ Deno.serve(async (req) => {
           await adminClient.from("audit_logs").insert({
             school_id: school.id,
             actor_id: user.id,
-            action: "school_admin.invited",
+            action: `${firstRole}.invited`,
             entity_type: "staff",
             entity_id: invited.user.id,
             details: { full_name: admin_name, email: admin_email },

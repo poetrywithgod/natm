@@ -1,6 +1,12 @@
 import { supabase } from "../../lib/supabase";
 
-const ALL_STAFF_ROLES = ["school_admin", "class_teacher", "shadow_teacher", "finance_manager"] as const;
+const ALL_STAFF_ROLES = [
+  "school_admin",
+  "class_teacher",
+  "shadow_teacher",
+  "finance_manager",
+  "homeschool_teacher",
+] as const;
 export type StaffRole = (typeof ALL_STAFF_ROLES)[number];
 export const STAFF_ROLES: readonly StaffRole[] = ALL_STAFF_ROLES;
 
@@ -9,7 +15,18 @@ export const ROLE_LABELS: Record<StaffRole, string> = {
   class_teacher: "Class Teacher",
   shadow_teacher: "Shadow Teacher",
   finance_manager: "Finance Manager",
+  homeschool_teacher: "Homeschool Teacher",
 };
+
+// Which roles can be invited into a given kind of tenant. A homeschool
+// family has one combined teacher (plus optional extra class/shadow
+// teachers later) and no finance role; an institution never gets the
+// combined homeschool role. The server and database enforce the same.
+export function rolesForSchoolType(schoolType: string | undefined): readonly StaffRole[] {
+  return schoolType === "homeschool"
+    ? ["homeschool_teacher", "class_teacher", "shadow_teacher"]
+    : ["school_admin", "class_teacher", "shadow_teacher", "finance_manager"];
+}
 
 export interface StaffMember {
   id: string;

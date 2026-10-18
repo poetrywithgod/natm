@@ -45,8 +45,8 @@ Deno.serve(async (req) => {
       .single();
 
     const isSuperAdmin = callerProfile?.role === "super_admin";
-    if (profileError || !callerProfile || (callerProfile.role !== "school_admin" && !isSuperAdmin)) {
-      return new Response(JSON.stringify({ error: "Forbidden — school_admin or super_admin only" }), {
+    if (profileError || !callerProfile || (!["school_admin", "homeschool_teacher"].includes(callerProfile.role) && !isSuperAdmin)) {
+      return new Response(JSON.stringify({ error: "Forbidden — school_admin, homeschool_teacher or super_admin only" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -57,6 +57,13 @@ Deno.serve(async (req) => {
 
     if (!staff_id) {
       return new Response(JSON.stringify({ error: "staff_id is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (staff_id === user.id) {
+      return new Response(JSON.stringify({ error: "You can't delete your own account." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
