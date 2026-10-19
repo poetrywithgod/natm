@@ -14,6 +14,13 @@ export default function Settings() {
   const [feesSaving, setFeesSaving] = useState(false);
   const [feesSaved, setFeesSaved] = useState(false);
 
+  // Homeschool tenants have their own, lower, default rate card.
+  const [hsTerm1, setHsTerm1] = useState("");
+  const [hsTerm2, setHsTerm2] = useState("");
+  const [hsTerm3, setHsTerm3] = useState("");
+  const [hsFeesSaving, setHsFeesSaving] = useState(false);
+  const [hsFeesSaved, setHsFeesSaved] = useState(false);
+
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState("");
   const [maintenanceSaving, setMaintenanceSaving] = useState(false);
@@ -26,6 +33,9 @@ export default function Settings() {
         setTerm1(s.default_term_1_fee != null ? String(s.default_term_1_fee) : "");
         setTerm2(s.default_term_2_fee != null ? String(s.default_term_2_fee) : "");
         setTerm3(s.default_term_3_fee != null ? String(s.default_term_3_fee) : "");
+        setHsTerm1(s.homeschool_term_1_fee != null ? String(s.homeschool_term_1_fee) : "");
+        setHsTerm2(s.homeschool_term_2_fee != null ? String(s.homeschool_term_2_fee) : "");
+        setHsTerm3(s.homeschool_term_3_fee != null ? String(s.homeschool_term_3_fee) : "");
         setMaintenanceMode(s.maintenance_mode);
         setMaintenanceMessage(s.maintenance_message ?? "");
       })
@@ -55,6 +65,24 @@ export default function Settings() {
       setError(getFriendlyErrorMessage(e, "Failed to save default fees"));
     } finally {
       setFeesSaving(false);
+    }
+  }
+
+  async function handleSaveHomeschoolFees() {
+    setHsFeesSaving(true);
+    setHsFeesSaved(false);
+    setError(null);
+    try {
+      await updatePlatformSettings({
+        homeschool_term_1_fee: parseFeeInput(hsTerm1),
+        homeschool_term_2_fee: parseFeeInput(hsTerm2),
+        homeschool_term_3_fee: parseFeeInput(hsTerm3),
+      });
+      setHsFeesSaved(true);
+    } catch (e) {
+      setError(getFriendlyErrorMessage(e, "Failed to save homeschool fees"));
+    } finally {
+      setHsFeesSaving(false);
     }
   }
 
@@ -103,7 +131,7 @@ export default function Settings() {
       {error && <p className="font-ui text-sm text-error">{error}</p>}
 
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
-        <h2 className="font-display font-bold text-slate-100">Default Subscription Fees</h2>
+        <h2 className="font-display font-bold text-slate-100">Default Subscription Fees (Schools)</h2>
         <p className="font-ui text-xs text-slate-400">
           Pre-fills a new school's Term 1/2/3 rate card when it's created, so you're not re-entering the same numbers
           every time. Leave a term blank to skip it — new schools still start with whatever terms you do set here,
@@ -138,6 +166,45 @@ export default function Settings() {
           {feesSaving ? "Saving..." : "Save Defaults"}
         </button>
         {feesSaved && <p className="font-ui text-xs text-success">Saved.</p>}
+      </div>
+
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3" data-testid="homeschool-fees">
+        <h2 className="font-display font-bold text-slate-100">Default Subscription Fees (Homeschool)</h2>
+        <p className="font-ui text-xs text-slate-400">
+          A separate, lower rate card for homeschool families. A new homeschool tenant is pre-filled from these, never
+          from the school rates above. Leave a term blank and that term starts with no rate set for the family, which
+          you can then set on its own page.
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: "Term 1", value: hsTerm1, set: setHsTerm1 },
+            { label: "Term 2", value: hsTerm2, set: setHsTerm2 },
+            { label: "Term 3", value: hsTerm3, set: setHsTerm3 },
+          ].map((t) => (
+            <div key={t.label}>
+              <label className="font-ui text-xs text-slate-400">{t.label} (₦)</label>
+              <input
+                type="number"
+                min={0}
+                aria-label={`Homeschool ${t.label} fee`}
+                value={t.value}
+                onChange={(e) => {
+                  t.set(e.target.value);
+                  setHsFeesSaved(false);
+                }}
+                className="mt-1 w-full p-2 rounded bg-slate-800 border border-slate-700 text-slate-100 font-body text-sm"
+              />
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={handleSaveHomeschoolFees}
+          disabled={hsFeesSaving}
+          className="px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-ui text-sm font-semibold disabled:opacity-60"
+        >
+          {hsFeesSaving ? "Saving..." : "Save Homeschool Defaults"}
+        </button>
+        {hsFeesSaved && <p className="font-ui text-xs text-success">Saved.</p>}
       </div>
 
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">

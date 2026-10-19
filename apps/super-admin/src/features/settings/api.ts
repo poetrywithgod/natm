@@ -5,6 +5,9 @@ export interface PlatformSettings {
   default_term_1_fee: number | null;
   default_term_2_fee: number | null;
   default_term_3_fee: number | null;
+  homeschool_term_1_fee: number | null;
+  homeschool_term_2_fee: number | null;
+  homeschool_term_3_fee: number | null;
   maintenance_mode: boolean;
   maintenance_message: string | null;
   updated_at: string;
@@ -20,7 +23,14 @@ export async function updatePlatformSettings(
   updates: Partial<
     Pick<
       PlatformSettings,
-      "default_term_1_fee" | "default_term_2_fee" | "default_term_3_fee" | "maintenance_mode" | "maintenance_message"
+      | "default_term_1_fee"
+      | "default_term_2_fee"
+      | "default_term_3_fee"
+      | "homeschool_term_1_fee"
+      | "homeschool_term_2_fee"
+      | "homeschool_term_3_fee"
+      | "maintenance_mode"
+      | "maintenance_message"
     >
   >
 ): Promise<void> {

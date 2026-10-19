@@ -106,6 +106,8 @@ Deno.serve(async (req) => {
       details: { name: school.name, school_type: resolvedType },
     });
 
+    // A homeschool tenant is pre-filled from its own (lower) default rate
+    // card, never from the school one; see the homeschool_term_N_fee columns.
     // Pre-fill the new school's Term 1/2/3 rate card from Platform
     // Settings, if a default has been set -- saves Super Admin from
     // manually re-entering the same numbers in SchoolDetail right after.
@@ -114,14 +116,20 @@ Deno.serve(async (req) => {
     // term.
     const { data: settings } = await adminClient
       .from("platform_settings")
-      .select("default_term_1_fee, default_term_2_fee, default_term_3_fee")
+      .select(
+        "default_term_1_fee, default_term_2_fee, default_term_3_fee, homeschool_term_1_fee, homeschool_term_2_fee, homeschool_term_3_fee"
+      )
       .eq("id", "default")
       .maybeSingle();
     if (settings) {
+      const isHomeschool = resolvedType === "homeschool";
+      const rates = isHomeschool
+        ? [settings.homeschool_term_1_fee, settings.homeschool_term_2_fee, settings.homeschool_term_3_fee]
+        : [settings.default_term_1_fee, settings.default_term_2_fee, settings.default_term_3_fee];
       const defaults: { term_number: number; amount: number }[] = [];
-      if (settings.default_term_1_fee != null) defaults.push({ term_number: 1, amount: settings.default_term_1_fee });
-      if (settings.default_term_2_fee != null) defaults.push({ term_number: 2, amount: settings.default_term_2_fee });
-      if (settings.default_term_3_fee != null) defaults.push({ term_number: 3, amount: settings.default_term_3_fee });
+      rates.forEach((amount, i) => {
+        if (amount != null) defaults.push({ term_number: i + 1, amount });
+      });
       if (defaults.length > 0) {
         await adminClient
           .from("subscription_fee_schedule")
