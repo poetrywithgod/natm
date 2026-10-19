@@ -13,7 +13,7 @@ const QUICK_ACTIONS = [
   { to: "/class-teacher/lessons", label: "Lessons", hint: "Plan and upload lessons", icon: FileText },
   { to: "/class-teacher/assign-work", label: "Assign work", hint: "Set work and quizzes", icon: Send },
   { to: "/admin/curriculum", label: "Curriculum", hint: "Browse by level and term", icon: Library },
-  { to: "/shadow-teacher/messages", label: "Messages", hint: "Talk to parents", icon: MessagesSquare },
+  { to: "/class-teacher/messages", label: "Messages", hint: "Talk to parents", icon: MessagesSquare },
 ];
 
 export default function HomeschoolDashboard() {

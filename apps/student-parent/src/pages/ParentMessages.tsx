@@ -4,13 +4,14 @@ import { ChevronRight, MessageCircle, Users } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import {
   KIND_TO_SLUG,
-  TEACHER_KIND_LABEL,
   fetchChildThreads,
+  teacherLabel,
   type ChildThreads,
   type TeacherThread,
 } from "../features/messaging/api";
 import ForumInviteCard from "../features/messaging/ForumInvite";
 import { fetchPtaOverview, type PtaOverview } from "../features/messaging/pta";
+import { useSchoolType } from "../features/schools/useSchoolType";
 
 function UnreadBadge({ count }: { count: number }) {
   if (count <= 0) return null;
@@ -21,8 +22,17 @@ function UnreadBadge({ count }: { count: number }) {
   );
 }
 
-function ThreadRow({ thread, onOpen }: { thread: TeacherThread; onOpen: () => void }) {
+function ThreadRow({
+  thread,
+  onOpen,
+  isHomeschool,
+}: {
+  thread: TeacherThread;
+  onOpen: () => void;
+  isHomeschool: boolean;
+}) {
   const assigned = !!thread.teacher_id;
+  const label = teacherLabel(thread.kind, isHomeschool);
   return (
     <button
       onClick={onOpen}
@@ -31,7 +41,7 @@ function ThreadRow({ thread, onOpen }: { thread: TeacherThread; onOpen: () => vo
     >
       <div className="min-w-0">
         <p className="font-ui text-sm text-abyssal-100">
-          {TEACHER_KIND_LABEL[thread.kind]}
+          {label}
           {thread.teacher_name && <span className="text-abyssal-300"> · {thread.teacher_name}</span>}
         </p>
         {assigned ? (
@@ -40,7 +50,7 @@ function ThreadRow({ thread, onOpen }: { thread: TeacherThread; onOpen: () => vo
           )
         ) : (
           <p className="font-ui text-xs text-abyssal-300">
-            No {TEACHER_KIND_LABEL[thread.kind].toLowerCase()} assigned yet
+            No {label.toLowerCase()} assigned yet
           </p>
         )}
       </div>
@@ -55,16 +65,20 @@ export default function ParentMessages() {
   const [children, setChildren] = useState<ChildThreads[]>([]);
   const [pta, setPta] = useState<PtaOverview | null>(null);
   const [loading, setLoading] = useState(true);
+  const { isHomeschool, ready } = useSchoolType();
 
   useEffect(() => {
-    if (!profile?.id) return;
+    if (!profile?.id || !ready) return;
     let cancelled = false;
     Promise.all([
       fetchChildThreads(profile.id),
-      fetchPtaOverview().catch((err) => {
-        console.error("Failed to load Parent Model Forum:", err);
-        return null;
-      }),
+      // No Parent Model Forum for a homeschool family.
+      isHomeschool
+        ? Promise.resolve(null)
+        : fetchPtaOverview().catch((err) => {
+            console.error("Failed to load Parent Model Forum:", err);
+            return null;
+          }),
     ])
       .then(([rows, overview]) => {
         if (cancelled) return;
@@ -78,7 +92,7 @@ export default function ParentMessages() {
     return () => {
       cancelled = true;
     };
-  }, [profile?.id]);
+  }, [profile?.id, ready, isHomeschool]);
 
   return (
     <div className="p-4 space-y-4">
@@ -133,9 +147,13 @@ export default function ParentMessages() {
             children.map((child) => (
               <section key={child.student_id} className="space-y-2">
                 <h2 className="font-ui text-xs uppercase tracking-wide text-abyssal-300">{child.student_name}</h2>
-                {child.threads.map((thread) => (
+                {child.threads
+                  // One teacher: the shadow-teacher thread has no one behind it.
+                  .filter((thread) => !isHomeschool || thread.kind === "class_teacher")
+                  .map((thread) => (
                   <ThreadRow
                     key={thread.kind}
+                    isHomeschool={isHomeschool}
                     thread={thread}
                     onOpen={() => navigate(`/parent/messages/${child.student_id}/${KIND_TO_SLUG[thread.kind]}`)}
                   />

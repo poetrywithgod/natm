@@ -63,7 +63,7 @@ const NAV_SECTIONS: { title: string | null; items: NavItem[] }[] = [
       { to: "/class-teacher/activities", label: "Daily log", icon: NotebookPen },
       { to: "/shadow-teacher/daily-record", label: "Support record", icon: BookOpen },
       { to: "/admin/curriculum", label: "Curriculum", icon: Library },
-      { to: "/shadow-teacher/messages", label: "Messages", icon: MessagesSquare },
+      { to: "/class-teacher/messages", label: "Messages", icon: MessagesSquare },
     ],
   },
   {

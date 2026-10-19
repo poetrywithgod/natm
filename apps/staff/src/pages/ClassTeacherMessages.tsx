@@ -63,11 +63,12 @@ export default function ClassTeacherMessages() {
     <div className="p-4 space-y-3">
       <h1 className="font-display text-xl text-forest-100">Messages</h1>
 
-      <PtaCard to="/class-teacher/pta" />
+      {/* A homeschool family has no Parent Model Forum. */}
+      {profile?.role !== "homeschool_teacher" && <PtaCard to="/class-teacher/pta" />}
 
       {error && <p className="font-ui text-sm text-error">{error}</p>}
 
-      <h2 className="font-ui text-xs uppercase tracking-wide text-forest-300 pt-1">Parents of your class</h2>
+      <h2 className="font-ui text-xs uppercase tracking-wide text-forest-300 pt-1">{profile?.role === "homeschool_teacher" ? "Parents" : "Parents of your class"}</h2>
 
       {loading ? (
         <div className="space-y-2 animate-pulse">
@@ -78,7 +79,7 @@ export default function ClassTeacherMessages() {
         <div className="bg-forest-900 rounded-lg p-6 text-center">
           <MessageCircle className="mx-auto text-forest-300 mb-2" size={24} />
           <p className="font-body text-sm text-forest-300">
-            No parents to message yet. Parents appear here once they're linked to a child in your class.
+            No parents to message yet. Parents appear here once they're linked to a child you teach.
           </p>
         </div>
       ) : (

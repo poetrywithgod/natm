@@ -12,6 +12,12 @@ export const TEACHER_KIND_LABEL: Record<TeacherKind, string> = {
   shadow_teacher: "Shadow Teacher",
 };
 
+// A homeschool family has one teacher who is both, so the thread is just
+// "Teacher" there; everywhere else the two kinds keep their names.
+export function teacherLabel(kind: TeacherKind, isHomeschool: boolean): string {
+  return isHomeschool ? "Teacher" : TEACHER_KIND_LABEL[kind];
+}
+
 // URL segment <-> kind. The bare /parent/messages/:studentId route predates
 // class-teacher threads and means "shadow teacher".
 export const KIND_TO_SLUG: Record<TeacherKind, string> = {

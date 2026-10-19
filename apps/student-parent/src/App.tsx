@@ -6,6 +6,7 @@ import { RequireRole } from "./guards/RequireRole";
 import { RequireMode } from "./guards/RequireMode";
 import { FamilyProvider } from "./features/family/FamilyContext";
 import { RedirectIfAuthed } from "./guards/RedirectIfAuthed";
+import { useSchoolType } from "./features/schools/useSchoolType";
 import { StudentOnboardingGate } from "./guards/StudentOnboardingGate";
 import { ParentOnboardingGate } from "./guards/ParentOnboardingGate";
 import StudentLayout from "./layouts/StudentLayout";
@@ -33,6 +34,14 @@ const ParentChat = lazy(() => import("./pages/ParentChat"));
 const ParentPtaChat = lazy(() => import("./pages/ParentPtaChat"));
 const ParentNotifications = lazy(() => import("./pages/ParentNotifications"));
 const ParentSettings = lazy(() => import("./pages/ParentSettings"));
+
+// Homeschool families have no school fees to pay, so the Fees page is not
+// theirs to open (also covers an old bookmark or notification link).
+function FeesRoute() {
+  const { isHomeschool, ready } = useSchoolType();
+  if (!ready) return <PageSkeleton />;
+  return isHomeschool ? <Navigate to="/parent" replace /> : <ParentFees />;
+}
 
 export default function App() {
   return (
@@ -119,7 +128,7 @@ export default function App() {
               >
                 <Route index element={<ParentHome />} />
                 <Route path="progress/:studentId" element={<ParentChildProgress />} />
-                <Route path="fees" element={<ParentFees />} />
+                <Route path="fees" element={<FeesRoute />} />
                 <Route path="messages" element={<ParentMessages />} />
                 <Route path="messages/pta" element={<ParentPtaChat />} />
                 <Route path="messages/:studentId" element={<ParentChat />} />

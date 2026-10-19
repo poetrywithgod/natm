@@ -6,10 +6,10 @@ import { fetchSchoolInfo, type SchoolInfo } from "../features/schools/api";
 import { fetchUnreadCount } from "../features/notifications/api";
 import ModeToggle from "../components/ModeToggle";
 
-function navItems(feesLabel: string) {
+function navItems(feesLabel: string, showFees: boolean) {
   return [
     { to: "/parent", label: "Home", icon: Home, end: true },
-    { to: "/parent/fees", label: feesLabel, icon: CreditCard, end: false },
+    ...(showFees ? [{ to: "/parent/fees", label: feesLabel, icon: CreditCard, end: false }] : []),
     { to: "/parent/messages", label: "Messages", icon: MessageCircle, end: false },
     { to: "/parent/settings", label: "Settings", icon: Settings, end: false },
   ];
@@ -27,7 +27,10 @@ export default function ParentLayout() {
     }
   }, [profile?.school_id]);
 
-  const NAV_ITEMS = navItems(schoolInfo?.financial_model === "partnership" ? "Partnership" : "Fees");
+  const NAV_ITEMS = navItems(
+    schoolInfo?.financial_model === "partnership" ? "Partnership" : "Fees",
+    schoolInfo?.school_type !== "homeschool"
+  );
 
   useEffect(() => {
     const userId = session?.user?.id;

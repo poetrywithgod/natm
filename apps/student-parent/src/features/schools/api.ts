@@ -1,6 +1,7 @@
 import { supabase } from "../../lib/supabase";
 
 export type FinancialModel = "fees" | "partnership";
+export type SchoolType = "institution" | "homeschool";
 
 export interface SchoolInfo {
   name: string;
@@ -14,13 +15,14 @@ export interface SchoolInfo {
   year_established: number | null;
   principal_name: string | null;
   financial_model: FinancialModel;
+  school_type: SchoolType;
 }
 
 export async function fetchSchoolInfo(schoolId: string): Promise<SchoolInfo | null> {
   const { data, error } = await supabase
     .from("schools")
     .select(
-      "name, logo_url, contact_email, address, phone_1, phone_2, website, motto, year_established, principal_name, financial_model"
+      "name, logo_url, contact_email, address, phone_1, phone_2, website, motto, year_established, principal_name, financial_model, school_type"
     )
     .eq("id", schoolId)
     .single();

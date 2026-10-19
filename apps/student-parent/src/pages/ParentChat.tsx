@@ -7,14 +7,15 @@ import Avatar from "../features/messaging/Avatar";
 import ChatThread from "../features/messaging/ChatThread";
 import { clearChat, fetchPerson } from "../features/messaging/chatActions";
 import type { Person } from "../features/messaging/types";
+import { useSchoolType } from "../features/schools/useSchoolType";
 import {
-  TEACHER_KIND_LABEL,
   fetchMessages,
   getOrCreateConversation,
   markConversationRead,
   resolveTeacher,
   sendMessage,
   slugToKind,
+  teacherLabel,
   subscribeToMessages,
 } from "../features/messaging/api";
 
@@ -30,7 +31,10 @@ interface ThreadSetup {
 // /parent/messages/:studentId/:kind      -> class-teacher | shadow-teacher
 export default function ParentChat() {
   const { studentId, kind: kindSlug } = useParams<{ studentId: string; kind?: string }>();
-  const kind = slugToKind(kindSlug);
+  const { isHomeschool, ready } = useSchoolType();
+  // One teacher does both jobs, so whatever link was followed (including the
+  // old shadow-teacher route) goes to the class-teacher thread.
+  const kind = isHomeschool ? "class_teacher" : slugToKind(kindSlug);
   const { profile } = useAuth();
   const navigate = useNavigate();
 
@@ -38,7 +42,7 @@ export default function ParentChat() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!studentId || !profile?.id || !profile.school_id) return;
+    if (!studentId || !profile?.id || !profile.school_id || !ready) return;
     const schoolId = profile.school_id;
     let cancelled = false;
 
@@ -46,7 +50,7 @@ export default function ParentChat() {
       try {
         const teacher = await resolveTeacher(studentId, kind);
         if (!teacher) {
-          if (!cancelled) setError(`No ${TEACHER_KIND_LABEL[kind].toLowerCase()} assigned to this child yet.`);
+          if (!cancelled) setError(`No ${teacherLabel(kind, isHomeschool).toLowerCase()} assigned to this child yet.`);
           return;
         }
         const { data: student } = await supabase.from("students").select("full_name").eq("id", studentId).maybeSingle();
@@ -56,7 +60,7 @@ export default function ParentChat() {
         setSetup({
           conversationId,
           studentName: student?.full_name ?? "",
-          teacherName: teacher.name ?? TEACHER_KIND_LABEL[kind],
+          teacherName: teacher.name ?? teacherLabel(kind, isHomeschool),
           teacher: person,
         });
       } catch (err) {
@@ -67,7 +71,7 @@ export default function ParentChat() {
     return () => {
       cancelled = true;
     };
-  }, [studentId, kind, profile?.id, profile?.school_id]);
+  }, [studentId, kind, profile?.id, profile?.school_id, ready, isHomeschool]);
 
   if (error) {
     return (
@@ -91,7 +95,7 @@ export default function ParentChat() {
       key={conversationId}
       kind="dm"
       title={setup.teacherName}
-      subtitle={`${TEACHER_KIND_LABEL[kind]} · re: ${setup.studentName}`}
+      subtitle={`${teacherLabel(kind, isHomeschool)} · re: ${setup.studentName}`}
       onBack={() => navigate("/parent/messages")}
       meId={profile.id}
       prefetchAudio
