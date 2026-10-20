@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import { LayoutDashboard, Building2, ScrollText, ChevronLeft, ChevronRight, LogOut, BookOpen, Users, UserCircle, Receipt, Plug, CalendarClock, Settings as SettingsIcon, FileSpreadsheet, Megaphone, Target } from "lucide-react";
+import { LayoutDashboard, Building2, ScrollText, ChevronLeft, ChevronRight, LogOut, BookOpen, Users, UserCircle, Receipt, Plug, CalendarClock, Settings as SettingsIcon, FileSpreadsheet, Megaphone, Target, GraduationCap } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 
 const NAV_ITEMS = [
@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { to: "/schools", label: "Schools", icon: Building2, end: false },
   { to: "/announcements", label: "Announcements", icon: Megaphone, end: false },
   { to: "/staff", label: "Staff", icon: Users, end: false },
+  { to: "/teacher-pool", label: "Teacher Pool", icon: GraduationCap, end: false },
   { to: "/billing", label: "Billing", icon: Receipt, end: false },
   { to: "/reports", label: "Reports", icon: FileSpreadsheet, end: false },
   { to: "/curriculum", label: "Curriculum", icon: BookOpen, end: false },

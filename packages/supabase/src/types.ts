@@ -3063,6 +3063,63 @@ export type Database = {
         }
         Relationships: []
       }
+      teacher_pool: {
+        Row: {
+          id: string
+          full_name: string
+          email: string
+          phone: string | null
+          qualifications: string | null
+          notes: string | null
+          status: string
+          profile_id: string | null
+          assigned_school_id: string | null
+          assigned_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          full_name: string
+          email: string
+          phone?: string | null
+          qualifications?: string | null
+          notes?: string | null
+          status?: string
+          profile_id?: string | null
+          assigned_school_id?: string | null
+          assigned_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          full_name?: string
+          email?: string
+          phone?: string | null
+          qualifications?: string | null
+          notes?: string | null
+          status?: string
+          profile_id?: string | null
+          assigned_school_id?: string | null
+          assigned_at?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_pool_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_pool_assigned_school_id_fkey"
+            columns: ["assigned_school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       terms: {
         Row: {
           created_at: string
