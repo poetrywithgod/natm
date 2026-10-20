@@ -21,6 +21,7 @@ import {
   type StaffMember,
   type StaffRole,
 } from "../features/staff/api";
+import { createFamilyContact, type FamilyLogin } from "../features/teacherPool/api";
 import {
   fetchFeeSchedule,
   setTermFee,
@@ -47,6 +48,12 @@ export default function SchoolDetail() {
   const [deleting, setDeleting] = useState(false);
 
   const [showInvite, setShowInvite] = useState(false);
+  const [showFamily, setShowFamily] = useState(false);
+  const [familyName, setFamilyName] = useState("");
+  const [familyEmail, setFamilyEmail] = useState("");
+  const [familySubmitting, setFamilySubmitting] = useState(false);
+  const [familyError, setFamilyError] = useState<string | null>(null);
+  const [familyLogin, setFamilyLogin] = useState<FamilyLogin | null>(null);
   const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<StaffRole>("class_teacher");
@@ -151,6 +158,21 @@ export default function SchoolDetail() {
     } catch (e) {
       setFeeError(getFriendlyErrorMessage(e, "Failed to save rate"));
       throw e;
+    }
+  }
+
+  async function handleCreateFamilyLogin() {
+    if (!id || !familyName.trim() || !familyEmail.trim()) return;
+    setFamilySubmitting(true);
+    setFamilyError(null);
+    try {
+      setFamilyLogin(await createFamilyContact(id, familyName.trim(), familyEmail.trim()));
+      setFamilyName("");
+      setFamilyEmail("");
+    } catch (e) {
+      setFamilyError(getFriendlyErrorMessage(e, "Failed to create the family login"));
+    } finally {
+      setFamilySubmitting(false);
     }
   }
 
@@ -379,13 +401,85 @@ export default function SchoolDetail() {
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-display font-bold text-slate-100">Staff</h2>
-          <button
-            onClick={() => setShowInvite(true)}
-            className="flex items-center gap-1 font-ui text-xs text-amber-400 hover:underline"
-          >
-            <UserPlus size={14} /> Invite Staff
-          </button>
+          <div className="flex items-center gap-4">
+            {school.school_type === "homeschool" && (
+              <button
+                onClick={() => {
+                  setShowFamily(true);
+                  setFamilyLogin(null);
+                }}
+                className="flex items-center gap-1 font-ui text-xs text-amber-400 hover:underline"
+              >
+                <UserPlus size={14} /> Add family login
+              </button>
+            )}
+            <button
+              onClick={() => setShowInvite(true)}
+              className="flex items-center gap-1 font-ui text-xs text-amber-400 hover:underline"
+            >
+              <UserPlus size={14} /> Invite Staff
+            </button>
+          </div>
         </div>
+
+        {showFamily && (
+          <div className="pt-1 pb-3 border-b border-slate-800 space-y-3" data-testid="family-login">
+            <p className="font-ui text-xs text-slate-400">
+              Creates the family's own parent login so they can request a teacher. Share the temporary password
+              with them; they must change it on first sign-in.
+            </p>
+            {familyLogin ? (
+              <div className="bg-slate-800 rounded-lg p-3 space-y-1">
+                <p className="font-ui text-xs text-success">Family login created. This password is shown once.</p>
+                <p className="font-body text-sm text-slate-100">Email: {familyLogin.email}</p>
+                <p className="font-body text-sm text-slate-100">
+                  Temporary password: <span className="font-mono">{familyLogin.temporary_password}</span>
+                </p>
+                <button
+                  onClick={() => setShowFamily(false)}
+                  className="mt-2 px-3 py-1.5 rounded-lg bg-slate-700 text-slate-100 font-ui text-xs"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <>
+                <input
+                  aria-label="Parent or guardian name"
+                  placeholder="Parent or guardian name"
+                  value={familyName}
+                  onChange={(e) => setFamilyName(e.target.value)}
+                  className="w-full p-2 rounded bg-slate-800 border border-slate-700 text-slate-100 font-body text-sm placeholder:text-slate-500"
+                />
+                <input
+                  type="email"
+                  aria-label="Family email"
+                  placeholder="Family email"
+                  value={familyEmail}
+                  onChange={(e) => setFamilyEmail(e.target.value)}
+                  className="w-full p-2 rounded bg-slate-800 border border-slate-700 text-slate-100 font-body text-sm placeholder:text-slate-500"
+                />
+                {familyError && <p className="font-ui text-xs text-error">{familyError}</p>}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowFamily(false)}
+                    disabled={familySubmitting}
+                    className="flex-1 px-4 py-2 rounded-lg bg-slate-800 text-slate-100 font-ui text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreateFamilyLogin}
+                    disabled={familySubmitting || !familyName.trim() || !familyEmail.trim()}
+                    className="flex-1 px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-ui text-sm font-semibold disabled:opacity-60"
+                  >
+                    {familySubmitting ? "Creating..." : "Create family login"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {staffNotice && <p className="font-ui text-xs text-success">{staffNotice}</p>}
 

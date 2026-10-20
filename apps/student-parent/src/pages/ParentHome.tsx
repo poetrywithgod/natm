@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { User, ChevronRight } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { User, ChevronRight, GraduationCap } from "lucide-react";
+import { useSchoolType } from "../features/schools/useSchoolType";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchLinkedChildren, getSignedChildPhotoUrl, type LinkedChild } from "../features/parent/api";
 import { fetchStudentAssignments } from "../features/assignments/api";
@@ -16,6 +17,7 @@ interface ChildSummary {
 export default function ParentHome() {
   const { profile } = useAuth();
   const navigate = useNavigate();
+  const { isHomeschool } = useSchoolType();
   const [summaries, setSummaries] = useState<ChildSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -60,6 +62,22 @@ export default function ParentHome() {
     <div className="p-4 space-y-4">
       <h1 className="font-display text-xl text-abyssal-100">{heading}</h1>
 
+      {isHomeschool && (
+        <Link
+          to="/parent/teacher"
+          className="flex items-center gap-3 bg-abyssal-900 rounded-lg p-4 hover:bg-abyssal-800"
+        >
+          <GraduationCap size={20} className="text-abyssal-300 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="font-ui text-sm text-abyssal-100">Request a teacher</p>
+            <p className="font-body text-xs text-abyssal-300">
+              Ask NATM to match your family with a trained teacher, or follow up on a request.
+            </p>
+          </div>
+          <ChevronRight size={18} className="text-abyssal-500 shrink-0" />
+        </Link>
+      )}
+
       {loading ? (
         <div className="space-y-2 animate-pulse">
           <div className="h-24 rounded-lg bg-abyssal-900" />
@@ -69,7 +87,9 @@ export default function ParentHome() {
         <div className="bg-abyssal-900 rounded-lg p-6 text-center">
           <User className="mx-auto text-abyssal-300 mb-2" size={24} />
           <p className="font-body text-sm text-abyssal-300">
-            No children linked to your account yet. Contact your school admin.
+            {isHomeschool
+              ? "No children are set up yet. Request a teacher and they will add your children once matched."
+              : "No children linked to your account yet. Contact your school admin."}
           </p>
         </div>
       ) : (

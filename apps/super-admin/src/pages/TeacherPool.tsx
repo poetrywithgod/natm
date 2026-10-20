@@ -8,6 +8,9 @@ import {
   unassignPoolTeacher,
   setPoolTeacherInactive,
   deletePoolTeacher,
+  fetchOpenRequests,
+  dismissRequest,
+  type TeacherRequest,
   type PoolTeacher,
   type PoolStatus,
 } from "../features/teacherPool/api";
@@ -29,6 +32,8 @@ const STATUS_STYLES: Record<PoolStatus, string> = {
 export default function TeacherPool() {
   const [teachers, setTeachers] = useState<PoolTeacher[]>([]);
   const [families, setFamilies] = useState<SchoolRow[]>([]);
+  const [requests, setRequests] = useState<TeacherRequest[]>([]);
+  const [fulfilling, setFulfilling] = useState<TeacherRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -41,8 +46,9 @@ export default function TeacherPool() {
 
   async function load() {
     try {
-      const [t, schools] = await Promise.all([fetchPoolTeachers(), fetchSchools()]);
+      const [t, schools, reqs] = await Promise.all([fetchPoolTeachers(), fetchSchools(), fetchOpenRequests()]);
       setTeachers(t);
+      setRequests(reqs);
       setFamilies(schools.filter((s) => s.school_type === "homeschool" && s.is_active));
     } catch (e) {
       setError(getFriendlyErrorMessage(e, "Failed to load the teacher pool"));
@@ -53,10 +59,11 @@ export default function TeacherPool() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([fetchPoolTeachers(), fetchSchools()])
-      .then(([t, schools]) => {
+    Promise.all([fetchPoolTeachers(), fetchSchools(), fetchOpenRequests()])
+      .then(([t, schools, reqs]) => {
         if (cancelled) return;
         setTeachers(t);
+        setRequests(reqs);
         setFamilies(schools.filter((s) => s.school_type === "homeschool" && s.is_active));
       })
       .catch((e) => {
@@ -118,6 +125,64 @@ export default function TeacherPool() {
           <UserPlus size={16} /> Add Teacher
         </button>
       </div>
+
+      {requests.length > 0 && (
+        <section className="space-y-2" aria-label="Open teacher requests">
+          <h2 className="font-display text-base font-bold text-slate-100">
+            Open requests <span className="font-ui text-xs text-amber-400">({requests.length})</span>
+          </h2>
+          {requests.map((r) => (
+            <div
+              key={r.id}
+              data-testid="request-row"
+              className="bg-slate-900 border border-amber-500/30 rounded-xl p-4 space-y-2"
+            >
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Link
+                    to={`/schools/${r.school_id}`}
+                    className="font-display text-slate-100 hover:text-amber-400"
+                  >
+                    {r.school_name}
+                  </Link>
+                  {r.requester_name && (
+                    <span className="font-ui text-xs text-slate-400">requested by {r.requester_name}</span>
+                  )}
+                  <span className="font-ui text-xs text-slate-500">
+                    {new Date(r.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setFulfilling(r)}
+                    className="px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-ui text-xs font-semibold"
+                  >
+                    Assign a teacher
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!window.confirm(`Dismiss ${r.school_name}'s request?`)) return;
+                      void run(r.id, () => dismissRequest(r.id), "Request dismissed.", "Failed to dismiss request");
+                    }}
+                    disabled={processingId === r.id}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-200 font-ui text-xs disabled:opacity-50"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+              <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-1 font-body text-sm">
+                <RequestField label="Children" value={r.children_info} />
+                <RequestField label="Preferred start" value={r.preferred_start_date} />
+                <RequestField label="Schedule" value={r.schedule} />
+                <RequestField label="Location" value={r.location} />
+                <RequestField label="Support needs" value={r.special_needs} />
+                <RequestField label="Notes" value={r.notes} />
+              </dl>
+            </div>
+          ))}
+        </section>
+      )}
 
       <div className="flex flex-wrap gap-3 items-center">
         <div className="relative">
@@ -251,6 +316,18 @@ export default function TeacherPool() {
           onAdded={() => {
             setShowAdd(false);
             setSuccessMessage("Teacher added to the pool.");
+            load();
+          }}
+        />
+      )}
+      {fulfilling && (
+        <FulfilModal
+          request={fulfilling}
+          teachers={teachers.filter((t) => t.status === "available")}
+          onClose={() => setFulfilling(null)}
+          onAssigned={() => {
+            setFulfilling(null);
+            setSuccessMessage("Teacher assigned and the request is marked matched.");
             load();
           }}
         />
@@ -403,6 +480,86 @@ function AssignModal({
           <button
             onClick={handleSubmit}
             disabled={submitting || !schoolId}
+            className="flex-1 px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-ui text-sm font-semibold disabled:opacity-60"
+          >
+            {submitting ? "Assigning..." : "Assign"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RequestField({ label, value }: { label: string; value: string | null }) {
+  if (!value) return null;
+  return (
+    <div>
+      <dt className="inline font-ui text-xs text-slate-500">{label}: </dt>
+      <dd className="inline text-slate-300">{value}</dd>
+    </div>
+  );
+}
+
+function FulfilModal({
+  request,
+  teachers,
+  onClose,
+  onAssigned,
+}: {
+  request: TeacherRequest;
+  teachers: PoolTeacher[];
+  onClose: () => void;
+  onAssigned: () => void;
+}) {
+  const [teacherId, setTeacherId] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit() {
+    if (!teacherId) {
+      setError("Choose a teacher first.");
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      await assignPoolTeacher(teacherId, request.school_id);
+      onAssigned();
+    } catch (e) {
+      setError(getFriendlyErrorMessage(e, "Failed to assign teacher"));
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+      <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl p-6 space-y-4">
+        <h2 className="font-display text-lg font-bold text-slate-100">Assign a teacher to {request.school_name}</h2>
+        <div>
+          <label className="font-ui text-xs text-slate-400" htmlFor="fulfil-teacher">Available teacher</label>
+          <select
+            id="fulfil-teacher"
+            value={teacherId}
+            onChange={(e) => setTeacherId(e.target.value)}
+            className="mt-1 w-full p-2 rounded bg-slate-800 border border-slate-700 text-slate-100 font-body text-sm"
+          >
+            <option value="">{teachers.length === 0 ? "No available teachers in the pool" : "Select a teacher..."}</option>
+            {teachers.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.full_name}
+                {t.qualifications ? ` — ${t.qualifications}` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+        {error && <p className="font-ui text-xs text-error">{error}</p>}
+        <div className="flex gap-2 pt-2">
+          <button onClick={onClose} disabled={submitting} className="flex-1 px-4 py-2 rounded-lg bg-slate-800 text-slate-100 font-ui text-sm">
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || !teacherId}
             className="flex-1 px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-ui text-sm font-semibold disabled:opacity-60"
           >
             {submitting ? "Assigning..." : "Assign"}

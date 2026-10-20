@@ -109,3 +109,72 @@ export async function unassignPoolTeacher(poolId: string): Promise<void> {
   if (error) throw await parseFunctionError(error, "Failed to unassign teacher");
   if (data?.error) throw new Error(data.error);
 }
+
+// ---------- Teacher requests (filed by homeschool families) ----------
+
+export interface TeacherRequest {
+  id: string;
+  school_id: string;
+  school_name: string;
+  requester_name: string | null;
+  children_info: string;
+  preferred_start_date: string | null;
+  schedule: string | null;
+  location: string | null;
+  special_needs: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export async function fetchOpenRequests(): Promise<TeacherRequest[]> {
+  const { data, error } = await supabase
+    .from("teacher_requests")
+    .select(
+      "id, school_id, children_info, preferred_start_date, schedule, location, special_needs, notes, created_at, schools:school_id(name), requester:requested_by(full_name)"
+    )
+    .eq("status", "open")
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v);
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    school_id: r.school_id,
+    school_name: one(r.schools as { name: string } | { name: string }[] | null)?.name ?? "Family",
+    requester_name: one(r.requester as { full_name: string } | { full_name: string }[] | null)?.full_name ?? null,
+    children_info: r.children_info,
+    preferred_start_date: r.preferred_start_date,
+    schedule: r.schedule,
+    location: r.location,
+    special_needs: r.special_needs,
+    notes: r.notes,
+    created_at: r.created_at,
+  }));
+}
+
+export async function dismissRequest(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("teacher_requests")
+    .update({ status: "cancelled", resolved_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("status", "open");
+  if (error) throw new Error(error.message);
+}
+
+export interface FamilyLogin {
+  email: string;
+  temporary_password: string;
+}
+
+export async function createFamilyContact(
+  schoolId: string,
+  fullName: string,
+  email: string,
+  phone?: string
+): Promise<FamilyLogin> {
+  const { data, error } = await supabase.functions.invoke("create-family-contact", {
+    body: { school_id: schoolId, full_name: fullName, email, phone },
+  });
+  if (error) throw await parseFunctionError(error, "Failed to create the family login");
+  if (data?.error) throw new Error(data.error);
+  return { email: data.email, temporary_password: data.temporary_password };
+}

@@ -3063,6 +3063,76 @@ export type Database = {
         }
         Relationships: []
       }
+      teacher_requests: {
+        Row: {
+          id: string
+          school_id: string
+          requested_by: string
+          status: string
+          children_info: string
+          preferred_start_date: string | null
+          schedule: string | null
+          location: string | null
+          special_needs: string | null
+          notes: string | null
+          pool_teacher_id: string | null
+          resolved_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          school_id: string
+          requested_by: string
+          status?: string
+          children_info: string
+          preferred_start_date?: string | null
+          schedule?: string | null
+          location?: string | null
+          special_needs?: string | null
+          notes?: string | null
+          pool_teacher_id?: string | null
+          resolved_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          school_id?: string
+          requested_by?: string
+          status?: string
+          children_info?: string
+          preferred_start_date?: string | null
+          schedule?: string | null
+          location?: string | null
+          special_needs?: string | null
+          notes?: string | null
+          pool_teacher_id?: string | null
+          resolved_at?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_requests_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_requests_pool_teacher_id_fkey"
+            columns: ["pool_teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_pool"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teacher_pool: {
         Row: {
           id: string

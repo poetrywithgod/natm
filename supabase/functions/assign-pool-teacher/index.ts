@@ -147,6 +147,13 @@ Deno.serve(async (req) => {
         .eq("id", pool_id);
       if (poolError) return json({ error: poolError.message }, 400);
 
+      // Assigning a teacher to a family fulfils its open request, if any.
+      await admin
+        .from("teacher_requests")
+        .update({ status: "matched", pool_teacher_id: pool_id, resolved_at: new Date().toISOString() })
+        .eq("school_id", school_id)
+        .eq("status", "open");
+
       await admin.from("audit_logs").insert({
         school_id,
         actor_id: user.id,
