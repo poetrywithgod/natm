@@ -101,7 +101,14 @@ export default function AdminClasses() {
   async function handleCreateClass() {
     if (!schoolId || !newClassName.trim()) return;
     try {
-      await createClass(schoolId, newClassName.trim(), newLevel || null, profile!.id);
+      // A homeschool teacher teaches every class, so new classes start with her.
+      await createClass(
+        schoolId,
+        newClassName.trim(),
+        newLevel || null,
+        profile!.id,
+        profile!.role === "homeschool_teacher" ? profile!.id : null
+      );
       setNewClassName("");
       setNewLevel("");
       await loadAll();

@@ -55,11 +55,17 @@ export async function createClass(
   schoolId: string,
   name: string,
   level: string | null,
-  actorId: string
+  actorId: string,
+  classTeacherId: string | null = null
 ): Promise<SchoolClass> {
   const { data, error } = await supabase
     .from("classes")
-    .insert({ school_id: schoolId, name, level: level as ClassLevel | null })
+    .insert({
+      school_id: schoolId,
+      name,
+      level: level as ClassLevel | null,
+      ...(classTeacherId ? { class_teacher_id: classTeacherId } : {}),
+    })
     .select()
     .single();
   if (error) throw new Error(error.message);

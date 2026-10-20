@@ -61,6 +61,8 @@ export default function AdminIntakeReview() {
   const [assigningClass, setAssigningClass] = useState(false);
   const [assigningShadowTeacher, setAssigningShadowTeacher] = useState(false);
 
+  const isHomeschool = profile?.role === "homeschool_teacher";
+
   async function load() {
     if (!id) return;
     try {
@@ -176,6 +178,17 @@ export default function AdminIntakeReview() {
     setError(null);
     try {
       await assignClass(detail.episodeId, detail.studentId, selectedClassId, profile.school_id, profile.id);
+      // A homeschool teacher is her own shadow teacher, so there is no
+      // separate step: assigning the class also assigns her to the child.
+      if (isHomeschool && !detail.shadowTeacherAssignedAt) {
+        await assignShadowTeacher(
+          detail.episodeId,
+          detail.studentId,
+          profile.id,
+          profile.school_id,
+          profile.id
+        );
+      }
       await load();
     } catch (e) {
       setError(getFriendlyErrorMessage(e, "Failed to assign class"));
@@ -399,7 +412,7 @@ export default function AdminIntakeReview() {
         </div>
       )}
 
-      {detail.status === "completed" && (
+      {detail.status === "completed" && !isHomeschool && (
         <div className="bg-forest-900 rounded-lg p-4 space-y-4">
           <p className="font-display text-lg text-forest-100">Assign Shadow Teacher</p>
           {!detail.classAssignedAt ? (
