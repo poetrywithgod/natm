@@ -7,13 +7,18 @@ import {
   fetchClassOptions,
   createFamilyAdmission,
   assignStudentClass,
+  assignShadowTeacherToStudent,
+  fetchActiveShadowAssignments,
+  isForm1Pending,
   renameStudent,
   uploadStudentPhoto,
   getSignedPhotoUrl,
   type Student,
   type ClassOption,
   type FamilyAdmissionResult,
+  type ActiveShadowAssignment,
 } from "../features/students/api";
+import { fetchShadowTeacherOptions, type ShadowTeacherOption } from "../features/assessments/api";
 import { classLevelRank } from "../features/classes/api";
 import { getFriendlyErrorMessage } from "@natm/supabase";
 
@@ -64,8 +69,12 @@ export default function AdminStudents() {
   const [students, setStudents] = useState<Student[]>([]);
   const [classOptions, setClassOptions] = useState<ClassOption[]>([]);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+  const [shadowTeachers, setShadowTeachers] = useState<ShadowTeacherOption[]>([]);
+  const [shadowAssignments, setShadowAssignments] = useState<Record<string, ActiveShadowAssignment>>({});
+  const [onlyForm1Pending, setOnlyForm1Pending] = useState(false);
   const [newName, setNewName] = useState("");
   const [newClassId, setNewClassId] = useState("");
+  const [newShadowTeacherId, setNewShadowTeacherId] = useState("");
   const [guardianName, setGuardianName] = useState("");
   const [guardianEmail, setGuardianEmail] = useState("");
   const [guardianRelationship, setGuardianRelationship] = useState("");
@@ -81,9 +90,18 @@ export default function AdminStudents() {
 
   const schoolId = profile?.school_id;
 
+  const form1PendingCount = useMemo(
+    () => students.filter((s) => isForm1Pending(s.onboarding_status)).length,
+    [students]
+  );
+
   const studentGroups = useMemo(
-    () => sortAndGroupStudents(students, classOptions),
-    [students, classOptions]
+    () =>
+      sortAndGroupStudents(
+        onlyForm1Pending ? students.filter((s) => isForm1Pending(s.onboarding_status)) : students,
+        classOptions
+      ),
+    [students, classOptions, onlyForm1Pending]
   );
 
   async function loadAll() {
@@ -91,9 +109,15 @@ export default function AdminStudents() {
     setLoading(true);
     setError(null);
     try {
-      const [stu, cls] = await Promise.all([fetchStudents(schoolId), fetchClassOptions(schoolId)]);
+      const [stu, cls, teachers] = await Promise.all([
+        fetchStudents(schoolId),
+        fetchClassOptions(schoolId),
+        fetchShadowTeacherOptions(schoolId),
+      ]);
       setStudents(stu);
       setClassOptions(cls);
+      setShadowTeachers(teachers);
+      setShadowAssignments(await fetchActiveShadowAssignments(stu.map((s) => s.id)));
 
       const urls: Record<string, string> = {};
       await Promise.all(
@@ -136,8 +160,21 @@ export default function AdminStudents() {
         },
       });
       setNewCredentials(result);
+      if (newShadowTeacherId && newClassId) {
+        try {
+          await assignShadowTeacherToStudent(result.student_id, newShadowTeacherId, schoolId!, profile!.id);
+        } catch (assignError) {
+          setError(
+            `${newName.trim()} was admitted, but the shadow teacher could not be assigned: ${getFriendlyErrorMessage(
+              assignError,
+              "please try again from the list below"
+            )}`
+          );
+        }
+      }
       setNewName("");
       setNewClassId("");
+      setNewShadowTeacherId("");
       setGuardianName("");
       setGuardianEmail("");
       setGuardianRelationship("");
@@ -157,6 +194,17 @@ export default function AdminStudents() {
       await loadAll();
     } catch (e) {
       setError(getFriendlyErrorMessage(e, "Failed to assign class"));
+    }
+  }
+
+  async function handleAssignShadowTeacher(studentId: string, teacherId: string) {
+    if (!teacherId) return;
+    setError(null);
+    try {
+      await assignShadowTeacherToStudent(studentId, teacherId, schoolId!, profile!.id);
+      await loadAll();
+    } catch (e) {
+      setError(getFriendlyErrorMessage(e, "Failed to assign shadow teacher"));
     }
   }
 
@@ -220,6 +268,20 @@ export default function AdminStudents() {
                 </option>
               ))}
             </select>
+            <select
+              value={newShadowTeacherId}
+              onChange={(e) => setNewShadowTeacherId(e.target.value)}
+              disabled={!newClassId}
+              title={newClassId ? undefined : "Choose a class first"}
+              className="p-2 rounded bg-forest-700 text-forest-100 font-ui disabled:opacity-50"
+            >
+              <option value="">No shadow teacher yet</option>
+              {shadowTeachers.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.full_name} ({t.activeStudentCount})
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -254,7 +316,7 @@ export default function AdminStudents() {
         </button>
       </div>
       <p className="font-ui text-xs text-forest-300 -mt-4">
-        One shared family email is used for the parent and the student: the family signs in once and switches between Parent view and Student view. A Student ID and a temporary password are generated automatically, and the family must set their own password on first login. Class/level is assigned later, after assessment.
+        One shared family email is used for the parent and the student: the family signs in once and switches between Parent view and Student view. A Student ID and a temporary password are generated automatically, and the family must set their own password on first login. Set a class and shadow teacher now so daily logs can start before Form 1 is submitted; the class can be confirmed or changed after assessment.
       </p>
 
       {newCredentials && (
@@ -301,9 +363,30 @@ export default function AdminStudents() {
         </div>
       )}
 
+      {students.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setOnlyForm1Pending((v) => !v)}
+            aria-pressed={onlyForm1Pending}
+            className={`px-3 py-1.5 rounded font-ui text-xs font-semibold ${
+              onlyForm1Pending ? "bg-forest-500 text-forest-950" : "bg-forest-700 text-forest-100"
+            }`}
+          >
+            Form 1 pending ({form1PendingCount})
+          </button>
+          {onlyForm1Pending && (
+            <span className="font-ui text-xs text-forest-300">Showing only students whose Form 1 has not been submitted.</span>
+          )}
+        </div>
+      )}
+
       <div className="space-y-6">
         {students.length === 0 && (
           <p className="text-forest-300 font-ui text-sm">No students yet — add one above.</p>
+        )}
+        {students.length > 0 && onlyForm1Pending && form1PendingCount === 0 && (
+          <p className="text-forest-300 font-ui text-sm">Every student has submitted Form 1.</p>
         )}
 
         {studentGroups.map((group) => (
@@ -376,7 +459,14 @@ export default function AdminStudents() {
                   {student.full_name}
                 </button>
               )}
-              <p className="font-ui text-xs text-forest-300 mt-0.5">ID: {student.unique_student_id}</p>
+              <p className="font-ui text-xs text-forest-300 mt-0.5">
+                ID: {student.unique_student_id}
+                {isForm1Pending(student.onboarding_status) && (
+                  <span className="ml-2 inline-block rounded-full bg-amber-500/20 text-amber-300 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                    Form 1 pending
+                  </span>
+                )}
+              </p>
             </div>
 
             <select
@@ -388,6 +478,28 @@ export default function AdminStudents() {
               {classOptions.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={shadowAssignments[student.id]?.shadow_teacher_id ?? ""}
+              onChange={(e) => handleAssignShadowTeacher(student.id, e.target.value)}
+              disabled={!student.class_id}
+              title={student.class_id ? "Shadow teacher" : "Assign a class first"}
+              aria-label={`Shadow teacher for ${student.full_name}`}
+              className="p-2 rounded bg-forest-700 text-forest-100 font-ui text-sm disabled:opacity-50"
+            >
+              <option value="">No shadow teacher</option>
+              {shadowAssignments[student.id] &&
+                !shadowTeachers.some((t) => t.id === shadowAssignments[student.id].shadow_teacher_id) && (
+                  <option value={shadowAssignments[student.id].shadow_teacher_id}>
+                    {shadowAssignments[student.id].shadow_teacher_name ?? "Current shadow teacher"} (inactive)
+                  </option>
+                )}
+              {shadowTeachers.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.full_name}
                 </option>
               ))}
             </select>

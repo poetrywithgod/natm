@@ -1,6 +1,18 @@
 import { supabase } from "../../lib/supabase";
 import { logAuditEvent } from "../audit/api";
 
+export type StudentOnboardingStatus =
+  | "pending_password_reset"
+  | "pending_intake_form"
+  | "pending_review"
+  | "approved";
+
+// Form 1 has not been submitted yet: the family hasn't set a password or
+// hasn't filled the intake form. (pending_review = submitted, awaiting admin.)
+export function isForm1Pending(status: StudentOnboardingStatus): boolean {
+  return status === "pending_password_reset" || status === "pending_intake_form";
+}
+
 export interface Student {
   id: string;
   school_id: string;
@@ -9,6 +21,7 @@ export interface Student {
   unique_student_id: string | null;
   photo_url: string | null; // storage path, not a public URL — bucket is private
   profile_id: string | null; // the student's own login (shared with the family), if any
+  onboarding_status: StudentOnboardingStatus;
   created_at: string;
   phone: string | null; // student-editable, from Student Settings > Profile
   address: string | null; // student-editable, from Student Settings > Profile
@@ -97,6 +110,70 @@ export async function assignStudentClass(
     entity_type: "student",
     entity_id: studentId,
     details: { class_id: classId },
+  });
+}
+
+export interface ActiveShadowAssignment {
+  shadow_teacher_id: string;
+  shadow_teacher_name: string | null;
+}
+
+// student_id -> current active shadow teacher, for the Students list.
+// Row-level security already limits this to the caller's own school.
+export async function fetchActiveShadowAssignments(
+  studentIds: string[]
+): Promise<Record<string, ActiveShadowAssignment>> {
+  if (studentIds.length === 0) return {};
+  const { data, error } = await supabase
+    .from("shadow_teacher_assignments")
+    .select("student_id, shadow_teacher_id, shadow_teacher:profiles(full_name)")
+    .eq("is_active", true)
+    .in("student_id", studentIds);
+  if (error) throw new Error(error.message);
+
+  const result: Record<string, ActiveShadowAssignment> = {};
+  for (const row of (data ?? []) as unknown as {
+    student_id: string;
+    shadow_teacher_id: string;
+    shadow_teacher: { full_name: string } | { full_name: string }[] | null;
+  }[]) {
+    const teacher = Array.isArray(row.shadow_teacher) ? row.shadow_teacher[0] : row.shadow_teacher;
+    result[row.student_id] = {
+      shadow_teacher_id: row.shadow_teacher_id,
+      shadow_teacher_name: teacher?.full_name ?? null,
+    };
+  }
+  return result;
+}
+
+// Assigns (or changes) a child's shadow teacher straight from the Students
+// page, without needing a completed intake episode -- so daily logs can start
+// before the family has submitted Form 1. Atomic, server-side; requires the
+// child to have a class already.
+export async function assignShadowTeacherToStudent(
+  studentId: string,
+  shadowTeacherId: string,
+  schoolId: string,
+  actorId: string
+): Promise<void> {
+  // The generated DB types predate this RPC, so the call is loosely typed.
+  const rpc = supabase.rpc as unknown as (
+    fn: string,
+    args: Record<string, unknown>
+  ) => Promise<{ data: { outcome?: string } | null; error: { message: string } | null }>;
+  const { data, error } = await rpc.call(supabase, "assign_shadow_teacher", {
+    target_student_id: studentId,
+    target_teacher_id: shadowTeacherId,
+  });
+  if (error) throw new Error(error.message);
+  if (data?.outcome === "unchanged") return;
+  logAuditEvent({
+    school_id: schoolId,
+    actor_id: actorId,
+    action: "student.shadow_teacher_assigned",
+    entity_type: "student",
+    entity_id: studentId,
+    details: { shadow_teacher_id: shadowTeacherId, outcome: data?.outcome ?? null },
   });
 }
 
