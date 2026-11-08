@@ -1,4 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { generateTemporaryPassword } from "../_shared/temporaryPassword.ts";
+
+function isEmailAlreadyRegisteredError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  if (error.code === "email_exists") return true;
+  return (error.message ?? "").toLowerCase().includes("already been registered");
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -84,66 +91,66 @@ Deno.serve(async (req) => {
     // Service-role client — only ever used server-side, never exposed to the browser.
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // APP_URL should be set as a Supabase secret, but if it's ever unset,
-    // falling back to `undefined` here would let Supabase Auth use whatever
-    // "Site URL" is configured in the dashboard's Auth settings instead --
-    // which defaults to http://localhost:3000 on a fresh project and is
-    // easy to leave misconfigured. Hardcode the real deployed URL as a
-    // safety net so an invite link never silently points at localhost.
-    const appUrl = (Deno.env.get("APP_URL") ?? "https://natm-staff-puce.vercel.app").replace(/\/$/, "");
-    const { data: invited, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${appUrl}/reset-password`,
+    // The admin hands the staff member a generated temporary password
+    // (shown once on the admin's screen, never stored or emailed). The
+    // profile is flagged must_change_password so the staff app forces a
+    // new password at first sign-in; the DB clears the flag server-side
+    // only once the password has really changed (see
+    // 20260930000000_profiles_security_hardening.sql).
+    const temporaryPassword = generateTemporaryPassword();
+    const { data: created, error: createError } = await adminClient.auth.admin.createUser({
+      email,
+      password: temporaryPassword,
+      email_confirm: true,
     });
-    if (inviteError || !invited.user) {
-      const raw = inviteError?.message ?? "Invite failed";
-      // Supabase Auth rejects inviting an email that's already a confirmed
-      // user. The most common way that happens here: someone tried to
-      // permanently delete a staff member earlier, but the delete failed
-      // (blocked by historical records like attendance or logged work --
-      // see delete-staff-member) and the auth account never actually went
+    if (createError || !created.user) {
+      // Supabase Auth rejects an email that's already a user. The most
+      // common way that happens here: someone tried to permanently delete
+      // a staff member earlier, but the delete failed (blocked by
+      // historical records like attendance or logged work -- see
+      // delete-staff-member) and the auth account never actually went
       // away, even though it may have been deactivated. Give a pointer to
       // the fix instead of the raw, easy-to-misread Auth error.
-      const alreadyRegistered = /already.*(registered|exist)/i.test(raw);
-      const message = alreadyRegistered
-        ? "A staff account with this email already exists in the system. If they used to work here, check \"Show deactivated staff\" and reactivate them instead of inviting again -- if Delete was tried on them before, it likely didn't fully complete because of historical records tied to their account."
-        : raw;
+      const message = isEmailAlreadyRegisteredError(createError)
+        ? "A staff account with this email already exists in the system. If they used to work here, check \"Show deactivated staff\" and reactivate them instead of adding them again -- if Delete was tried on them before, it likely didn't fully complete because of historical records tied to their account."
+        : (createError?.message ?? "Account creation failed");
       return new Response(JSON.stringify({ error: message }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Upsert rather than insert: inviteUserByEmail is idempotent and
-    // returns the existing auth user if this email was already invited
-    // before, so a plain insert would collide on the profiles primary key
-    // for a retried invite. Upsert makes retries safe either way.
-    const { error: insertError } = await adminClient.from("profiles").upsert(
-      {
-        id: invited.user.id,
-        school_id: callerProfile.school_id,
-        role,
-        full_name,
-      },
-      { onConflict: "id" }
-    );
+    // createUser only succeeds for a brand-new auth user, so a plain
+    // insert is safe here. If it fails, roll the auth user back: leaving
+    // it behind would make a retry hit "already registered" with nothing
+    // actually linked to the account.
+    const { error: insertError } = await adminClient.from("profiles").insert({
+      id: created.user.id,
+      school_id: callerProfile.school_id,
+      role,
+      full_name,
+      must_change_password: true,
+    });
 
     if (insertError) {
+      await adminClient.auth.admin.deleteUser(created.user.id);
       return new Response(JSON.stringify({ error: insertError.message }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    // The temporary password is deliberately NOT logged.
     await adminClient.from("audit_logs").insert({
       school_id: callerProfile.school_id,
       actor_id: user.id,
-      action: "staff.invited",
+      action: "staff.created",
       entity_type: "staff",
-      entity_id: invited.user.id,
+      entity_id: created.user.id,
       details: { full_name, email, role },
     });
 
-    return new Response(JSON.stringify({ success: true, id: invited.user.id }), {
+    return new Response(JSON.stringify({ success: true, id: created.user.id, temporary_password: temporaryPassword }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

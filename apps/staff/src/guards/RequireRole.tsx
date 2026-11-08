@@ -10,5 +10,8 @@ export function RequireRole({ allow, children }: { allow: StaffRole[]; children:
   if (!profile || !allow.includes(profile.role)) {
     return <div className="p-6 text-error font-ui">Not authorized for this section.</div>;
   }
+  // First sign-in with an admin-issued temporary password: nothing else in
+  // the app is reachable until they choose their own.
+  if (profile.must_change_password) return <Navigate to="/set-password" replace />;
   return <>{children}</>;
 }

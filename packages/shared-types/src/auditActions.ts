@@ -30,6 +30,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
 
   // Staff accounts
   "staff.invited": "invited a staff member",
+  "staff.created": "added a staff member",
   "staff.deactivated": "deactivated a staff member",
   "staff.reactivated": "reactivated a staff member",
   "staff.deleted": "permanently deleted a staff member",

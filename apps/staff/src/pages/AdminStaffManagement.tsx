@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Check, Copy } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 import { getFriendlyErrorMessage } from "@natm/supabase";
 import {
@@ -30,6 +31,11 @@ export default function AdminStaffManagement() {
   const [error, setError] = useState<string | null>(null);
   const [blockedReasons, setBlockedReasons] = useState<{ id: string; reasons: string[] } | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  // The temporary password is only ever available right after creation --
+  // it isn't stored anywhere -- so it lives in component state until the
+  // admin dismisses the card.
+  const [credentials, setCredentials] = useState<{ name: string; email: string; password: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const schoolId = profile?.school_id;
 
@@ -56,16 +62,34 @@ export default function AdminStaffManagement() {
     setInviting(true);
     setError(null);
     setSuccessMessage(null);
+    setCredentials(null);
+    setCopied(false);
     try {
-      await createStaffMember(newName.trim(), newEmail.trim(), newRole);
-      setSuccessMessage(`Invite sent to ${newEmail.trim()}.`);
+      const email = newEmail.trim();
+      const name = newName.trim();
+      const created = await createStaffMember(name, email, newRole);
+      setCredentials({ name, email, password: created.temporaryPassword });
       setNewName("");
       setNewEmail("");
       await loadAll();
     } catch (e) {
-      setError(getFriendlyErrorMessage(e, "Failed to invite staff member"));
+      setError(getFriendlyErrorMessage(e, "Failed to add staff member"));
     } finally {
       setInviting(false);
+    }
+  }
+
+  async function handleCopyCredentials() {
+    if (!credentials) return;
+    try {
+      await navigator.clipboard.writeText(
+        `Email: ${credentials.email}\nTemporary password: ${credentials.password}`
+      );
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard can be blocked (e.g. insecure context); the password is
+      // still on screen to copy by hand.
     }
   }
 
@@ -141,14 +165,20 @@ export default function AdminStaffManagement() {
 
       <div className="bg-forest-900 rounded-lg p-4 flex flex-col sm:flex-row gap-2">
         <input
+          id="new-staff-name"
+          name="new-staff-name"
           type="text"
+          autoComplete="off"
           placeholder="Full name"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           className="p-2 rounded bg-forest-700 text-forest-100 font-ui placeholder:text-forest-300/60 flex-1"
         />
         <input
+          id="new-staff-email"
+          name="new-staff-email"
           type="email"
+          autoComplete="off"
           placeholder="Email"
           value={newEmail}
           onChange={(e) => setNewEmail(e.target.value)}
@@ -169,12 +199,48 @@ export default function AdminStaffManagement() {
           disabled={inviting}
           className="px-4 py-2 rounded bg-forest-500 text-forest-950 font-ui font-semibold whitespace-nowrap"
         >
-          {inviting ? "Inviting..." : "Invite Staff"}
+          {inviting ? "Adding..." : "Add Staff"}
         </button>
       </div>
       <p className="font-ui text-xs text-forest-300 -mt-4">
-        They'll receive an email invite to set their own password.
+        A temporary password is generated for them. At first sign-in they must set their own.
       </p>
+
+      {credentials && (
+        <div className="bg-forest-900 border border-forest-500/40 rounded-lg p-4 space-y-3">
+          <div>
+            <p className="font-display text-forest-100">{credentials.name} was added</p>
+            <p className="font-ui text-xs text-forest-300 mt-1">
+              Share these sign-in details with them. This password is shown only once and can't be
+              retrieved later.
+            </p>
+          </div>
+          <div className="rounded bg-forest-700 p-3 space-y-1 font-ui text-sm">
+            <p className="text-forest-300">
+              Email: <span className="text-forest-100 break-all">{credentials.email}</span>
+            </p>
+            <p className="text-forest-300">
+              Temporary password:{" "}
+              <span className="text-forest-100 font-mono tracking-wide select-all">{credentials.password}</span>
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleCopyCredentials}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-forest-500 text-forest-950 font-ui text-xs font-semibold"
+            >
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+              {copied ? "Copied" : "Copy details"}
+            </button>
+            <button
+              onClick={() => setCredentials(null)}
+              className="px-3 py-1.5 rounded border border-forest-100/20 text-forest-100 font-ui text-xs"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-3">
         {staff.length === 0 && (

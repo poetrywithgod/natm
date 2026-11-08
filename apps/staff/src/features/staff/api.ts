@@ -43,19 +43,28 @@ async function parseFunctionError(error: unknown, fallback: string): Promise<Err
   return new Error(error instanceof Error ? error.message : fallback);
 }
 
+export interface CreatedStaffMember {
+  id: string;
+  temporaryPassword: string;
+}
+
 // Calls the create-staff-member Edge Function, which uses the service role
-// to invite a real auth.users account by email (they set their own password
-// via the invite link) and creates the linked profiles row.
+// to create a real auth.users account with a generated temporary password
+// and the linked profiles row (flagged must_change_password). The password
+// is returned ONCE here for the admin to hand over; it is not stored
+// anywhere, and the staff member must replace it at first sign-in.
 export async function createStaffMember(
   fullName: string,
   email: string,
   role: "class_teacher" | "shadow_teacher" | "finance_manager"
-): Promise<void> {
+): Promise<CreatedStaffMember> {
   const { data, error } = await supabase.functions.invoke("create-staff-member", {
     body: { full_name: fullName, email, role },
   });
-  if (error) throw await parseFunctionError(error, "Failed to invite staff member");
+  if (error) throw await parseFunctionError(error, "Failed to add staff member");
   if (data?.error) throw new Error(data.error);
+  if (!data?.id || !data?.temporary_password) throw new Error("Staff member was created but no temporary password was returned.");
+  return { id: data.id, temporaryPassword: data.temporary_password };
 }
 
 // Thrown when deactivation is blocked because the staff member still has

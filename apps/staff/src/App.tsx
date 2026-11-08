@@ -18,6 +18,7 @@ import MaintenanceBanner from "./components/MaintenanceBanner";
 // download on first load -- each route's code only fetches when visited.
 const Login = lazy(() => import("./pages/Login"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const StaffSetPassword = lazy(() => import("./pages/StaffSetPassword"));
 const SchoolAdminDashboard = lazy(() => import("./pages/SchoolAdminDashboard"));
 const ClassTeacherAttendance = lazy(() => import("./pages/ClassTeacherAttendance"));
 const ClassTeacherDashboard = lazy(() => import("./pages/ClassTeacherDashboard"));
@@ -95,6 +96,7 @@ function AppRoutes() {
         />
         <Route path="/" element={<Navigate to="/admin" replace />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/set-password" element={<StaffSetPassword />} />
 
         <Route
           path="/admin"

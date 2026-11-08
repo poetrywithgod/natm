@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth, type StaffRole } from "../features/auth/AuthContext";
 
-const ROLE_HOME: Record<StaffRole, string> = {
+export const ROLE_HOME: Record<StaffRole, string> = {
   school_admin: "/admin",
   class_teacher: "/class-teacher",
   shadow_teacher: "/shadow-teacher",

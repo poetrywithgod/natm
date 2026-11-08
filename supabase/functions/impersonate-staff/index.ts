@@ -58,10 +58,19 @@ Deno.serve(async (req) => {
 
     const { data: target, error: targetError } = await adminClient
       .from("profiles")
-      .select("id, school_id, role, full_name, is_active")
+      .select("id, school_id, role, full_name, is_active, must_change_password")
       .eq("id", staff_id)
       .single();
     if (targetError || !target) return jsonResponse({ error: "Staff member not found" }, 404);
+    // A staff member who hasn't set their own password yet is gated behind
+    // the forced set-password screen, so viewing as them would force the
+    // Super Admin to choose a password on their behalf.
+    if (target.must_change_password) {
+      return jsonResponse(
+        { error: "This staff member hasn't signed in and set their own password yet, so you can't view as them until they have." },
+        400
+      );
+    }
     if (!STAFF_ROLES.includes(target.role)) {
       return jsonResponse({ error: "Can only view as staff (School Admin, Class Teacher, Shadow Teacher, Finance Manager)" }, 400);
     }
